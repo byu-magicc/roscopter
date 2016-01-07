@@ -1,0 +1,43 @@
+<launch>
+
+  <!-- Rosbag -->
+  <node name="play" pkg="rosbag" type="play" args="-s 45 /home/iman/rosbag/vo_toggle_2015-07-21-12-06-34.bag">
+    <remap from="vo" to="old_vo"/>
+  </node>
+
+  <!-- VO_Toggle -->
+  <node name="xbox" pkg="joy" type="joy_node"/>
+  <node name="joy_commander" pkg="joy_commander" type="joy_commander_node">
+    <remap from="relative_state" to="estimated_state"/>
+  </node>
+  <node name="vo_toggle" pkg="vo_toggle" type="vo_toggle_node" output="screen"/>
+
+
+  <!--Estimation-->
+  <node name="start_trigger"       pkg="rmekf"               type="start_trigger.py"/> 
+  <rosparam command="load" file="$(find relative_nav_common)/param/shredder.yaml"/>
+  <node name="rmekf"               pkg="rmekf"               type="rmekf_node"> 
+    <rosparam command="load" file="$(find rmekf)/params/estimator.yaml" /> 
+    <remap from="altimeter" to="/mavros/distance_sensor"/> 
+    <remap from="relative_state" to="estimated_state"/> 
+  </node> 
+
+  <!-- Visualization -->
+  <!-- <node name="obstacle_rviz"  pkg="rviz"    type="rviz" machine="$(arg base_station)"  args="-d /home/$(arg base_station)/obstacle/src/path_planner_hotdog/rviz/path_planner_hotdog.rviz" /> -->
+<!--   <node name="map_rviz" pkg="rviz" type="rviz" machine="$(arg base_station)"  args="-d /home/$(arg base_station)/obstacle/src/hex_map/rviz/map_visualizer.rviz" /> -->
+  <node name="rqt_graph"         pkg="rqt_graph" type="rqt_graph"/>
+  <node name="plot_x" pkg="rqt_plot" type="rqt_plot" args="/relative_state/transform/translation/x estimated_state/transform/translation/x"/>
+  <node name="plot_y" pkg="rqt_plot" type="rqt_plot" args="/relative_state/transform/translation/y estimated_state/transform/translation/y"/>
+
+
+  <!-- Truth -->
+  <node name="truth" pkg="rotor_estimator" type="truth">
+    <remap from="mocap" to="shredder/CG"/>
+  </node>
+
+  <!--Record-->
+<!--   <node name="record" pkg="rosbag" type="record" args="-o Waypoint_Collect /imu/data /mavros/distance_sensor /vo /keyframe /relative_state /node /edge /goal /raw_desired_state /desired_state"/> -->
+
+  <!--<node name="record_debug" pkg="rosbag" type="record" args="-o debug /imu/data /mavros/distance_sensor /command /relative_state /node /edge /goal /raw_desired_state /desired_state /joy_desired_state /mavlink/to /is_flying"/>-->
+
+</launch>
