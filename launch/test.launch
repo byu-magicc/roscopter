@@ -4,11 +4,12 @@
 
  <!--Estimation-->
   <node name="ekf" pkg="mocap_filter"  type="mocap_filter" output="screen">
-    <rosparam command="load" file="$(find mocap_filter)/params/estimator.yaml" /> 
+    <rosparam command="load" file="$(find mocap_filter)/params/estimator.yaml" />
+    <remap from="mocap" to="/naze/CG"/> 
   </node>
   
   <node name="record" pkg="rosbag" type="record" args="-O naze -a"/>
-  <node name="play" pkg="rosbag" type="play" args="/home/iman/imu_mocap_new_odroid.bag -r 3"  />
+  <node name="play" pkg="rosbag" type="play" args="/home/jarvis/imu_mocap_new_odroid.bag -r 3"  />
  
 
 </launch>

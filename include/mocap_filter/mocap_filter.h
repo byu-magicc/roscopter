@@ -51,9 +51,11 @@ private:
   ros::Subscriber imu_sub_;
   ros::Publisher estimate_pub_;
   ros::Timer predict_timer_;
+  ros::Timer publish_timer_;
 
   // Parameters
   double inner_loop_rate_;
+  double publish_rate_;
   double mass_;
   struct inertia{
     double x;
@@ -85,6 +87,7 @@ private:
   void updateMocap(geometry_msgs::TransformStamped msg);
   void initializeX(geometry_msgs::TransformStamped msg);
   void predictTimerCallback(const ros::TimerEvent& event);
+  void publishTimerCallback(const ros::TimerEvent& event);
   void publishEstimate();
   double LPF(double yn, double un);
   Eigen::Matrix<double, NUM_STATES, 1> f(const Eigen::Matrix<double, NUM_STATES, 1> x);

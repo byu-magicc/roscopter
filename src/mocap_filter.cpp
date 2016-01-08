@@ -9,6 +9,7 @@ mocapFilter::mocapFilter() :
 {
   // retrieve params
   nh_private_.param<double>("inner_loop_rate", inner_loop_rate_, 400);
+  nh_private_.param<double>("publish_rate", publish_rate_, 400);
   nh_private_.param<double>("alpha", alpha_, 0.7);
   relative_nav::importMatrixFromParamServer(nh_private_, x_hat_, "x0");
   relative_nav::importMatrixFromParamServer(nh_private_, P_, "P0");
@@ -21,6 +22,7 @@ mocapFilter::mocapFilter() :
   mocap_sub_ = nh_.subscribe("mocap", 1, &mocapFilter::mocapCallback, this);
   estimate_pub_ = nh_.advertise<relative_nav::FilterState>("estimate", 1);
   predict_timer_ = nh_.createTimer(ros::Duration(1.0/inner_loop_rate_), &mocapFilter::predictTimerCallback, this);
+  publish_timer_ = nh_.createTimer(ros::Duration(1.0/publish_rate_), &mocapFilter::publishTimerCallback, this);
 
   first_mocap_ = true;
   flying_ = false;
@@ -28,11 +30,18 @@ mocapFilter::mocapFilter() :
   return;
 }
 
+void mocapFilter::publishTimerCallback(const ros::TimerEvent &event)
+{
+  if(flying_){
+    publishEstimate();
+  }
+  return;
+}
+
 void mocapFilter::predictTimerCallback(const ros::TimerEvent &event)
 {
   if(flying_){
-    predictStep();
-    publishEstimate();
+//    predictStep();
   }
   return;
 }
@@ -41,7 +50,7 @@ void mocapFilter::predictTimerCallback(const ros::TimerEvent &event)
 void mocapFilter::imuCallback(const sensor_msgs::Imu msg)
 {
   if(!flying_){
-    if(msg.linear_acceleration.z > 10.0){
+    if(fabs(msg.linear_acceleration.z) > 11.0){
       ROS_WARN("Now flying");
       flying_ = true;
     }
@@ -58,6 +67,7 @@ void mocapFilter::mocapCallback(const geometry_msgs::TransformStamped msg)
   if(first_mocap_){
     ROS_INFO("motion capture received");
     initializeX(msg);
+    first_mocap_ = false;
   }else{
     updateMocap(msg);
   }
@@ -66,6 +76,7 @@ void mocapFilter::mocapCallback(const geometry_msgs::TransformStamped msg)
 
 void mocapFilter::initializeX(geometry_msgs::TransformStamped msg)
 {
+  ROS_INFO("init");
   tf::Transform measurement;
   double roll, pitch, yaw;
   tf::transformMsgToTF(msg.transform, measurement);
@@ -108,12 +119,13 @@ void mocapFilter::updateIMU(sensor_msgs::Imu msg)
   p_ = LPF(prev_gx,msg.angular_velocity.x);
   q_ = LPF(prev_gy,msg.angular_velocity.y);
   r_ = LPF(prev_gz,msg.angular_velocity.z);
+  ROS_INFO_STREAM("p = " << p_ << " q = " << q_ << " r = " << r_);
   prev_gx = msg.angular_velocity.x;
   prev_gy = msg.angular_velocity.y;
   prev_gz = msg.angular_velocity.z;
   Eigen::Matrix<double, 3, 1> y;
   y << ax, ay, az_;
-  Eigen::Matrix<double, 3, NUM_STATES> C;
+  Eigen::Matrix<double, 3, NUM_STATES> C = Eigen::Matrix<double, 3, NUM_STATES>::Zero();
   C <<
   //N  E  D  U   V   W   PHI       THETA     PSI
     0, 0, 0, 0,  -r_,  q_, 0,        G*ct,     0,
@@ -136,18 +148,17 @@ void mocapFilter::updateMocap(geometry_msgs::TransformStamped msg)
        -measurement.getOrigin().getY(),
        -measurement.getOrigin().getZ(),
        roll, -pitch, -yaw;
-  Eigen::Matrix<double, 6, NUM_STATES> C;
+  Eigen::Matrix<double, 6, NUM_STATES> C = Eigen::Matrix<double, 6, NUM_STATES>::Zero();
   C(0,PN) = 1;
   C(1,PE) = 1;
   C(2,PD) = 1;
   C(3,PHI) = 1;
-  C(7,THETA) = 1;
-  C(8,PSI) = 1;
+  C(4,THETA) = 1;
+  C(5,PSI) = 1;
   Eigen::Matrix<double, NUM_STATES, 6> L;
   L = P_*C.transpose()*(R_Mocap_ + C*P_*C.transpose()).inverse();
   P_ = (Eigen::MatrixXd::Identity(NUM_STATES,NUM_STATES) - L*C)*P_;
   x_hat_ = x_hat_ + L*(y - C*x_hat_);
-
 }
 
 
@@ -216,9 +227,9 @@ Eigen::Matrix<double, NUM_STATES, NUM_STATES> mocapFilter::dfdx(const Eigen::Mat
       0, // PSI
 
 //PN PE PD U    V    W    PHI               THETA                       PSI
-  0, 0, 0, 0,   r_,   -q_,  0,                -G*ct,                      0,
+  0, 0, 0, 0,    r_,   -q_,  0,                -G*ct,                      0,
   0, 0, 0, -r_,  0,   p_,   G*ct*cp,          -G*ct*sp,                   0,
-  0, 0, 0, q_,   -p_,  0    -G*ct*sp,         -G*st*cp,                   0,
+  0, 0, 0, q_,  -p_,  0,    -G*ct*sp,         -G*st*cp,                   0,
   0, 0, 0, 0,   0,   0,   cp*tt*q_-sp*tt*r_,  (sp*q_ + cp*r_)/(ct*ct),      0,
   0, 0, 0, 0,   0,   0,   -sp*q_-cp*r_,       0,                          0,
   0, 0, 0, 0,   0,   0,   (q_*cp-r_*sp)/ct,   -(q_*sp+r_*cp)*tt/ct,         0;
@@ -247,9 +258,10 @@ void mocapFilter::publishEstimate()
   geometry_msgs::Vector3 velmsg;
   tf::vector3TFToMsg(vel, velmsg);
   state.velocity = velmsg;
-  boost::array<double, 36> covariance;
-  relative_nav::matrixToArray(P_, covariance);
-  state.covariance = covariance;
+  Eigen::Matrix<double, 36, 1> cov;
+  Eigen::Matrix<double, 36-NUM_STATES,1> empty;
+  cov << P_.diagonal(), empty;
+  relative_nav::matrixToArray(cov, state.covariance);
   estimate_pub_.publish(state);
 }
 
