@@ -9,7 +9,7 @@
   </node>
   
   <node name="record" pkg="rosbag" type="record" args="-O naze -a"/>
-  <node name="play" pkg="rosbag" type="play" args="/home/jarvis/imu_mocap_new_odroid.bag -r 3"  />
+  <node name="play" pkg="rosbag" type="play" args="/home/iman/imu_mocap_new_odroid.bag -r 3"  />
  
 
 </launch>

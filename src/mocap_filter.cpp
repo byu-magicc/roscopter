@@ -32,16 +32,14 @@ mocapFilter::mocapFilter() :
 
 void mocapFilter::publishTimerCallback(const ros::TimerEvent &event)
 {
-  if(flying_){
-    publishEstimate();
-  }
+  publishEstimate();
   return;
 }
 
 void mocapFilter::predictTimerCallback(const ros::TimerEvent &event)
 {
   if(flying_){
-//    predictStep();
+    predictStep();
   }
   return;
 }
@@ -53,6 +51,7 @@ void mocapFilter::imuCallback(const sensor_msgs::Imu msg)
     if(fabs(msg.linear_acceleration.z) > 11.0){
       ROS_WARN("Now flying");
       flying_ = true;
+      previous_predict_time_ = ros::Time::now();
     }
   }
   if(flying_){
@@ -64,10 +63,9 @@ void mocapFilter::imuCallback(const sensor_msgs::Imu msg)
 
 void mocapFilter::mocapCallback(const geometry_msgs::TransformStamped msg)
 {
-  if(first_mocap_){
-    ROS_INFO("motion capture received");
+  if(!flying_){
+    ROS_INFO_THROTTLE(1,"Not flying, but motion capture received, estimate is copy of mocap");
     initializeX(msg);
-    first_mocap_ = false;
   }else{
     updateMocap(msg);
   }
@@ -76,7 +74,7 @@ void mocapFilter::mocapCallback(const geometry_msgs::TransformStamped msg)
 
 void mocapFilter::initializeX(geometry_msgs::TransformStamped msg)
 {
-  ROS_INFO("init");
+  ROS_INFO_ONCE("ekf initialized");
   tf::Transform measurement;
   double roll, pitch, yaw;
   tf::transformMsgToTF(msg.transform, measurement);
@@ -93,7 +91,7 @@ void mocapFilter::initializeX(geometry_msgs::TransformStamped msg)
 void mocapFilter::predictStep()
 {
   ros::Time now = ros::Time::now();
-  double dt = (previous_predict_time_ - now).toSec();
+  double dt = (now-previous_predict_time_).toSec();
   x_hat_ = x_hat_ + dt*f(x_hat_);
   Eigen::Matrix<double, NUM_STATES, NUM_STATES> A = dfdx(x_hat_);
   P_ = P_ + dt*(A*P_ + P_*A.transpose() + Q_);
@@ -119,7 +117,6 @@ void mocapFilter::updateIMU(sensor_msgs::Imu msg)
   p_ = LPF(prev_gx,msg.angular_velocity.x);
   q_ = LPF(prev_gy,msg.angular_velocity.y);
   r_ = LPF(prev_gz,msg.angular_velocity.z);
-  ROS_INFO_STREAM("p = " << p_ << " q = " << q_ << " r = " << r_);
   prev_gx = msg.angular_velocity.x;
   prev_gy = msg.angular_velocity.y;
   prev_gz = msg.angular_velocity.z;
@@ -127,14 +124,14 @@ void mocapFilter::updateIMU(sensor_msgs::Imu msg)
   y << ax, ay, az_;
   Eigen::Matrix<double, 3, NUM_STATES> C = Eigen::Matrix<double, 3, NUM_STATES>::Zero();
   C <<
-  //N  E  D  U   V   W   PHI       THETA     PSI
-    0, 0, 0, 0,  -r_,  q_, 0,        G*ct,     0,
-    0, 0, 0, r_,  0,  -p_, -G*ct*cp, G*ct*sp,  0,
-    0, 0, 0, -q_, p_,  0,  G*ct*sp,  -G*st*cp, 0;
+  //N  E  D  U   V   W  PHI       THETA      PSI
+    0, 0, 0, 0,  0,  0, 0,        G*ct,    0,
+    0, 0, 0, 0,  0,  0, -G*ct*cp, G*st*sp, 0,
+    0, 0, 0, 0,  0,  0, G*ct*sp,  G*st*cp, 0;
   Eigen::Matrix<double, NUM_STATES, 3> L;
   L = P_*C.transpose()*(R_IMU_ + C*P_*C.transpose()).inverse();
-  P_ = (Eigen::MatrixXd::Identity(NUM_STATES,NUM_STATES) - L*C)*P_;
-  x_hat_ = x_hat_ + L*(y - C*x_hat_);
+//  P_ = (Eigen::MatrixXd::Identity(NUM_STATES,NUM_STATES) - L*C)*P_;
+//  x_hat_ = x_hat_ + L*(y - C*x_hat_);
 }
 
 void mocapFilter::updateMocap(geometry_msgs::TransformStamped msg)
@@ -211,28 +208,28 @@ Eigen::Matrix<double, NUM_STATES, NUM_STATES> mocapFilter::dfdx(const Eigen::Mat
 //PN PE PD U      V                 W
   0, 0, 0, ct*cs, (sp*st*cs-cp*ss), (cp*st*cs+sp*ss),
       0 + (cp*st*cs+sp*ss)*v + (-sp*st*cs+cp*ss)*w, // PHI
-      -st*cs*u + (sp*ct*cs)*v + (cp*ct*cs)*w, // THETA
+      -st*cs*u + (sp*ct*cs)*v + (cp*ct*ss)*w, // THETA
       -ct*ss*u + (-sp*st*ss-cp*cs)*v + (-cp*st*ss+sp*cs)*w, // PSI
 
 //PN PE PD U      V                 W
   0, 0, 0, cp*ss, (sp*st*ss+cp*cs), (cp*st*ss-sp*cs),
-      -sp*ss*u  + (cp*st*ss-sp*cs)*v + (-sp*st*ss-cp*cs)*w,
-      0 + (sp*ct*ss)*v + (cp*ct*ss)*w, // THETA
-      cp*cs*u  + (sp*st*cs-cp*ss)*v + (cp*st*cs+sp*ss)*w, // PSI
+      0 + (cp*st*ss-sp*cs)*v + (-sp*st*ss-cp*cs)*w,
+      -st*ss*u + (sp*ct*ss)*v + (cp*ct*ss)*w, // THETA
+      ct*cs*u  + (sp*st*cs-cp*ss)*v + (cp*st*cs+sp*ss)*w, // PSI
 
 //PN PE PD U      V                 W
-  0, 0, 0, st,     -sp*ct,           -cp*ct,
-      - cp*ct*v           + sp*ct*w, // PHI
-      ct*u     + sp*st*v            + cp*st*w, // THETA
+  0, 0, 0, st,  - sp*ct,           - cp*ct,
+      cp*ct*v   - sp*ct*w, // PHI
+      -ct*u     - sp*st*v - cp*st*w, // THETA
       0, // PSI
 
 //PN PE PD U    V    W    PHI               THETA                       PSI
-  0, 0, 0, 0,    r_,   -q_,  0,                -G*ct,                      0,
-  0, 0, 0, -r_,  0,   p_,   G*ct*cp,          -G*ct*sp,                   0,
-  0, 0, 0, q_,  -p_,  0,    -G*ct*sp,         -G*st*cp,                   0,
-  0, 0, 0, 0,   0,   0,   cp*tt*q_-sp*tt*r_,  (sp*q_ + cp*r_)/(ct*ct),      0,
-  0, 0, 0, 0,   0,   0,   -sp*q_-cp*r_,       0,                          0,
-  0, 0, 0, 0,   0,   0,   (q_*cp-r_*sp)/ct,   -(q_*sp+r_*cp)*tt/ct,         0;
+  0, 0, 0, 0,   r_,  -q_, 0,                -G*ct,                      0,
+  0, 0, 0, -r_, 0,   p_,  G*ct*cp,          -G*ct*sp,                   0,
+  0, 0, 0, q_,  -p_, 0,   -G*ct*sp,         -G*st*cp,                   0,
+  0, 0, 0, 0,   0,   0,   cp*tt*q_-sp*tt*r_,  (sp*q_ + cp*r_)/(ct*ct),  0,
+  0, 0, 0, 0,   0,   0,   -sp*q_-cp*r_,       0,                        0,
+  0, 0, 0, 0,   0,   0,   (q_*cp-r_*sp)/ct,   -(q_*sp+r_*cp)*tt/ct,     0;
   return result;
 }
 
