@@ -8,6 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   relative_nav
+  eigen_conversions
 )
 find_package(Eigen REQUIRED)
 
@@ -27,7 +28,7 @@ include_directories(
 # )
 
 ## Declare a cpp executable
-add_executable(mocap_filter_node
+add_executable(mocap_filter
   src/mocap_filter_node.cpp
   src/mocap_filter.cpp
   include/mocap_filter/mocap_filter.h
@@ -35,8 +36,8 @@ add_executable(mocap_filter_node
 )
 
 ## Add cmake target dependencies of the executable/library
-add_dependencies(mocap_filter_node relative_nav_msgs_generate_messages_cpp)
+add_dependencies(mocap_filter relative_nav_generate_messages_cpp)
 
-target_link_libraries(mocap_filter_node
+target_link_libraries(mocap_filter
   ${catkin_LIBRARIES}
 )
