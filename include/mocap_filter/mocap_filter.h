@@ -3,6 +3,7 @@
 
 #include <ros/ros.h>
 #include <sensor_msgs/Imu.h>
+#include <std_msgs/Bool.h>
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/LU>
 #include <eigen3/Eigen/Dense>
@@ -50,6 +51,7 @@ private:
   ros::Subscriber mocap_sub_;
   ros::Subscriber imu_sub_;
   ros::Publisher estimate_pub_;
+  ros::Publisher is_flying_pub_;
   ros::Timer predict_timer_;
   ros::Timer publish_timer_;
 

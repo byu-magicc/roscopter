@@ -20,7 +20,8 @@ mocapFilter::mocapFilter() :
   // Setup publishers and subscribers
   imu_sub_ = nh_.subscribe("imu/data", 1, &mocapFilter::imuCallback, this);
   mocap_sub_ = nh_.subscribe("mocap", 1, &mocapFilter::mocapCallback, this);
-  estimate_pub_ = nh_.advertise<relative_nav::FilterState>("estimate", 1);
+  estimate_pub_ = nh_.advertise<relative_nav::FilterState>("relative_state", 1);
+  is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1);
   predict_timer_ = nh_.createTimer(ros::Duration(1.0/inner_loop_rate_), &mocapFilter::predictTimerCallback, this);
   publish_timer_ = nh_.createTimer(ros::Duration(1.0/publish_rate_), &mocapFilter::publishTimerCallback, this);
 
@@ -51,6 +52,9 @@ void mocapFilter::imuCallback(const sensor_msgs::Imu msg)
     if(fabs(msg.linear_acceleration.z) > 11.0){
       ROS_WARN("Now flying");
       flying_ = true;
+      std_msgs::Bool flying;
+      flying.data = true;
+      is_flying_pub_.publish(flying);
       previous_predict_time_ = ros::Time::now();
     }
   }
@@ -259,6 +263,7 @@ void mocapFilter::publishEstimate()
   Eigen::Matrix<double, 36-NUM_STATES,1> empty;
   cov << P_.diagonal(), empty;
   relative_nav::matrixToArray(cov, state.covariance);
+  state.node_id = 1;
   estimate_pub_.publish(state);
 }
 
