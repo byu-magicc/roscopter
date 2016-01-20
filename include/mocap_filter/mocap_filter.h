@@ -76,7 +76,7 @@ private:
 
   ros::Time previous_predict_time_;
   double prev_p_, prev_q_, prev_r_;
-  double p_, q_, r_, az_;
+  double p_, q_, r_, az_, ax_, ay_;
   double alpha_;
   bool first_mocap_, flying_;
 

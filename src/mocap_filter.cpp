@@ -10,7 +10,7 @@ mocapFilter::mocapFilter() :
   // retrieve params
   nh_private_.param<double>("inner_loop_rate", inner_loop_rate_, 400);
   nh_private_.param<double>("publish_rate", publish_rate_, 400);
-  nh_private_.param<double>("alpha", alpha_, 0.7);
+  nh_private_.param<double>("alpha", alpha_, 0.2);
   relative_nav::importMatrixFromParamServer(nh_private_, x_hat_, "x0");
   relative_nav::importMatrixFromParamServer(nh_private_, P_, "P0");
   relative_nav::importMatrixFromParamServer(nh_private_, Q_, "Q0");
@@ -105,7 +105,7 @@ void mocapFilter::predictStep()
 
 void mocapFilter::updateIMU(sensor_msgs::Imu msg)
 {
-  static double prev_gx(0.0), prev_gy(0.0), prev_gz(0.0);
+  static double prev_gx(0.0), prev_gy(0.0), prev_gz(0.0), prev_ax(0.0), prev_ay(0.0), prev_az(0.0);
   double ax, ay;
   double phi(x_hat_(PHI)), theta(x_hat_(THETA)), psi(x_hat_(PSI));
   double ct = cos(theta);
@@ -115,15 +115,18 @@ void mocapFilter::updateIMU(sensor_msgs::Imu msg)
   double ss = sin(psi);
   double sp = sin(phi);
   double tt = tan(theta);
-  ax = msg.linear_acceleration.x;
-  ay = msg.linear_acceleration.y;
-  az_ = msg.linear_acceleration.z;
+  ax = LPF(prev_ax,msg.linear_acceleration.x);
+  ay = LPF(prev_ay,msg.linear_acceleration.y);
+  az_ = LPF(prev_az,msg.linear_acceleration.z);
   p_ = LPF(prev_gx,msg.angular_velocity.x);
   q_ = LPF(prev_gy,msg.angular_velocity.y);
   r_ = LPF(prev_gz,msg.angular_velocity.z);
-  prev_gx = msg.angular_velocity.x;
-  prev_gy = msg.angular_velocity.y;
-  prev_gz = msg.angular_velocity.z;
+  prev_ax = ax;
+  prev_ay = ay;
+  prev_az = az_;
+  prev_gx = p_;
+  prev_gy = q_;
+  prev_gz = r_;
   Eigen::Matrix<double, 3, 1> y;
   y << ax, ay, az_;
   Eigen::Matrix<double, 3, NUM_STATES> C = Eigen::Matrix<double, 3, NUM_STATES>::Zero();
@@ -133,9 +136,10 @@ void mocapFilter::updateIMU(sensor_msgs::Imu msg)
     0, 0, 0, 0,  0,  0, -G*ct*cp, G*st*sp, 0,
     0, 0, 0, 0,  0,  0, G*ct*sp,  G*st*cp, 0;
   Eigen::Matrix<double, NUM_STATES, 3> L;
+  L.setZero();
   L = P_*C.transpose()*(R_IMU_ + C*P_*C.transpose()).inverse();
-//  P_ = (Eigen::MatrixXd::Identity(NUM_STATES,NUM_STATES) - L*C)*P_;
-//  x_hat_ = x_hat_ + L*(y - C*x_hat_);
+  P_ = (Eigen::MatrixXd::Identity(NUM_STATES,NUM_STATES) - L*C)*P_;
+  x_hat_ = x_hat_ + L*(y - C*x_hat_);
 }
 
 void mocapFilter::updateMocap(geometry_msgs::TransformStamped msg)
@@ -157,6 +161,7 @@ void mocapFilter::updateMocap(geometry_msgs::TransformStamped msg)
   C(4,THETA) = 1;
   C(5,PSI) = 1;
   Eigen::Matrix<double, NUM_STATES, 6> L;
+  L.setZero();
   L = P_*C.transpose()*(R_Mocap_ + C*P_*C.transpose()).inverse();
   P_ = (Eigen::MatrixXd::Identity(NUM_STATES,NUM_STATES) - L*C)*P_;
   x_hat_ = x_hat_ + L*(y - C*x_hat_);
