@@ -29,7 +29,7 @@
 
 #define NUM_STATES 9
 
-#define G 9.81
+#define G 10.6160
 
 namespace mocap_filter
 {

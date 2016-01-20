@@ -1,7 +1,7 @@
 %data = processTopics({'/relative_state','/vo_out','/naze/CG','/altimeter'},'one/naze.bag');
 %data = processTopics({'/relative_state','/vo_out','/naze/CG','/altimeter'},'two/naze.bag');
 %data = processTopics({'/relative_state','/vo_out','/naze/CG','/altimeter'},'three/naze.bag');
-data = processAllTopics('/home/iman/.ros/naze.bag');
+data = processAllTopics('/home/jarvis/.ros/naze.bag');
 
 %% TRANSLATION
 figure(1); clf
@@ -69,21 +69,43 @@ end
 
 %% ROTATION
 % LPF For mocap data
-[b,a] = butter(6, 0.15);
+[b,a] = butter(6, 0.2);
 
-figure(3); clf
+figure(3); clf;
 % Plot euler
 labels = {'roll','pitch','yaw'};
-for i = 1:3
+for i = 1:2 % roll and pitch
  subplot(3,1,i); hold on;
  cov_area_X = [data.relative_state.time, fliplr(data.relative_state.time)];
- cov_area_Y = [20*sqrt(data.relative_state.covariance(6+i,:)) + data.relative_state.transform.euler(:,i)',...
-            fliplr(-20*sqrt(data.relative_state.covariance(6+i,:)) + data.relative_state.transform.euler(:,i)')];
+ cov_area_Y = [2*sqrt(data.relative_state.covariance(6+i,:)) + data.relative_state.transform.euler(:,i)',...
+            fliplr(-2*sqrt(data.relative_state.covariance(6+i,:)) + data.relative_state.transform.euler(:,i)')];
  fill(cov_area_X, cov_area_Y,'k', 'facealpha',.5,'edgecolor','none');
- estimate = plot(data.relative_state.time', data.relative_state.transform.euler(:,i)-data.relative_state.transform.euler(1,i),'-b');
+ estimate = plot(data.relative_state.time', data.relative_state.transform.euler(:,i),'-b');
  truth = plot(data.transformed_mocap.time', filtfilt(b,a,data.transformed_mocap.transform.euler(:,i)),'-r');
  ylabel(strcat(labels{i},' (deg)'));
  %legend('Truth','Estimates')
 end
+% yaw
+i = 3;
+subplot(3,1,i); hold on;
+cov_area_X = [data.relative_state.time, fliplr(data.relative_state.time)];
+cov_area_Y = [2*sqrt(data.relative_state.covariance(6+i,:)) + (data.relative_state.transform.euler(:,i)-data.transformed_mocap.transform.euler(1,i))',...
+        fliplr(-2*sqrt(data.relative_state.covariance(6+i,:)) + (data.relative_state.transform.euler(:,i)-data.transformed_mocap.transform.euler(1,i))')];
+fill(cov_area_X, cov_area_Y,'k', 'facealpha',.5,'edgecolor','none');
+estimate = plot(data.relative_state.time', data.relative_state.transform.euler(:,i)-data.transformed_mocap.transform.euler(1,i),'-b');
+truth = plot(data.transformed_mocap.time', filtfilt(b,a,data.transformed_mocap.transform.euler(:,i)),'-r');
+ylabel(strcat(labels{i},' (deg)'));
+%legend('Truth','Estimates')
 xlabel('time (sec)');
 suptitle('Euler')
+
+%% accelerometers
+% figure(4); clf; hold on;
+% for i = 1:3
+%     plot(data.imu.data.time(1:150), data.imu.data.acc(i,1:150));
+% end
+% hold off
+% 
+% x = mean(data.imu.data.acc(1,1:150))
+% y = mean(data.imu.data.acc(2,1:150))
+% z = mean(data.imu.data.acc(3,1:150))
