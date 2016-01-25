@@ -17,7 +17,7 @@ labels = {'forward','right','down'};
  truth = plot(data.naze.CG.time, data.naze.CG.transform.translation(1,:),'-r');
  ylabel(strcat(labels{1},' (m)'));
  legend([estimate, truth],'estimate','truth', 'Location','northoutside','Orientation','horizontal')
- axis([0,20,-2,4])
+ axis([0,80,-2,4])
  hold off;
 
 % PLOT Y
@@ -29,7 +29,7 @@ labels = {'forward','right','down'};
  estimate = plot(data.relative_state.time, data.relative_state.transform.translation(2,:),'-b');
  truth = plot(data.naze.CG.time, -data.naze.CG.transform.translation(2,:),'-r');
  ylabel(strcat(labels{2},' (m)'));
- axis([0,20,-2,4])
+ axis([0,80,-2,4])
  hold off;
 
 % PLOT Z
@@ -41,7 +41,7 @@ labels = {'forward','right','down'};
  estimate = plot(data.relative_state.time, data.relative_state.transform.translation(3,:),'-b');
  truth = plot(data.naze.CG.time, -data.naze.CG.transform.translation(3,:),'-r');
  ylabel(strcat(labels{3},' (m)'));
- axis([0,20,-2,4])
+ axis([0,80,-2,4])
  hold off;
 
  xlabel('time (sec)');
@@ -62,7 +62,7 @@ for i = 1:3
  estimate = plot(data.relative_state.time, data.relative_state.velocity(i,:),'-b');
  truth = plot(data.transformed_mocap.time, filtfilt(b,a,data.transformed_mocap.velocity(i,:)),'-r');
  ylabel(strcat(labels{i},' (m)'));
- axis([0,20,-2,4])
+ axis([0,80,-2,4])
  hold off;
 end
 
@@ -100,12 +100,13 @@ xlabel('time (sec)');
 suptitle('Euler')
 
 %% accelerometers
-% figure(4); clf; hold on;
-% for i = 1:3
-%     plot(data.imu.data.time(1:150), data.imu.data.acc(i,1:150));
-% end
-% hold off
-% 
-% x = mean(data.imu.data.acc(1,1:150))
-% y = mean(data.imu.data.acc(2,1:150))
-% z = mean(data.imu.data.acc(3,1:150))
+figure(4); clf; hold on;
+[b,a] = butter(6, 0.1);
+for i = 1:3
+    plot(data.imu.data.time, filtfilt(b,a,data.imu.data.acc(i,:)));
+end
+hold off
+
+x = mean(data.imu.data.acc(1,1:50))
+y = mean(data.imu.data.acc(2,1:50))
+z = mean(data.imu.data.acc(3,1:50))

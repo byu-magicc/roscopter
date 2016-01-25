@@ -39,6 +39,6 @@ R_Mocap: [0.01, 0,0,0,0,0,0,
           0.01, 0,0,0,0,0,0,
           0.01],
 
-inner_loop_rate: 800,
+inner_loop_rate: 1000,
 alpha: 0.3
 }

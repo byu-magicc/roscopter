@@ -25,7 +25,6 @@ mocapFilter::mocapFilter() :
   predict_timer_ = nh_.createTimer(ros::Duration(1.0/inner_loop_rate_), &mocapFilter::predictTimerCallback, this);
   publish_timer_ = nh_.createTimer(ros::Duration(1.0/publish_rate_), &mocapFilter::publishTimerCallback, this);
 
-  first_mocap_ = true;
   flying_ = false;
   ROS_INFO("Done");
   return;
@@ -105,8 +104,7 @@ void mocapFilter::predictStep()
 
 void mocapFilter::updateIMU(sensor_msgs::Imu msg)
 {
-  static double prev_gx(0.0), prev_gy(0.0), prev_gz(0.0), prev_ax(0.0), prev_ay(0.0), prev_az(0.0);
-  double ax, ay;
+  double ax, ay, az;
   double phi(x_hat_(PHI)), theta(x_hat_(THETA)), psi(x_hat_(PSI));
   double ct = cos(theta);
   double cs = cos(psi);
@@ -117,18 +115,22 @@ void mocapFilter::updateIMU(sensor_msgs::Imu msg)
   double tt = tan(theta);
   ax = msg.linear_acceleration.x;
   ay = msg.linear_acceleration.y;
-  az_ = msg.linear_acceleration.z;
+  az = msg.linear_acceleration.z;
+  static double prev_gx(msg.angular_velocity.x), prev_gy(msg.angular_velocity.y), prev_gz(msg.angular_velocity.z);
+  static double prev_ax(ax), prev_ay(ay), prev_az(az);
   p_ = LPF(prev_gx,msg.angular_velocity.x);
   q_ = LPF(prev_gy,msg.angular_velocity.y);
   r_ = LPF(prev_gz,msg.angular_velocity.z);
+  filt_az_ = LPF(prev_az, az);
   prev_ax = ax;
   prev_ay = ay;
-  prev_az = az_;
+  prev_az = az;
   prev_gx = msg.angular_velocity.x;
   prev_gy = msg.angular_velocity.y;
   prev_gz = msg.angular_velocity.z;
+
   Eigen::Matrix<double, 3, 1> y;
-  y << ax, ay, az_;
+  y << ax, ay, az;
   Eigen::Matrix<double, 3, NUM_STATES> C = Eigen::Matrix<double, 3, NUM_STATES>::Zero();
   C <<
   //N  E  D  U   V   W  PHI       THETA      PSI
@@ -189,7 +191,7 @@ Eigen::Matrix<double, NUM_STATES, 1> mocapFilter::f(const Eigen::Matrix<double, 
 
           r_*v-q_*w - G*st,  // velocity (Body Frame)
           p_*w-r_*u + G*ct*sp,
-          q_*u-p_*v + G*ct*cp + az_,
+          q_*u-p_*v + G*ct*cp + filt_az_,
 
           p_ + sp*tt*q_ + cp*tt*r_, // attitude (Inertial Frame)
           cp*q_    - sp*r_,

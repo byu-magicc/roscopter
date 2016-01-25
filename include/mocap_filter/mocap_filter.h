@@ -29,7 +29,7 @@
 
 #define NUM_STATES 9
 
-#define G 10.6160
+#define G 9.80
 
 namespace mocap_filter
 {
@@ -76,9 +76,9 @@ private:
 
   ros::Time previous_predict_time_;
   double prev_p_, prev_q_, prev_r_;
-  double p_, q_, r_, az_, ax_, ay_;
+  double p_, q_, r_, filt_az_, ax_, ay_;
   double alpha_;
-  bool first_mocap_, flying_;
+  bool flying_;
 
   // Functions
   void mocapCallback(const geometry_msgs::TransformStamped msg);
