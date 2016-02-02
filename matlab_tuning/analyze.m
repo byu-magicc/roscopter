@@ -103,10 +103,6 @@ suptitle('Euler')
 figure(4); clf; hold on;
 [b,a] = butter(6, 0.1);
 for i = 1:3
-    plot(data.imu.data.time, filtfilt(b,a,data.imu.data.acc(i,:)));
+     plot(data.imu.data.time, filtfilt(b,a,data.imu.data.euler(:,i)));
 end
 hold off
-
-x = mean(data.imu.data.acc(1,1:50))
-y = mean(data.imu.data.acc(2,1:50))
-z = mean(data.imu.data.acc(3,1:50))

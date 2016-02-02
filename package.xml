@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package>
-  <name>mocap_filter</name>
+  <name>ros_copter</name>
   <version>0.0.0</version>
-  <description>The mocap_filter package</description>
+  <description>The ekf package</description>
 
   <maintainer email="superjax08@gmail.com">James Jackson</maintainer>
 

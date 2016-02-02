@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(mocap_filter)
+project(ros_copter)
 
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
@@ -23,21 +23,15 @@ include_directories(
 )
 
 ## Declare a cpp library
-# add_library(mocap_filter
-#   src/${PROJECT_NAME}/mocap_filter.cpp
+# add_library(ekf
+#   src/${PROJECT_NAME}/ekf.cpp
 # )
 
 ## Declare a cpp executable
-add_executable(mocap_filter
-  src/mocap_filter_node.cpp
-  src/mocap_filter.cpp
-  include/mocap_filter/mocap_filter.h
-  include/mocap_filter/message.h
+add_executable(ekf
+  src/ekf_node.cpp
+  src/ekf.cpp
+  include/ekf/ekf.h
 )
-
-## Add cmake target dependencies of the executable/library
-add_dependencies(mocap_filter relative_nav_generate_messages_cpp)
-
-target_link_libraries(mocap_filter
-  ${catkin_LIBRARIES}
-)
+add_dependencies(ekf relative_nav_generate_messages_cpp)
+target_link_libraries(ekf  ${catkin_LIBRARIES} )

@@ -131,6 +131,9 @@ for topic = topics
         case 'sensor_msgs/Imu'
             struct.acc = [a.linear_acceleration];
             struct.gyro = [a.angular_velocity];
+            struct.orientation = [a.orientation];
+            [r,p,y] = rollPitchYawFromQuaternion(struct.orientation');
+            struct.euler = [r,p,y]*180/pi;
             struct.time = [d.time] -t0; % This could also use the header time    
         case 'sensor_msgs/LaserScan'
             struct.angle_min = [a.angle_min];
