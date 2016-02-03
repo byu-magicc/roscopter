@@ -11,16 +11,16 @@ mocapFilter::mocapFilter() :
   nh_private_.param<double>("inner_loop_rate", inner_loop_rate_, 400);
   nh_private_.param<double>("publish_rate", publish_rate_, 400);
   nh_private_.param<double>("alpha", alpha_, 0.2);
-  relative_nav::importMatrixFromParamServer(nh_private_, x_hat_, "x0");
-  relative_nav::importMatrixFromParamServer(nh_private_, P_, "P0");
-  relative_nav::importMatrixFromParamServer(nh_private_, Q_, "Q0");
-  relative_nav::importMatrixFromParamServer(nh_private_, R_IMU_, "R_IMU");
-  relative_nav::importMatrixFromParamServer(nh_private_, R_Mocap_, "R_Mocap");
+  ros_copter::importMatrixFromParamServer(nh_private_, x_hat_, "x0");
+  ros_copter::importMatrixFromParamServer(nh_private_, P_, "P0");
+  ros_copter::importMatrixFromParamServer(nh_private_, Q_, "Q0");
+  ros_copter::importMatrixFromParamServer(nh_private_, R_IMU_, "R_IMU");
+  ros_copter::importMatrixFromParamServer(nh_private_, R_Mocap_, "R_Mocap");
 
   // Setup publishers and subscribers
   imu_sub_ = nh_.subscribe("imu/data", 1, &mocapFilter::imuCallback, this);
   mocap_sub_ = nh_.subscribe("mocap", 1, &mocapFilter::mocapCallback, this);
-  estimate_pub_ = nh_.advertise<relative_nav::FilterState>("relative_state", 1);
+  estimate_pub_ = nh_.advertise<nav_msgs::Odometry>("estimate", 1);
   is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1);
   predict_timer_ = nh_.createTimer(ros::Duration(1.0/inner_loop_rate_), &mocapFilter::predictTimerCallback, this);
   publish_timer_ = nh_.createTimer(ros::Duration(1.0/publish_rate_), &mocapFilter::publishTimerCallback, this);
@@ -257,32 +257,45 @@ Eigen::Matrix<double, NUM_STATES, NUM_STATES> mocapFilter::dfdx(const Eigen::Mat
 
 void mocapFilter::publishEstimate()
 {
-  relative_nav::FilterState state;
+  nav_msgs::Odometry estimate;
   double pn(x_hat_(PN)), pe(x_hat_(PE)), pd(x_hat_(PD));
   double u(x_hat_(U)), v(x_hat_(V)), w(x_hat_(W));
   double phi(x_hat_(PHI)), theta(x_hat_(THETA)), psi(x_hat_(PSI));
 
-  tf::Matrix3x3 R;
-  R.setEulerYPR(psi, theta, phi);
   tf::Quaternion q;
-  R.getRotation(q);
+  q.setRPY(phi, theta, psi);
   geometry_msgs::Quaternion qmsg;
   tf::quaternionTFToMsg(q, qmsg);
-  state.transform.rotation = qmsg;
-  tf::Vector3 pos(pn, pe, pd);
-  geometry_msgs::Vector3 posmsg;
-  tf::vector3TFToMsg(pos, posmsg);
-  state.transform.translation = posmsg;
-  tf::Vector3 vel(u, v, w);
-  geometry_msgs::Vector3 velmsg;
-  tf::vector3TFToMsg(vel, velmsg);
-  state.velocity = velmsg;
-  Eigen::Matrix<double, 36, 1> cov;
-  Eigen::Matrix<double, 36-NUM_STATES,1> empty;
-  cov << P_.diagonal(), empty;
-  relative_nav::matrixToArray(cov, state.covariance);
-  state.node_id = 1;
-  estimate_pub_.publish(state);
+  estimate.pose.pose.orientation = qmsg;
+
+  estimate.pose.pose.position.x = pn;
+  estimate.pose.pose.position.y = pe;
+  estimate.pose.pose.position.z = pd;
+
+  estimate.pose.covariance[0*6+0] = P_(PN, PN);
+  estimate.pose.covariance[1*6+1] = P_(PE, PE);
+  estimate.pose.covariance[2*6+2] = P_(PD, PD);
+  estimate.pose.covariance[3*6+3] = P_(PHI, PHI);
+  estimate.pose.covariance[4*6+4] = P_(THETA, THETA);
+  estimate.pose.covariance[5*6+5] = P_(PSI, PSI);
+
+  estimate.twist.twist.linear.x = u;
+  estimate.twist.twist.linear.y = v;
+  estimate.twist.twist.linear.z = w;
+  estimate.twist.twist.angular.x = p_;
+  estimate.twist.twist.angular.y = q_;
+  estimate.twist.twist.angular.z = r_;
+
+  estimate.twist.covariance[0*6+0] = P_(U, U);
+  estimate.twist.covariance[1*6+1] = P_(V, V);
+  estimate.twist.covariance[2*6+2] = P_(W, W);
+  estimate.twist.covariance[3*6+3] = 0.05;  // not being estimated
+  estimate.twist.covariance[4*6+4] = 0.05;
+  estimate.twist.covariance[5*6+5] = 0.05;
+
+  estimate.header.frame_id = "body_link";
+  estimate.header.stamp = ros::Time::now();
+  estimate_pub_.publish(estimate);
 }
 
 

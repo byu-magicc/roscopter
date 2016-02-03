@@ -1,5 +1,5 @@
-#ifndef ekf_H
-#define ekf_H
+#ifndef EKF_H
+#define EKF_H
 
 #include <ros/ros.h>
 #include <sensor_msgs/Imu.h>
@@ -8,10 +8,10 @@
 #include <eigen3/Eigen/LU>
 #include <eigen3/Eigen/Dense>
 #include <geometry_msgs/TransformStamped.h>
-#include <relative_nav/FilterState.h>
+#include <nav_msgs/Odometry.h>
 #include <tf/tf.h>
 #include <deque>
-#include <relative_nav/eigen.h>
+#include <lib/eigen.h>
 #include <eigen_conversions/eigen_msg.h>
 
 // state numbers
@@ -98,4 +98,4 @@ private:
 
 } // namespace ekf
 
-#endif // mocapFilter_H
+#endif // EKF_H
