@@ -3,8 +3,8 @@
  <!-- Set non-default parameters -->
 
  <!--Estimation-->
-  <node name="ekf" pkg="ekf"  type="ekf" output="screen">
-    <rosparam command="load" file="$(find ekf)/params/estimator.yaml" />
+  <node name="ekf" pkg="ros_copter"  type="ekf" output="screen">
+    <rosparam command="load" file="$(find ros_copter)/params/estimator.yaml" />
     <remap from="mocap" to="/naze/CG"/> 
   </node>
   

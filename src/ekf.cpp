@@ -25,6 +25,7 @@ mocapFilter::mocapFilter() :
   predict_timer_ = nh_.createTimer(ros::Duration(1.0/inner_loop_rate_), &mocapFilter::predictTimerCallback, this);
   publish_timer_ = nh_.createTimer(ros::Duration(1.0/publish_rate_), &mocapFilter::publishTimerCallback, this);
 
+  x_hat_.setZero();
   flying_ = false;
   ROS_INFO("Done");
   return;
@@ -82,14 +83,15 @@ void mocapFilter::initializeX(geometry_msgs::TransformStamped msg)
   double roll, pitch, yaw;
   tf::transformMsgToTF(msg.transform, measurement);
   tf::Matrix3x3(measurement.getRotation()).getRPY(roll, pitch, yaw);
-  x_hat_ <<
-      measurement.getOrigin().getX(), // NWU to NED
-      -measurement.getOrigin().getY(),
-      -measurement.getOrigin().getZ(),
-      0, 0, 0,
-      roll, -pitch, -yaw;
+  x_hat_(PN) =  measurement.getOrigin().getX(); // NWU to NED
+  x_hat_(PE) = -measurement.getOrigin().getY();
+  x_hat_(PD) = -measurement.getOrigin().getZ();
+  x_hat_(PHI) = roll;
+  x_hat_(THETA) = -pitch;
+  x_hat_(PSI) = -yaw;
   return;
 }
+
 
 void mocapFilter::predictStep()
 {
@@ -102,52 +104,37 @@ void mocapFilter::predictStep()
   return;
 }
 
+
 void mocapFilter::updateIMU(sensor_msgs::Imu msg)
 {
-  double ax, ay, az;
   double phi(x_hat_(PHI)), theta(x_hat_(THETA)), psi(x_hat_(PSI));
   double ct = cos(theta);
-  double cs = cos(psi);
   double cp = cos(phi);
   double st = sin(theta);
-  double ss = sin(psi);
   double sp = sin(phi);
-  double tt = tan(theta);
-  ax = msg.linear_acceleration.x;
-  ay = msg.linear_acceleration.y;
-  az = msg.linear_acceleration.z;
-  static double prev_gx(msg.angular_velocity.x), prev_gy(msg.angular_velocity.y), prev_gz(msg.angular_velocity.z);
-  static double filt_ax(ax), filt_ay(ay);
-  p_ = LPF(prev_gx,msg.angular_velocity.x);
-  q_ = LPF(prev_gy,msg.angular_velocity.y);
-  r_ = LPF(prev_gz,msg.angular_velocity.z);
-  filt_az_ = LPF(filt_az_, az);
-  filt_ax = LPF(filt_ax, ax);
-  filt_ay = LPF(filt_ay, ay);
-
-  prev_gx = msg.angular_velocity.x;
-  prev_gy = msg.angular_velocity.y;
-  prev_gz = msg.angular_velocity.z;
-
-  tf::Quaternion attitude_tf;
-  tf::quaternionMsgToTF(msg.orientation, attitude_tf);
-  double roll, pitch, yaw;
-  tf::Matrix3x3(attitude_tf).getEulerYPR(yaw, pitch, roll);
+  ax_ = msg.linear_acceleration.x;
+  ay_ = msg.linear_acceleration.y;
+  az_ = msg.linear_acceleration.z;
+  gx_ = msg.angular_velocity.x;
+  gy_ = msg.angular_velocity.y;
+  gz_ = msg.angular_velocity.z;
 
   Eigen::Matrix<double, 3, 1> y;
-//  y << filt_ax, filt_ay, filt_az_;
-  y << roll, pitch, yaw;
-  Eigen::Matrix<double, 3, NUM_STATES> C = Eigen::Matrix<double, 3, NUM_STATES>::Zero();
-//  C <<
-//  //N  E  D  U   V   W  PHI       THETA      PSI
-//    0, 0, 0, 0,  0,  0, 0,        G*ct,      0,
-//    0, 0, 0, 0,  0,  0, -G*ct*cp, G*st*sp,   0,
-//    0, 0, 0, 0,  0,  0, G*ct*sp,  G*st*cp,   0;
-  C <<
-  //N  E  D  U   V   W  PHI       THETA      PSI
-    0, 0, 0, 0,  0,  0, 1,        0,         0,
-    0, 0, 0, 0,  0,  0, 0,        1,         0,
-    0, 0, 0, 0,  0,  0, 0,        0,         1;
+  y << ax_, ay_, az_;
+
+  Eigen::Matrix<double, 3, NUM_STATES> C;
+  C.setZero();
+  C(0,THETA) = G*ct;
+  C(0,AX) = -1;
+
+  C(0,PHI) = -G*ct*cp;
+  C(0,THETA) = -G*st*sp;
+  C(0,AY) = -1;
+
+  C(0,PHI) = G*ct*sp;
+  C(0,THETA) = G*st*sp;
+  C(0,AZ) = -1;
+
   Eigen::Matrix<double, NUM_STATES, 3> L;
   L.setZero();
   L = P_*C.transpose()*(R_IMU_ + C*P_*C.transpose()).inverse();
@@ -170,8 +157,8 @@ void mocapFilter::updateMocap(geometry_msgs::TransformStamped msg)
   C(0,PN) = 1;
   C(1,PE) = 1;
   C(2,PD) = 1;
-  C(3,PHI) = 0;
-  C(4,THETA) = 0;
+  C(3,PHI) = 1;
+  C(4,THETA) = 1;
   C(5,PSI) = 1;
   Eigen::Matrix<double, NUM_STATES, 6> L;
   L.setZero();
@@ -185,6 +172,8 @@ Eigen::Matrix<double, NUM_STATES, 1> mocapFilter::f(const Eigen::Matrix<double, 
 {
   double u(x(U)), v(x(V)), w(x(W));
   double phi(x(PHI)), theta(x(THETA)), psi(x(PSI));
+  double alpha_z(x(AZ));
+  double bx(x(BX)), by(x(BY)), bz(x(BZ));
 
   double ct = cos(theta);
   double cs = cos(psi);
@@ -196,17 +185,20 @@ Eigen::Matrix<double, NUM_STATES, 1> mocapFilter::f(const Eigen::Matrix<double, 
 
   // calculate forces - see eqs. 16-19, and 35-37.
   Eigen::Matrix<double, NUM_STATES, 1> xdot;
-  xdot  << ct*cs*u + (sp*st*cs-cp*ss)*v + (cp*st*cs+sp*ss)*w,  // position (Inertial)
-          cp*ss*u  + (sp*st*ss+cp*cs)*v + (cp*st*ss-sp*cs)*w,
-          st*u     - sp*ct*v            - cp*ct*w,
+  xdot.setZero();
+  xdot(PN) = ct*cs*u + (sp*st*cs-cp*ss)*v + (cp*st*cs+sp*ss)*w;
+  xdot(PE) = cp*ss*u  + (sp*st*ss+cp*cs)*v + (cp*st*ss-sp*cs)*w;
+  xdot(PD) = st*u     - sp*ct*v            - cp*ct*w;
 
-          r_*v-q_*w - G*st,  // velocity (Body Frame)
-          p_*w-r_*u + G*ct*sp,
-          q_*u-p_*v + G*ct*cp + filt_az_,
+  xdot(U) = (gz_+bz)*v-(gy_+by)*w - G*st;
+  xdot(V) = (gx_+bx)*w-(gz_+bz)*u + G*ct*sp;
+  xdot(W) = (gy_+by)*u-(gx_+bx)*v + G*ct*cp + (az_+alpha_z);
 
-          p_ + sp*tt*q_ + cp*tt*r_, // attitude (Inertial Frame)
-          cp*q_    - sp*r_,
-          sp/ct*q_ + cp/ct*r_;
+  xdot(PHI) = (gx_+bx) + sp*tt*(gy_+by) + cp*tt*(gz_+bz);
+  xdot(THETA) = (gy_+by)*ct - (gz_+bz)*sp;
+  xdot(PSI) = (gy_+by)*sp/ct + (gz_+bz)*cp/ct;
+
+  // all other states (biases) are constant
   return xdot;
 }
 
@@ -216,6 +208,7 @@ Eigen::Matrix<double, NUM_STATES, NUM_STATES> mocapFilter::dfdx(const Eigen::Mat
 {
   double u(x(U)), v(x(V)), w(x(W));
   double phi(x(PHI)), theta(x(THETA)), psi(x(PSI));
+  double bx(x(BX)), by(x(BY)), bz(x(BZ));
 
   double ct = cos(theta);
   double cs = cos(psi);
@@ -225,34 +218,66 @@ Eigen::Matrix<double, NUM_STATES, NUM_STATES> mocapFilter::dfdx(const Eigen::Mat
   double sp = sin(phi);
   double tt = tan(theta);
 
-  Eigen::Matrix<double, NUM_STATES, NUM_STATES> result;
-  result <<
-//PN PE PD U      V                 W
-  0, 0, 0, ct*cs, (sp*st*cs-cp*ss), (cp*st*cs+sp*ss),
-      0 + (cp*st*cs+sp*ss)*v + (-sp*st*cs+cp*ss)*w, // PHI
-      -st*cs*u + (sp*ct*cs)*v + (cp*ct*ss)*w, // THETA
-      -ct*ss*u + (-sp*st*ss-cp*cs)*v + (-cp*st*ss+sp*cs)*w, // PSI
+  Eigen::Matrix<double, NUM_STATES, NUM_STATES> A;
+  A.setZero();
+  A(PN,U) = ct*cs;
+  A(PN,V) = sp*st*cs-cp*ss;
+  A(PN,W) = cp*st*cs+sp*ss;
+  A(PN,PHI) = (cp*st*cs+sp*ss)*v + (-sp*st*cs+cp*ss)*w;
+  A(PN,THETA) = -st*cs*u + (sp*ct*cs)*v + (cp*ct*ss)*w;
+  A(PN,PSI) = -ct*ss*u + (-sp*st*ss-cp*cs)*v + (-cp*st*ss+sp*cs)*w;
 
-//PN PE PD U      V                 W
-  0, 0, 0, cp*ss, (sp*st*ss+cp*cs), (cp*st*ss-sp*cs),
-      0 + (cp*st*ss-sp*cs)*v + (-sp*st*ss-cp*cs)*w,
-      -st*ss*u + (sp*ct*ss)*v + (cp*ct*ss)*w, // THETA
-      ct*cs*u  + (sp*st*cs-cp*ss)*v + (cp*st*cs+sp*ss)*w, // PSI
+  A(PE,U) = cp*ss;
+  A(PE,V) = sp*st*ss+cp*cs;
+  A(PE,W) = cp*st*ss-sp*cs;
+  A(PE,PHI) = (cp*st*ss-sp*cs)*v + (-sp*st*ss-cp*cs)*w;
+  A(PE,THETA) = -st*ss*u + (sp*ct*ss)*v + (cp*ct*ss)*w;
+  A(PE,PSI) = ct*cs*u  + (sp*st*cs-cp*ss)*v + (cp*st*cs+sp*ss)*w;
 
-//PN PE PD U      V                 W
-  0, 0, 0, st,  - sp*ct,           - cp*ct,
-      cp*ct*v   - sp*ct*w, // PHI
-      -ct*u     - sp*st*v - cp*st*w, // THETA
-      0, // PSI
+  A(PD,U) = st;
+  A(PD,V) = -sp*ct;
+  A(PD,W) = -cp*ct;
+  A(PD,PHI) = cp*ct*v - sp*ct*w;
+  A(PD,THETA) = -ct*u - sp*st*v - cp*st*w;
 
-//PN PE PD U    V    W    PHI               THETA                       PSI
-  0, 0, 0, 0,   r_,  -q_, 0,                -G*ct,                      0,
-  0, 0, 0, -r_, 0,   p_,  G*ct*cp,          -G*ct*sp,                   0,
-  0, 0, 0, q_,  -p_, 0,   -G*ct*sp,         -G*st*cp,                   0,
-  0, 0, 0, 0,   0,   0,   cp*tt*q_-sp*tt*r_,  (sp*q_ + cp*r_)/(ct*ct),  0,
-  0, 0, 0, 0,   0,   0,   -sp*q_-cp*r_,       0,                        0,
-  0, 0, 0, 0,   0,   0,   (q_*cp-r_*sp)/ct,   -(q_*sp+r_*cp)*tt/ct,     0;
-  return result;
+  A(U,V) = gz_+bz;
+  A(U,W) = -(gy_+by);
+  A(U,THETA) = -G*ct;
+  A(U,BY) = -w;
+  A(U,BZ) = v;
+
+  A(V,U) = -(gz_+bz);
+  A(V,W) = gx_+bx;
+  A(V,PHI) = G*ct*cp;
+  A(V,THETA) = -G*ct*sp;
+  A(V,BX) = w;
+  A(V,BZ) = -u;
+
+  A(W,U) = gy_+by;
+  A(W,V) = -(gx_+bx);
+  A(W,PHI) = -G*ct*sp;
+  A(W,THETA) = -G*st*cp;
+  A(W,BX) = -v;
+  A(W,BY) = u;
+
+  A(PHI,PHI) = cp*tt*(gy_+by) - sp*tt*(gz_+bz);
+  A(PHI,THETA) = (sp*(gy_+by) + cp*(gz_+bz))/(ct*ct);
+  A(PHI,BX) = 1;
+  A(PHI,BY) = sp*tt;
+  A(PHI,BZ) = cp*tt;
+
+  A(THETA,PHI) = -sp*(gy_+by) -cp*(gz_+bz);
+  A(THETA,BY) = cp;
+  A(THETA,BZ) = -sp;
+
+  A(PSI,PHI) = ((gy_+by)*cp-(gz_+bz)*sp)/ct;
+  A(PSI,THETA) = -((gy_+by)*sp+(gz_+bz)*cp)*tt/ct;
+  A(PSI,BY) = sp/ct;
+  A(PSI,BZ) = cp/ct;
+
+  // all other states are zero
+
+  return A;
 }
 
 void mocapFilter::publishEstimate()
@@ -261,6 +286,7 @@ void mocapFilter::publishEstimate()
   double pn(x_hat_(PN)), pe(x_hat_(PE)), pd(x_hat_(PD));
   double u(x_hat_(U)), v(x_hat_(V)), w(x_hat_(W));
   double phi(x_hat_(PHI)), theta(x_hat_(THETA)), psi(x_hat_(PSI));
+  double bx(x_hat_(BX)), by(x_hat_(BY)), bz(x_hat_(BZ));
 
   tf::Quaternion q;
   q.setRPY(phi, theta, psi);
@@ -282,9 +308,9 @@ void mocapFilter::publishEstimate()
   estimate.twist.twist.linear.x = u;
   estimate.twist.twist.linear.y = v;
   estimate.twist.twist.linear.z = w;
-  estimate.twist.twist.angular.x = p_;
-  estimate.twist.twist.angular.y = q_;
-  estimate.twist.twist.angular.z = r_;
+  estimate.twist.twist.angular.x = gx_+bx;
+  estimate.twist.twist.angular.y = gy_+by;
+  estimate.twist.twist.angular.z = gz_+bz;
 
   estimate.twist.covariance[0*6+0] = P_(U, U);
   estimate.twist.covariance[1*6+1] = P_(V, V);
@@ -296,6 +322,9 @@ void mocapFilter::publishEstimate()
   estimate.header.frame_id = "body_link";
   estimate.header.stamp = ros::Time::now();
   estimate_pub_.publish(estimate);
+
+  double ax(x_hat_(AX)), ay(x_hat_(AY)),az(x_hat_(AZ));
+  ROS_INFO_STREAM("ax: " << ax << " ay:" << ay << " az: " << az << " bx: " << bx << " by: " << by << " bz: " << bz);
 }
 
 
@@ -307,4 +336,5 @@ double mocapFilter::LPF(double yn, double un)
 
 
 } // namespace ekf
+
 

@@ -9,8 +9,8 @@ figure(1); clf
 labels = {'forward','right','down'};
 % PLOT X
  subplot(3,1,1); hold on;
- cov_area_X = [data.relative_state.time, fliplr(data.relative_state.time)];
- cov_area_Y = [2*sqrt(data.relative_state.covariance(1,:)) + data.relative_state.transform.translation(1,:),...
+ cov_area_X = [data.estimate.time, fliplr(data.estimate.time)];
+ cov_area_Y = [2*sqrt(data.pose.covariance(1,:)) + data.relative_state.transform.translation(1,:),...
             fliplr(-2*sqrt(data.relative_state.covariance(1,:)) + data.relative_state.transform.translation(1,:))];
  fill(cov_area_X, cov_area_Y,'k', 'facealpha',.5,'edgecolor','none');
  estimate = plot(data.relative_state.time, data.relative_state.transform.translation(1,:),'-b');

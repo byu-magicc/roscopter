@@ -24,9 +24,14 @@
 #define PHI 6
 #define THETA 7
 #define PSI 8
+#define AX 9
+#define AY 10
+#define AZ 11
+#define BX 12
+#define BY 13
+#define BZ 14
 
-
-#define NUM_STATES 9
+#define NUM_STATES 15
 
 #define G 9.80
 
@@ -75,7 +80,7 @@ private:
 
   ros::Time previous_predict_time_;
   double prev_p_, prev_q_, prev_r_;
-  double p_, q_, r_, filt_az_, ax_, ay_;
+  double gx_, gy_, gz_, az_, ax_, ay_;
   double alpha_;
   bool flying_;
 
