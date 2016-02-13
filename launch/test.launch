@@ -9,7 +9,7 @@
   </node>
   
   <node name="record" pkg="rosbag" type="record" args="-O naze -a"/>
-  <node name="play" pkg="rosbag" type="play" args="/home/jarvis/naze_attitude_imu.bag -u 50">
+  <node name="play" pkg="rosbag" type="play" args="/home/iman/.ros/naze_balanced_props.bag -s 10 -u 35">
    <remap from="relative_state" to="transformed_mocap"/>
   </node>
  

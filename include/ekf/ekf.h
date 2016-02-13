@@ -55,6 +55,7 @@ private:
   ros::Subscriber mocap_sub_;
   ros::Subscriber imu_sub_;
   ros::Publisher estimate_pub_;
+  ros::Publisher bias_pub_;
   ros::Publisher is_flying_pub_;
   ros::Timer predict_timer_;
   ros::Timer publish_timer_;

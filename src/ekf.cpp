@@ -21,6 +21,7 @@ mocapFilter::mocapFilter() :
   imu_sub_ = nh_.subscribe("imu/data", 1, &mocapFilter::imuCallback, this);
   mocap_sub_ = nh_.subscribe("mocap", 1, &mocapFilter::mocapCallback, this);
   estimate_pub_ = nh_.advertise<nav_msgs::Odometry>("estimate", 1);
+  bias_pub_ = nh_.advertise<sensor_msgs::Imu>("estimate/bias", 1);
   is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1);
   predict_timer_ = nh_.createTimer(ros::Duration(1.0/inner_loop_rate_), &mocapFilter::predictTimerCallback, this);
   publish_timer_ = nh_.createTimer(ros::Duration(1.0/publish_rate_), &mocapFilter::publishTimerCallback, this);
@@ -108,6 +109,7 @@ void mocapFilter::predictStep()
 void mocapFilter::updateIMU(sensor_msgs::Imu msg)
 {
   double phi(x_hat_(PHI)), theta(x_hat_(THETA)), psi(x_hat_(PSI));
+  double alpha_x(x_hat_(AX)), alpha_y(x_hat_(AY)), alpha_z(x_hat_(AZ));
   double ct = cos(theta);
   double cp = cos(phi);
   double st = sin(theta);
@@ -125,15 +127,15 @@ void mocapFilter::updateIMU(sensor_msgs::Imu msg)
   Eigen::Matrix<double, 3, NUM_STATES> C;
   C.setZero();
   C(0,THETA) = G*ct;
-  C(0,AX) = -1;
+  C(0,AX) = -1.0;
 
-  C(0,PHI) = -G*ct*cp;
-  C(0,THETA) = -G*st*sp;
-  C(0,AY) = -1;
+  C(1,PHI) = -G*ct*cp;
+  C(1,THETA) = G*st*sp;
+  C(1,AY) = -1.0;
 
-  C(0,PHI) = G*ct*sp;
-  C(0,THETA) = G*st*sp;
-  C(0,AZ) = -1;
+  C(2,PHI) = G*ct*sp;
+  C(2,THETA) = G*st*cp;
+  C(2,AZ) = -1.0;
 
   Eigen::Matrix<double, NUM_STATES, 3> L;
   L.setZero();
@@ -154,12 +156,12 @@ void mocapFilter::updateMocap(geometry_msgs::TransformStamped msg)
        -measurement.getOrigin().getZ(),
        roll, -pitch, -yaw;
   Eigen::Matrix<double, 6, NUM_STATES> C = Eigen::Matrix<double, 6, NUM_STATES>::Zero();
-  C(0,PN) = 1;
-  C(1,PE) = 1;
-  C(2,PD) = 1;
-  C(3,PHI) = 1;
-  C(4,THETA) = 1;
-  C(5,PSI) = 1;
+  C(0,PN) = 1.0;
+  C(1,PE) = 1.0;
+  C(2,PD) = 1.0;
+  C(3,PHI) = 0;
+  C(4,THETA) = 0;
+  C(5,PSI) = 0;
   Eigen::Matrix<double, NUM_STATES, 6> L;
   L.setZero();
   L = P_*C.transpose()*(R_Mocap_ + C*P_*C.transpose()).inverse();
@@ -173,7 +175,7 @@ Eigen::Matrix<double, NUM_STATES, 1> mocapFilter::f(const Eigen::Matrix<double, 
   double u(x(U)), v(x(V)), w(x(W));
   double phi(x(PHI)), theta(x(THETA)), psi(x(PSI));
   double alpha_z(x(AZ));
-  double bx(x(BX)), by(x(BY)), bz(x(BZ));
+  double p(gx_+x(BX)), q(gy_+x(BY)), r(gz_+x(BZ));
 
   double ct = cos(theta);
   double cs = cos(psi);
@@ -187,16 +189,16 @@ Eigen::Matrix<double, NUM_STATES, 1> mocapFilter::f(const Eigen::Matrix<double, 
   Eigen::Matrix<double, NUM_STATES, 1> xdot;
   xdot.setZero();
   xdot(PN) = ct*cs*u + (sp*st*cs-cp*ss)*v + (cp*st*cs+sp*ss)*w;
-  xdot(PE) = cp*ss*u  + (sp*st*ss+cp*cs)*v + (cp*st*ss-sp*cs)*w;
-  xdot(PD) = st*u     - sp*ct*v            - cp*ct*w;
+  xdot(PE) = ct*ss*u + (sp*st*ss+cp*cs)*v + (cp*st*ss-sp*cs)*w;
+  xdot(PD) = -st*u   + sp*ct*v            + cp*ct*w;
 
-  xdot(U) = (gz_+bz)*v-(gy_+by)*w - G*st;
-  xdot(V) = (gx_+bx)*w-(gz_+bz)*u + G*ct*sp;
-  xdot(W) = (gy_+by)*u-(gx_+bx)*v + G*ct*cp + (az_+alpha_z);
+  xdot(U) = r*v-q*w - G*st;
+  xdot(V) = p*w-r*u + G*ct*sp;
+  xdot(W) = q*u-p*v + G*ct*cp + (az_+alpha_z);
 
-  xdot(PHI) = (gx_+bx) + sp*tt*(gy_+by) + cp*tt*(gz_+bz);
-  xdot(THETA) = (gy_+by)*ct - (gz_+bz)*sp;
-  xdot(PSI) = (gy_+by)*sp/ct + (gz_+bz)*cp/ct;
+  xdot(PHI) = p + sp*tt*q + cp*tt*r;
+  xdot(THETA) = q*ct - r*sp;
+  xdot(PSI) = q*sp/ct + r*cp/ct;
 
   // all other states (biases) are constant
   return xdot;
@@ -208,7 +210,7 @@ Eigen::Matrix<double, NUM_STATES, NUM_STATES> mocapFilter::dfdx(const Eigen::Mat
 {
   double u(x(U)), v(x(V)), w(x(W));
   double phi(x(PHI)), theta(x(THETA)), psi(x(PSI));
-  double bx(x(BX)), by(x(BY)), bz(x(BZ));
+  double p(gx_+x(BX)), q(gy_+x(BY)), r(gz_+x(BZ));
 
   double ct = cos(theta);
   double cs = cos(psi);
@@ -232,46 +234,47 @@ Eigen::Matrix<double, NUM_STATES, NUM_STATES> mocapFilter::dfdx(const Eigen::Mat
   A(PE,W) = cp*st*ss-sp*cs;
   A(PE,PHI) = (cp*st*ss-sp*cs)*v + (-sp*st*ss-cp*cs)*w;
   A(PE,THETA) = -st*ss*u + (sp*ct*ss)*v + (cp*ct*ss)*w;
-  A(PE,PSI) = ct*cs*u  + (sp*st*cs-cp*ss)*v + (cp*st*cs+sp*ss)*w;
+  A(PE,PSI) = -ct*ss*u  + (sp*st*cs-cp*ss)*v + (cp*st*cs+sp*ss)*w;
 
-  A(PD,U) = st;
-  A(PD,V) = -sp*ct;
-  A(PD,W) = -cp*ct;
+  A(PD,U) = -st;
+  A(PD,V) = sp*ct;
+  A(PD,W) = cp*ct;
   A(PD,PHI) = cp*ct*v - sp*ct*w;
   A(PD,THETA) = -ct*u - sp*st*v - cp*st*w;
 
-  A(U,V) = gz_+bz;
-  A(U,W) = -(gy_+by);
+  A(U,V) = r;
+  A(U,W) = -q;
   A(U,THETA) = -G*ct;
   A(U,BY) = -w;
   A(U,BZ) = v;
 
-  A(V,U) = -(gz_+bz);
-  A(V,W) = gx_+bx;
+  A(V,U) = -r;
+  A(V,W) = p;
   A(V,PHI) = G*ct*cp;
-  A(V,THETA) = -G*ct*sp;
+  A(V,THETA) = -G*st*sp;
   A(V,BX) = w;
   A(V,BZ) = -u;
 
-  A(W,U) = gy_+by;
-  A(W,V) = -(gx_+bx);
+  A(W,U) = q;
+  A(W,V) = -p;
   A(W,PHI) = -G*ct*sp;
   A(W,THETA) = -G*st*cp;
+  A(W,AZ) = 1.0;
   A(W,BX) = -v;
   A(W,BY) = u;
 
-  A(PHI,PHI) = cp*tt*(gy_+by) - sp*tt*(gz_+bz);
-  A(PHI,THETA) = (sp*(gy_+by) + cp*(gz_+bz))/(ct*ct);
+  A(PHI,PHI) = cp*tt*q - sp*tt*r;
+  A(PHI,THETA) = (sp*q + cp*r)/(ct*ct);
   A(PHI,BX) = 1;
   A(PHI,BY) = sp*tt;
   A(PHI,BZ) = cp*tt;
 
-  A(THETA,PHI) = -sp*(gy_+by) -cp*(gz_+bz);
+  A(THETA,PHI) = -sp*q -cp*r;
   A(THETA,BY) = cp;
   A(THETA,BZ) = -sp;
 
-  A(PSI,PHI) = ((gy_+by)*cp-(gz_+bz)*sp)/ct;
-  A(PSI,THETA) = -((gy_+by)*sp+(gz_+bz)*cp)*tt/ct;
+  A(PSI,PHI) = (q*cp-r*sp)/ct;
+  A(PSI,THETA) = -(q*sp+r*cp)*tt/ct;
   A(PSI,BY) = sp/ct;
   A(PSI,BZ) = cp/ct;
 
@@ -323,6 +326,22 @@ void mocapFilter::publishEstimate()
   estimate.header.stamp = ros::Time::now();
   estimate_pub_.publish(estimate);
 
+  sensor_msgs::Imu bias;
+  bias.linear_acceleration.x = x_hat_(AX);
+  bias.linear_acceleration.y = x_hat_(AY);
+  bias.linear_acceleration.z = x_hat_(AZ);
+  bias.linear_acceleration_covariance[0*3+0] = P_(AX,AX);
+  bias.linear_acceleration_covariance[1*3+1] = P_(AY,AY);
+  bias.linear_acceleration_covariance[2*3+2] = P_(AZ,AZ);
+
+  bias.angular_velocity.x = x_hat_(BX);
+  bias.angular_velocity.y = x_hat_(BY);
+  bias.angular_velocity.z = x_hat_(BZ);
+  bias.angular_velocity_covariance[0*3+0] = P_(BX,BX);
+  bias.angular_velocity_covariance[1*3+1] = P_(BY,BY);
+  bias.angular_velocity_covariance[2*3+2] = P_(BZ,BZ);
+
+  bias_pub_.publish(bias);
   double ax(x_hat_(AX)), ay(x_hat_(AY)),az(x_hat_(AZ));
   ROS_INFO_STREAM("ax: " << ax << " ay:" << ay << " az: " << az << " bx: " << bx << " by: " << by << " bz: " << bz);
 }
