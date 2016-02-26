@@ -8,7 +8,7 @@ It is a single ROS package, with several nodes.
 
 # - EKF 
 
-The ekf package contains a standard rmekf, as defined mostly in the way in the reference above.  We are probably going to release a new version of the Quadrotor Dynamics and Control to resemble more closely the modeling in this node.  We are estimating position, velocity, and attitude as well as accelerometer biases, velocities are body fixed, and the accelerometer biases allow for better estimation and control long term.   The model and jacobians are defined explicitly in the doc/ekf_jacobians.pdf document
+The ekf package contains a standard mekf, as defined mostly in the way in the reference above.  We are probably going to release a new version of the Quadrotor Dynamics and Control to resemble more closely the modeling in this node.  We are estimating position, velocity, and attitude as well as accelerometer biases, velocities are body fixed, and the accelerometer biases allow for better estimation and control long term.   The model and jacobians are defined explicitly in the doc/ekf_jacobians.pdf document
 
 # - PID Controller
 
