@@ -7,7 +7,21 @@ The package is intended to be used with fcu\_io or fcu\_sim, for hardware with a
 It is a single ROS package, with several nodes.
 
 # - EKF 
+
+The ekf package contains a standard rmekf, as defined mostly in the way in the reference above.  We are probably going to release a new version of the Quadrotor Dynamics and Control to resemble more closely the modeling in this node.  We are estimating position, velocity, and attitude as well as accelerometer biases, velocities are body fixed, and the accelerometer biases allow for better estimation and control long term.   The model and jacobians are defined explicitly in the doc/ekf_jacobians.pdf document
+
 # - PID Controller
+
+To be implemented (will be general PID control as defined in the reference above)
+
 # - Path Planner
+
+To be implemented (will probably use an RRT-based planner, with knowledge of the environment)
+
 # - Path Follower
+
+To be implemented (will use a waypoint-following technique as described in the UAS book)
+
 # - Monocular Visual Odometry
+
+May or may not implement.  This likely is better done by SVO, and if so, we will just make sure it integrates well with our stuff.
