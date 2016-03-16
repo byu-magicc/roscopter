@@ -49,16 +49,25 @@ target_link_libraries(ros_copter ${catkin_LIBRARIES})
 
 ## Declare cpp executables
 add_executable(ekf
-  src/ekf_node.cpp
-  src/ekf.cpp
+  src/ekf/ekf_node.cpp
+  src/ekf/ekf.cpp
   include/ekf/ekf.h
 )
 add_dependencies(ekf ros_copter_generate_messages_cpp fcu_io_generate_messages_cpp)
 target_link_libraries(ekf ${catkin_LIBRARIES})
 
+## Declare cpp executables
+add_executable(mono_vo
+  src/mono_vo/mono_vo_node.cpp
+  src/mono_vo/mono_vo.cpp
+  include/mono_vo/mono_vo.h
+)
+add_dependencies(mono_vo ros_copter_generate_messages_cpp fcu_io_generate_messages_cpp)
+target_link_libraries(mono_vo ${catkin_LIBRARIES})
+
 
 add_executable(rc_joy
-  src/rc_joy.cpp
+  src/joy/rc_joy.cpp
   include/rc_joy/rc_joy.h
 )
 add_dependencies(rc_joy ros_copter_generate_messages_cpp fcu_io_generate_messages_cpp)
