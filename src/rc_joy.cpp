@@ -24,7 +24,7 @@ namespace ros_copter {
 
   pnh.param<int>("button_takeoff", buttons_.fly.index, 0);
 
-  command_pub_ = nh_.advertise<fcu_io::Command>(command_topic_,10);
+  command_pub_ = nh_.advertise<fcu_common::Command>(command_topic_,10);
 
   ROS_ERROR_STREAM("thrust to mass ratio" << thrust_to_mass_ratio_);
 

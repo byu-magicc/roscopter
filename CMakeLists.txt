@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   eigen_conversions
   std_msgs
+  fcu_common
 )
 find_package(Eigen REQUIRED)
 

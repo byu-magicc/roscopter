@@ -1,7 +1,7 @@
 #ifndef RC_JOY_H
 #define RC_JOY_H
 
-#include <fcu_io/Command.h>
+#include <fcu_common/Command.h>
 #include <ros/ros.h>
 #include <sensor_msgs/Joy.h>
 
@@ -41,7 +41,7 @@ private:
 
   bool fly_mav_;
 
-  fcu_io::Command command_msg_;
+  fcu_common::Command command_msg_;
   sensor_msgs::Joy current_joy_;
 
   Buttons buttons_;
