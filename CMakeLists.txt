@@ -12,6 +12,9 @@ find_package(catkin REQUIRED COMPONENTS
   fcu_common
 )
 find_package(Eigen REQUIRED)
+find_package( OpenCV 3 REQUIRED)
+set(OpenCV_INCLUDE_DIRS "/usr/local/include/opencv2")
+
 
 set(CMAKE_CXX_FLAGS "-std=c++0x")
 
