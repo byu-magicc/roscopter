@@ -10,10 +10,10 @@ find_package(catkin REQUIRED COMPONENTS
   eigen_conversions
   std_msgs
   fcu_common
+  cv3_bridge
 )
 find_package(Eigen REQUIRED)
-find_package( OpenCV 3 REQUIRED)
-set(OpenCV_INCLUDE_DIRS "/usr/local/include/opencv2")
+find_package(OpenCV REQUIRED)
 
 
 set(CMAKE_CXX_FLAGS "-std=c++0x")
@@ -40,6 +40,7 @@ catkin_package(
 ###########
 include_directories(include)
 include_directories(${catkin_INCLUDE_DIRS})
+include_directories(${OpenCV_INCLUDE_DIRS})
 
 ## Declare cpp libraries
 add_library(ros_copter
@@ -66,7 +67,7 @@ add_executable(mono_vo
   include/mono_vo/mono_vo.h
 )
 add_dependencies(mono_vo ros_copter_generate_messages_cpp fcu_io_generate_messages_cpp)
-target_link_libraries(mono_vo ${catkin_LIBRARIES})
+target_link_libraries(mono_vo ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
 
 add_executable(rc_joy

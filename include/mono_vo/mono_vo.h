@@ -8,6 +8,7 @@
 #include <sensor_msgs/Image.h>
 #include <geometry_msgs/Vector3.h>
 
+#include <cv_bridge/cv_bridge.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/videoio.hpp>
@@ -45,7 +46,7 @@ private:
   geometry_msgs::Vector3 velocity_measurement_;
 
   // Functions
-  void cameraCallback(const sensor_msgs::Image msg);
+  void cameraCallback(const sensor_msgs::ImageConstPtr msg);
   void estimateCallback(const nav_msgs::Odometry msg);
   void publishVelocity();
 };
