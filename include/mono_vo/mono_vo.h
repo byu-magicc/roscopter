@@ -39,13 +39,48 @@ private:
   ros::Subscriber estimate_sub_;
   ros::Publisher velocity_pub_;
 
-  // Parameters
-  Mat I_, D_; // intrinsic parameters for camera
+  // Parameters (Things we will want to tweak)
+  // put an underscore after class variables,
+  // local variables do not have underscores following them
+  // all variables are lowercase, (except acronyms) functions are camelCase (ROS standard)
+  // structs and classes are also camelCase
+  struct goodFeaturesToTrackParameters{
+    int max_corners;
+    double quality_level;
+    double min_dist;
+    int block_size;
+  }GFTT_params_;
 
+  struct calcOpticalFlowPyrLKParams{
+    Size winSize;
+    int maxLevel;
+    TermCriteria criteria;
+  }LK_params_;
+
+  struct findHomographyParams{
+    int method;
+    double ransac_reproj_threshold;
+    int max_iters;
+    double confidence;
+  };
+
+  struct lineCircleParams{
+    int radius;
+    int thickness;
+    Scalar lineColor;
+    Scalar circColor;
+  };
+
+  // Class Variables (for memory between loops and functions)
   nav_msgs::Odometry current_state_;
   geometry_msgs::Vector3 velocity_measurement_;
+  vector<uchar> status_; // point mask
+  vector<float> err_; // (NOT SURE)
+  int wait_time_; // milliseconds
+  Mat frame_prev_;
+  vector<Point2f> corners_, corners_LK_, corners_prev_;
 
-  // Functions
+  // Functions (feel free to add more helper functions if needed)
   void cameraCallback(const sensor_msgs::ImageConstPtr msg);
   void estimateCallback(const nav_msgs::Odometry msg);
   void publishVelocity();

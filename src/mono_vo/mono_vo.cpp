@@ -8,19 +8,17 @@ monoVO::monoVO() :
   nh_private_(ros::NodeHandle("~/mono_vo"))
 {
   // Get Parameters from Server
-  string camera_parameter_filename;
-  nh_private_.param<string>("camera_parameter_filename", camera_parameter_filename, "camera.yaml");
-
-//  // Initialize Camera
-//  FileStorage file(camera_parameter_filename, FileStorage::WRITE);
-//  file["I"] >> I_;
-//  file["D"] >> D_;
+  // arguments are "name", "variable to put the value into", "default value"
+  nh_private_.param<int>("max_corners", max_corners_, 70);
 
   // Setup publishers and subscribers
   camera_sub_ = nh_.subscribe("/usb_cam/image_raw", 1, &monoVO::cameraCallback, this);
   estimate_sub_ = nh_.subscribe("estimate", 1, &monoVO::estimateCallback, this);
   velocity_pub_ = nh_.advertise<geometry_msgs::Vector3>("velocity", 1);
   return;
+  
+  
+  // Initialize Filters and other class variables
 }
 
 
@@ -41,12 +39,33 @@ void monoVO::cameraCallback(const sensor_msgs::ImageConstPtr msg)
   imshow("image", src);
   waitKey(33);
 
+  // At this point, src holds the color image you should use for the rest
+  // of the main processing loop.
+
+  // The current state can be found in the current_state_ data member
+  // positions/orientations are in pose, angular and linear velocity
+  // estimates are in the twist data member.
+  // covariances are also available (from the ekf)
+  double phi = current_state_.pose.pose.orientation.x;
+  double theta = current_state_.pose.pose.orientation.y;
+  double psi = current_state_.pose.pose.orientation.z;
+  double p = current_state_.twist.twist.angular.x;
+  double q = current_state_.twist.twist.angular.y;
+  double r = current_state_.twist.twist.angular.z;
+
+  //Store the resulting measurement in the geometry_msgs::Vector3 velocity_measurement.
+  velocity_measurement_.x = 0.0;
+  velocity_measurement_.y = 0.0;
+  velocity_measurement_.z = 0.0;
+
+  // publish the velocity measurement whenever you're finished processing
+  publishVelocity();
   return;
 }
 
-void monoVO::estimateCallback(const nav_msgs::Odometry)
+void monoVO::estimateCallback(const nav_msgs::Odometry msg)
 {
-  // Save off estimate for vision processing
+  current_state_ = msg;
   return;
 }
 
@@ -56,5 +75,6 @@ void monoVO::publishVelocity()
 }
 
 } // namespace ekf
+
 
 
