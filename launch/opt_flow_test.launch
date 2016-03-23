@@ -1,0 +1,15 @@
+<launch>
+
+ <!-- Set non-default parameters -->
+
+ <!--Estimation-->
+  <node name="mono_vo" pkg="ros_copter"  type="mono_vo" output="screen">
+    <rosparam command="load" file="$(find ros_copter)/params/estimator.yaml" />
+    <remap from="mocap" to="/naze/CG"/> 
+  </node>
+  
+  <node name="play" pkg="rosbag" type="play" args="/home/ecestudent/Desktop/mono_vo.bag -s 10 -u 35">
+   <remap from="relative_state" to="transformed_mocap"/>
+  </node>
+ 
+</launch>
