@@ -23,7 +23,7 @@ monoVO::monoVO() :
   nh_private_.param<double>("FH_ransacReprojThreshold", FH_params_.rancsace_reproj_threshold, 3);
   nh_private_.param<int>("FH_maxIters", FH_params_.max_iters, 2000);
   nh_private_.param<double>("FH_confidence", FH_params_.confidence, 0.995);
-  nh_private_.param<bool>("no_normal_estimate", no_normal_estimate_, false);
+  nh_private_.param<bool>("no_normal_estimate", no_normal_estimate_, true);
 
   // Setup publishers and subscribers
   camera_sub_ = nh_.subscribe("/image_mono", 1, &monoVO::cameraCallback, this);
@@ -57,6 +57,9 @@ void monoVO::cameraCallback(const sensor_msgs::ImageConstPtr msg)
   // positions/orientations are in pose, angular and linear velocity
   // estimates are in the twist data member.
   // covariances are also available (from the ekf)
+  double u = current_state_.twist.twist.linear.x;
+  double v = current_state_.twist.twist.linear.y;
+  double w = current_state_.twist.twist.linear.z;
   double pd = current_state_.pose.pose.position.z;
   double phi = current_state_.pose.pose.orientation.x;
   double theta = current_state_.pose.pose.orientation.y;
@@ -64,29 +67,53 @@ void monoVO::cameraCallback(const sensor_msgs::ImageConstPtr msg)
   double p = current_state_.twist.twist.angular.x;
   double q = current_state_.twist.twist.angular.y;
   double r = current_state_.twist.twist.angular.z;
+  static double prev_x(0);
+  static double prev_y(0);
+  static double prev_time(0);
+
+  Mat N_inertial = (Mat_<double>(3,1) <<  0, 0, -1);
+  Mat R_v1_to_v2 = (Mat_<double>(3,3) <<
+                    cos(theta),  0, -sin(theta),
+                    0,           1, 0,
+                    sin(theta),  0, cos(theta) );
+  Mat R_v2_to_b = (Mat_<double>(3,3) <<
+                   1,  0,         0,
+                   0,  cos(phi),  sin(phi),
+                   0, -sin(phi),  cos(phi) );
+  Mat R_b_to_c = (Mat_<double>(3,3) <<
+                  0,  1,  0,
+                  -1, 0,  0,
+                  0,  0,  1 );
+  Mat N_c = R_b_to_c*R_v2_to_b*R_v1_to_v2*N_inertial; // rotate inertial into the camera frame
+
+  Mat velocity_b = (Mat_<double>(3,1) << u, v, w);
 
   /*-------------------------------------------------------------------------------------
     ----------------------------------- Optical Flow ------------------------------------
     -------------------------------------------------------------------------------------*/
 
   // build angular velocity skew symmetric matrix
-  Mat omega_hat = (Mat_<double>(3,3) <<   0, -r,  q,
+
+  Mat omega_hat_b = (Mat_<double>(3,3) <<
+                   0, -r,  q,
                    r,  0, -p,
                    -q,  p,  0 );
+
+  Mat omega_hat_c = R_b_to_c*omega_hat_b;
+  Mat velocity_c = R_b_to_c*velocity_b;
 
 
   // compute ground normal (w.r.t. camera frame) from gravity vector
   if (no_normal_estimate_ == false) {
     Mat N_inertial = (Mat_<double>(3,1) <<  0, 0, -1);
-    Mat R_v1_to_v2 = (Mat_<double>(3,3) <<  cos(theta),  0, -sin(theta),
-                      0     ,  1,      0     ,
-                      sin(theta),  0,  cos(theta) );
-    Mat R_v2_to_b = (Mat_<double>(3,3) <<  1,      0   ,      0   ,
+    Mat R_v1_to_v2 = (Mat_<double>(3,3) <<
+                      cos(theta),  0, -sin(theta),
+                      0,           1, 0,
+                      sin(theta),  0, cos(theta) );
+    Mat R_v2_to_b = (Mat_<double>(3,3) <<
+                     1,  0,         0,
                      0,  cos(phi),  sin(phi),
                      0, -sin(phi),  cos(phi) );
-    Mat R_b_to_c = (Mat_<double>(3,3) <<  0,  1,  0,
-                    -1,  0,  0,
-                    0,  0,  1 );
     N_ = R_b_to_c*R_v2_to_b*R_v1_to_v2*N_inertial; // rotate inertial into the camera frame
   }
 
@@ -113,12 +140,24 @@ void monoVO::cameraCallback(const sensor_msgs::ImageConstPtr msg)
         cornersGood.push_back(corners_LK_[i]);
       }
     }
+    // manually compute homography from truth
+    Mat H_true = omega_hat_c + 1/(-pd)*velocity_c*N_c.t();
+
     // compute homography matrix
     Mat mask; // just to run function but not actually needed/used
     Mat H = findHomography(cornersPrevGood, cornersGood, CV_RANSAC, FH_params_.rancsace_reproj_threshold, mask, FH_params_.max_iters, FH_params_.confidence);
+    double time = ros::Time::now().toSec();
+    cout << "H = \n" << H << endl;
+    cout << "H_true = \n" << H_true << endl;
+    cout << "dx = " << current_state_.pose.pose.position.x - prev_x;
+    cout << " dy = " << current_state_.pose.pose.position.x - prev_x;
+    cout << " dt = " << time - prev_time << endl;
+    prev_x = current_state_.pose.pose.position.x;
+    prev_y = current_state_.pose.pose.position.y;
+    prev_time = time;
 
     // remove angular velocity from homography
-    Mat H_no_omega = H - omega_hat;
+    Mat H_no_omega = H - omega_hat_c;
 
     // DO THIS IF NO GROUND NORMAL VECTOR ESTIMATE IS AVAILABLE
     // decompose H_no_omega into velocity and normal components
