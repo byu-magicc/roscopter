@@ -39,6 +39,7 @@ private:
   ros::Subscriber camera_sub_;
   ros::Subscriber estimate_sub_;
   ros::Publisher velocity_pub_;
+  ros::Publisher flow_image_pub_;
 
   // Parameters (Things we will want to tweak)
   // put an underscore after class variables,
@@ -46,22 +47,22 @@ private:
   // all variables are lowercase, (except acronyms) functions are camelCase (ROS standard)
   // structs and classes are also camelCase
   struct goodFeaturesToTrackParameters{
-    int maxCorners;
-    double qualityLevel;
-    double minDist;
-    int blockSize;
+    int max_corners;
+    double quality_level;
+    double min_dist;
+    int block_size;
   }GFTT_params_;
 
   struct calcOpticalFlowPyrLKParams{
-    int winSize;
-    int maxLevel;
+    int win_size;
+    int win_level;
     int iters;
     double accuracy;
   }LK_params_;
 
   struct findHomographyParams{
-    double ransacReprojThreshold;
-    int maxIters;
+    double rancsace_reproj_threshold;
+    int max_iters;
     double confidence;
   }FH_params_;
 
@@ -73,8 +74,8 @@ private:
   // Class Variables (for memory between loops and functions)
   nav_msgs::Odometry current_state_;
   geometry_msgs::Vector3 velocity_measurement_;
-  Mat srcPrev_, optFlowVel_, N_;
-  vector<Point2f> corners_, cornersLK_, cornersPrev_;
+  Mat prev_src_, optical_flow_velocity_, N_;
+  vector<Point2f> corners_, corners_LK_, prev_corners_;
   bool no_normal_estimate_;
 
   // Functions (feel free to add more helper functions if needed)
