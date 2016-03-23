@@ -25,8 +25,8 @@ monoVO::monoVO() :
   nh_private_.param<bool>("no_normal_estimate", no_normal_estimate_, false);
 
   // Setup publishers and subscribers
-  camera_sub_ = nh_.subscribe("/usb_cam/image_raw", 1, &monoVO::cameraCallback, this);
-  estimate_sub_ = nh_.subscribe("estimate", 1, &monoVO::estimateCallback, this);
+  camera_sub_ = nh_.subscribe("/image_mono", 1, &monoVO::cameraCallback, this);
+  estimate_sub_ = nh_.subscribe("/shredder/ground_truth/odometry", 1, &monoVO::estimateCallback, this);
   velocity_pub_ = nh_.advertise<geometry_msgs::Vector3>("velocity", 1);
   return;
   
