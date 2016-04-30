@@ -10,10 +10,10 @@ namespace ros_copter {
 
   pnh.param<std::string>("command_topic", command_topic_, "command");
 
-  pnh.param<int>("axis_roll_", axes_.roll, 2);
-  pnh.param<int>("axis_pitch_", axes_.pitch, 3);
-  pnh.param<int>("axis_thrust_", axes_.thrust, 1);
-  pnh.param<int>("axis_yaw_", axes_.yaw, 0);
+  pnh.param<int>("axis_roll", axes_.roll, 2);
+  pnh.param<int>("axis_pitch", axes_.pitch, 3);
+  pnh.param<int>("axis_thrust", axes_.thrust, 1);
+  pnh.param<int>("axis_yaw", axes_.yaw, 0);
 
   pnh.param<int>("axis_direction_roll", axes_.roll_direction, -1);
   pnh.param<int>("axis_direction_pitch", axes_.pitch_direction, -1);
