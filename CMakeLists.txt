@@ -10,9 +10,14 @@ find_package(catkin REQUIRED COMPONENTS
   eigen_conversions
   std_msgs
   fcu_common
+  dynamic_reconfigure
 )
 find_package(Eigen REQUIRED)
 find_package(OpenCV REQUIRED)
+
+generate_dynamic_reconfigure_options(
+  cfg/Controller.cfg
+)
 
 
 set(CMAKE_CXX_FLAGS "-std=c++0x")
@@ -63,6 +68,8 @@ add_executable(controller
   src/controller/controller_node.cpp
   src/controller/controller.cpp
   include/controller/controller.h)
-add_dependencies(controller ros_copter_generate_messages_cpp fcu_common_generate_messages_cpp)
+add_dependencies(controller
+  ros_copter_generate_messages_cpp
+  fcu_common_generate_messages_cpp
+  ros_copter_gencfg)
 target_link_libraries(controller ${catkin_LIBRARIES})
-
