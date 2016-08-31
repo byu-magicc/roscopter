@@ -59,9 +59,10 @@ add_executable(ekf
 add_dependencies(ekf ros_copter_generate_messages_cpp fcu_common_generate_messages_cpp)
 target_link_libraries(ekf ${catkin_LIBRARIES})
 
-add_executable(rc_joy
-  src/joy/rc_joy.cpp
-  include/rc_joy/rc_joy.h
-)
-add_dependencies(rc_joy ros_copter_generate_messages_cpp fcu_common_generate_messages_cpp)
-target_link_libraries(rc_joy ${catkin_LIBRARIES})
+add_executable(controller
+  src/controller/controller_node.cpp
+  src/controller/controller.cpp
+  include/controller/controller.h)
+add_dependencies(controller ros_copter_generate_messages_cpp fcu_common_generate_messages_cpp)
+target_link_libraries(controller ${catkin_LIBRARIES})
+
