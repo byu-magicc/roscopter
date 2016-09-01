@@ -24,7 +24,7 @@ mocapFilter::mocapFilter() :
   gps_sub_ = nh_.subscribe("gps/data", 1, &mocapFilter::gpsCallback, this);
   estimate_pub_ = nh_.advertise<nav_msgs::Odometry>("estimate", 1);
   bias_pub_ = nh_.advertise<sensor_msgs::Imu>("estimate/bias", 1);
-  is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1);
+  is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1, true); // be sure to latch the is_flying message
   predict_timer_ = nh_.createTimer(ros::Duration(1.0/inner_loop_rate_), &mocapFilter::predictTimerCallback, this);
   publish_timer_ = nh_.createTimer(ros::Duration(1.0/publish_rate_), &mocapFilter::publishTimerCallback, this);
 
