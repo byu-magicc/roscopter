@@ -67,23 +67,23 @@ void Controller::stateCallback(const nav_msgs::OdometryConstPtr &msg)
 {
   // This should already be coming in NED
   xhat_.pn = msg->pose.pose.position.x;
-  xhat_.pe = -msg->pose.pose.position.y;
-  xhat_.pd = -msg->pose.pose.position.z;
+  xhat_.pe = msg->pose.pose.position.y;
+  xhat_.pd = msg->pose.pose.position.z;
 
   xhat_.u = msg->twist.twist.linear.x;
-  xhat_.v = -msg->twist.twist.linear.y;
-  xhat_.w = -msg->twist.twist.linear.z;
+  xhat_.v = msg->twist.twist.linear.y;
+  xhat_.w = msg->twist.twist.linear.z;
 
   // Convert Quaternion to RPY
   tf::Quaternion tf_quat;
   tf::quaternionMsgToTF(msg->pose.pose.orientation, tf_quat);
   tf::Matrix3x3(tf_quat).getRPY(xhat_.phi, xhat_.theta, xhat_.psi);
-  xhat_.theta = -xhat_.theta;
-  xhat_.psi = -xhat_.psi;
+  xhat_.theta = xhat_.theta;
+  xhat_.psi = xhat_.psi;
 
   xhat_.p = msg->twist.twist.angular.x;
-  xhat_.q = -msg->twist.twist.angular.y;
-  xhat_.r = -msg->twist.twist.angular.z;
+  xhat_.q = msg->twist.twist.angular.y;
+  xhat_.r = msg->twist.twist.angular.z;
 
   if(is_flying_)
   {
@@ -171,8 +171,8 @@ void Controller::computeControl()
 
     // Rotate into body frame
     /// TODO: Include pitch and roll in this mapping
-    double u_c = pndot_c*cos(xhat_.psi) + pedot_c*sin(xhat_.psi);
-    double v_c = -pndot_c*sin(xhat_.psi) + pedot_c*cos(xhat_.psi);
+    double u_c = saturate(pndot_c*cos(xhat_.psi) + pedot_c*sin(xhat_.psi), max_.u, -1.0*max_.u);
+    double v_c = saturate(-pndot_c*sin(xhat_.psi) + pedot_c*cos(xhat_.psi), max_.v, -1.0*max_.v);
 
 //    double u_c = xc_.pn;
 //    double v_c = xc_.pe;
