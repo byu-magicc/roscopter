@@ -8,6 +8,9 @@
 #include <std_msgs/Bool.h>
 #include <tf/tf.h>
 
+#include <dynamic_reconfigure/server.h>
+#include <ros_copter/ControllerConfig.h>
+
 namespace controller
 {
 
@@ -29,6 +32,16 @@ typedef struct
   double q;
   double r;
 }state_t;
+
+typedef struct
+{
+  double roll;
+  double pitch;
+  double yaw_rate;
+  double throttle;
+  double u;
+  double v;
+} max_t;
 
 class Controller
 {
@@ -62,8 +75,14 @@ private:
   fcu_common::SimplePID PID_z_;
   fcu_common::SimplePID PID_psi_;
 
+  // Dynamic Reconfigure Hooks
+  dynamic_reconfigure::Server<ros_copter::ControllerConfig> _server;
+  dynamic_reconfigure::Server<ros_copter::ControllerConfig>::CallbackType _func;
+  void reconfigure_callback(ros_copter::ControllerConfig &config, uint32_t level);
+
   // Memory for sharing information between functions
   state_t xhat_; // estimate
+  max_t max_;
   fcu_common::ExtendedCommand command_;
   state_t xc_; // command
   double prev_time_;
@@ -77,6 +96,8 @@ private:
   void computeControl();
   void resetIntegrators();
   void publishCommand();
+  double saturate(double x, double max, double min);
+  double sgn(double x);
 };
 }
 
