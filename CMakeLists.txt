@@ -22,6 +22,13 @@ add_message_files(
   FilterState.msg
 )
 
+add_service_files(
+  FILES
+  AddWaypoint.srv
+  RemoveWaypoint.srv
+  SetWaypointsFromFile.srv
+)
+
 generate_messages(
   DEPENDENCIES
   std_msgs
@@ -65,4 +72,3 @@ add_executable(controller
   include/controller/controller.h)
 add_dependencies(controller ros_copter_generate_messages_cpp fcu_common_generate_messages_cpp)
 target_link_libraries(controller ${catkin_LIBRARIES})
-
