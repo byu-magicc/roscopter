@@ -1,0 +1,95 @@
+<!-- This is a launch file that runs the bare minimum requirements to get -->
+<!-- gazebo running.  It requires a relative_nav::Command on /command -->
+<!-- to move the hex, and outputs imu, altimeter, laserscan and RGBD images -->
+<!-- as well as a relative_nav::FilterState message on /global_state  -->
+<!-- a geometry_msgs::StampedTransform on /mocap to imitate motion capture -->
+
+
+<launch>
+  <arg name="mav_name"            default="shredder"/>
+  <arg name="enable_ground_truth" default="true" />
+  <arg name="log_file"            default="$(arg mav_name)" />
+  <arg name="color"               default="White"/>
+  <arg name="x"                   default="0"/>
+  <arg name="y"                   default="0"/>
+  <arg name="z"                   default="0.1"/>
+  <arg name="yaw"                 default="0"/>
+
+  <arg name="world_file" default="basic.world"/>
+
+  <!-- Start Simulator -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find fcu_sim)/worlds/$(arg world_file)"/>
+    <arg name="paused" value="true"/>
+    <arg name="gui" value="true"/>
+  </include>
+
+  <!-- Spawn in Gazebo -->
+  <include file="$(find fcu_sim)/launch/spawn_mav.launch">
+    <arg name="mav_name"            value="$(arg mav_name)" />
+    <arg name="model"               value="$(find fcu_sim)/urdf/$(arg mav_name)/$(arg mav_name)_base.xacro" />
+    <arg name="enable_ground_truth" value="true" />
+    <arg name="x"                   value="$(arg x)"/>
+    <arg name="y"                   value="$(arg y)"/>
+    <arg name="z"                   value="$(arg z)"/>
+    <arg name="yaw"                 value="$(arg yaw)"/>
+    <arg name="color"               value="$(arg color)"/>
+  </include>
+
+  <!-- Joy -->
+  <node name="rc" pkg="fcu_common" type="joy" output="screen">
+    <param name="F_axis" value="1"/>
+    <param name="x_axis" value="2"/>
+    <param name="y_axis" value="3"/>
+    <param name="z_axis" value="0"/>
+
+    <param name="x_sign" value="1"/>
+    <param name="y_sign" value="1"/>
+    <param name="z_sign" value="-1"/>
+    <param name="F_sign" value="1"/>
+
+    <param name="button_takeoff_" value="0"/>
+    <param name="button_mode_" value="1"/>
+    <param name="button_reset_" value="6"/>
+    <param name="button_pause_" value="7"/>
+
+    <remap from="extended_command" to="bleh"/>
+  </node>
+  <node name="joy" pkg="joy" type="joy_node">
+    <param name="autorepeat_rate" value="100"/>
+  </node>
+
+  <!-- Position Controller -->
+  <node name="controller" pkg="ros_copter" type="controller" output="screen">
+    <param name="u/P" value="0.0"/>
+    <param name="u/I" value="0.0"/>
+    <param name="u/D" value="0.0"/>
+
+    <param name="v/P" value="0.0"/>
+    <param name="v/I" value="0.0"/>
+    <param name="v/D" value="0.0"/>
+
+    <param name="x/P" value="0.0"/>
+    <param name="x/I" value="0.0"/>
+    <param name="x/D" value="0.0"/>
+
+    <param name="y/P" value="0.0"/>
+    <param name="y/I" value="0.0"/>
+    <param name="y/D" value="0.0"/>
+
+    <param name="z/P" value="0.5"/>
+    <param name="z/I" value="0.0"/>
+    <param name="z/D" value="0.0"/>
+
+    <param name="psi/P" value="0.0"/>
+    <param name="psi/I" value="0.0"/>
+    <param name="psi/D" value="0.0"/>
+
+    <remap from="estimate" to="$(arg mav_name)/ground_truth/odometry"/>
+  </node>
+
+  <!-- FPV -->
+  <!-- <node name="fpv" pkg="image_view" type="image_view">
+    <remap from="image" to="/$(arg mav_name)/camera/rgb/image_raw"/>
+  </node> -->
+</launch>
