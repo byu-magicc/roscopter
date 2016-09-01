@@ -1,0 +1,5 @@
+# Add a Waypoint to the waypoint list
+
+bool front # if true, removes the front of the queue, false, removes the back
+---
+int32 length # The Length of the Waypoint Queue

@@ -27,6 +27,13 @@ add_message_files(
   FilterState.msg
 )
 
+add_service_files(
+  FILES
+  AddWaypoint.srv
+  RemoveWaypoint.srv
+  SetWaypointsFromFile.srv
+)
+
 generate_messages(
   DEPENDENCIES
   std_msgs

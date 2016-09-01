@@ -88,6 +88,9 @@
     <remap from="estimate" to="$(arg mav_name)/ground_truth/odometry"/>
   </node>
 
+  <!-- Waypoint Manager -->
+  <node name="waypoint_manager" pkg="ros_copter" type="waypoint_manager.py"/>
+
   <!-- FPV -->
   <!-- <node name="fpv" pkg="image_view" type="image_view">
     <remap from="image" to="/$(arg mav_name)/camera/rgb/image_raw"/>
