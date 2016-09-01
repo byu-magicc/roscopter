@@ -16,10 +16,12 @@ mocapFilter::mocapFilter() :
   ros_copter::importMatrixFromParamServer(nh_private_, Q_, "Q0");
   ros_copter::importMatrixFromParamServer(nh_private_, R_IMU_, "R_IMU");
   ros_copter::importMatrixFromParamServer(nh_private_, R_Mocap_, "R_Mocap");
+  ros_copter::importMatrixFromParamServer(nh_private_, R_GPS_, "R_GPS");
 
   // Setup publishers and subscribers
   imu_sub_ = nh_.subscribe("imu/data", 1, &mocapFilter::imuCallback, this);
   mocap_sub_ = nh_.subscribe("mocap", 1, &mocapFilter::mocapCallback, this);
+  gps_sub_ = nh_.subscribe("gps/data", 1, &mocapFilter::gpsCallback, this);
   estimate_pub_ = nh_.advertise<nav_msgs::Odometry>("estimate", 1);
   bias_pub_ = nh_.advertise<sensor_msgs::Imu>("estimate/bias", 1);
   is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1);
@@ -75,6 +77,17 @@ void mocapFilter::mocapCallback(const geometry_msgs::TransformStamped msg)
     updateMocap(msg);
   }
   return;
+}
+
+void mocapFilter::gpsCallback(const fcu_common::GPS msg)
+{
+    if(!flying_){
+        ROS_INFO_THROTTLE(1,"Not flying, but GPS signal received");
+    }else{
+        if(msg.fix){
+            updateGPS(msg);
+        }
+    }
 }
 
 void mocapFilter::initializeX(geometry_msgs::TransformStamped msg)
@@ -167,6 +180,40 @@ void mocapFilter::updateMocap(geometry_msgs::TransformStamped msg)
   L = P_*C.transpose()*(R_Mocap_ + C*P_*C.transpose()).inverse();
   P_ = (Eigen::MatrixXd::Identity(NUM_STATES,NUM_STATES) - L*C)*P_;
   x_hat_ = x_hat_ + L*(y - C*x_hat_);
+}
+
+void mocapFilter::updateGPS(fcu_common::GPS msg)
+{
+    double u = x_hat_(U);
+    double v = x_hat_(V);
+    lat_ = msg.latitude;
+    lon_ = msg.longitude;
+    alt_ = msg.altitude;
+    vg_ = msg.speed;
+    chi_ = msg.ground_course;
+
+    Eigen::Matrix<double, 5, 1> y;
+    y << lon_, lat_, alt_, vg_, chi_;
+
+    Eigen::Matrix<double, 5, NUM_STATES> C;
+    C.setZero();
+    C(0,PN) = 1.0;
+
+    C(1,PE) = 1.0;
+
+    C(2,PD) = 1.0;
+
+    C(3,U) = u/sqrt(u*u+v*v);
+    C(3,V) = v/sqrt(u*u+v*v);
+
+    C(4,U) = -v/(u*u+v*v);
+    C(4,V) = u/(u*u+v*v);
+
+    Eigen::Matrix<double, NUM_STATES, 5> L;
+    L.setZero();
+    L = P_*C.transpose()*(R_GPS_ + C*P_*C.transpose()).inverse();
+    P_ = (Eigen::MatrixXd::Identity(NUM_STATES,NUM_STATES) - L*C)*P_;
+    x_hat_ = x_hat_ + L*(y - C*x_hat_);
 }
 
 
