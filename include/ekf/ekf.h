@@ -86,6 +86,7 @@ private:
   double prev_p_, prev_q_, prev_r_;
   double gx_, gy_, gz_, az_, ax_, ay_;
   double lat_, lon_, alt_, vg_, chi_;
+  double lat0, lon0, alt0, gps_count;
   double alpha_;
   bool flying_;
 

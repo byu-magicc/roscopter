@@ -1,4 +1,7 @@
 #include "ekf/ekf.h"
+#include <stdio.h>
+
+using namespace std;
 
 namespace ekf
 {
@@ -24,9 +27,14 @@ mocapFilter::mocapFilter() :
   gps_sub_ = nh_.subscribe("gps/data", 1, &mocapFilter::gpsCallback, this);
   estimate_pub_ = nh_.advertise<nav_msgs::Odometry>("estimate", 1);
   bias_pub_ = nh_.advertise<sensor_msgs::Imu>("estimate/bias", 1);
-  is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1, true); // be sure to latch the is_flying message
+  is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1);
   predict_timer_ = nh_.createTimer(ros::Duration(1.0/inner_loop_rate_), &mocapFilter::predictTimerCallback, this);
   publish_timer_ = nh_.createTimer(ros::Duration(1.0/publish_rate_), &mocapFilter::publishTimerCallback, this);
+
+  lat0 = 0;
+  lon0 = 0;
+  alt0 = 0;
+  gps_count = 0;
 
   x_hat_.setZero();
   flying_ = false;
@@ -83,6 +91,10 @@ void mocapFilter::gpsCallback(const fcu_common::GPS msg)
 {
     if(!flying_){
         ROS_INFO_THROTTLE(1,"Not flying, but GPS signal received");
+        lat0 = (gps_count*lat0 + msg.latitude)/(gps_count + 1);
+        lon0 = (gps_count*lon0 + msg.longitude)/(gps_count + 1);
+        alt0 = (gps_count*alt0 + msg.altitude)/(gps_count + 1);
+        gps_count++;
     }else{
         if(msg.fix){
             updateGPS(msg);
@@ -121,6 +133,7 @@ void mocapFilter::predictStep()
 
 void mocapFilter::updateIMU(sensor_msgs::Imu msg)
 {
+  //ROS_INFO_STREAM("Update IMU");
   double phi(x_hat_(PHI)), theta(x_hat_(THETA)), psi(x_hat_(PSI));
   double alpha_x(x_hat_(AX)), alpha_y(x_hat_(AY)), alpha_z(x_hat_(AZ));
   double ct = cos(theta);
@@ -137,6 +150,8 @@ void mocapFilter::updateIMU(sensor_msgs::Imu msg)
   Eigen::Matrix<double, 3, 1> y;
   y << ax_, ay_, az_;
 
+  //cout << "y = " << y << endl;
+
   Eigen::Matrix<double, 3, NUM_STATES> C;
   C.setZero();
   C(0,THETA) = G*ct;
@@ -150,11 +165,17 @@ void mocapFilter::updateIMU(sensor_msgs::Imu msg)
   C(2,THETA) = G*st*cp;
   C(2,AZ) = -1.0;
 
+  //cout << "C = " << C << endl;
+  //cout << "P = " << P_ << endl;
+  //cout << "R = " << R_IMU_ << endl;
+  //cout << "xhat_  = " << x_hat_ << endl;
+
   Eigen::Matrix<double, NUM_STATES, 3> L;
   L.setZero();
   L = P_*C.transpose()*(R_IMU_ + C*P_*C.transpose()).inverse();
   P_ = (Eigen::MatrixXd::Identity(NUM_STATES,NUM_STATES) - L*C)*P_;
   x_hat_ = x_hat_ + L*(y - C*x_hat_);
+  //ROS_INFO("x = %0.02f\n", x_hat_(PN));
 }
 
 void mocapFilter::updateMocap(geometry_msgs::TransformStamped msg)
@@ -184,6 +205,7 @@ void mocapFilter::updateMocap(geometry_msgs::TransformStamped msg)
 
 void mocapFilter::updateGPS(fcu_common::GPS msg)
 {
+    ROS_INFO_STREAM("Update GPS");
     double u = x_hat_(U);
     double v = x_hat_(V);
     lat_ = msg.latitude;
@@ -192,8 +214,11 @@ void mocapFilter::updateGPS(fcu_common::GPS msg)
     vg_ = msg.speed;
     chi_ = msg.ground_course;
 
+
     Eigen::Matrix<double, 5, 1> y;
-    y << lon_, lat_, alt_, vg_, chi_;
+    y << (lat_ - lat0), (lon_ - lon0), (alt_ - alt0), vg_, chi_;
+
+    cout << "y = " << y << endl;
 
     Eigen::Matrix<double, 5, NUM_STATES> C;
     C.setZero();
@@ -214,6 +239,7 @@ void mocapFilter::updateGPS(fcu_common::GPS msg)
     L = P_*C.transpose()*(R_GPS_ + C*P_*C.transpose()).inverse();
     P_ = (Eigen::MatrixXd::Identity(NUM_STATES,NUM_STATES) - L*C)*P_;
     x_hat_ = x_hat_ + L*(y - C*x_hat_);
+    ROS_INFO("x = %0.02f\n", x_hat_(PN));
 }
 
 
@@ -390,7 +416,6 @@ void mocapFilter::publishEstimate()
 
   bias_pub_.publish(bias);
   double ax(x_hat_(AX)), ay(x_hat_(AY)),az(x_hat_(AZ));
-  ROS_INFO_STREAM("ax: " << ax << " ay:" << ay << " az: " << az << " bx: " << bx << " by: " << by << " bz: " << bz);
 }
 
 
