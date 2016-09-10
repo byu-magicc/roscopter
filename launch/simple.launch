@@ -37,7 +37,7 @@
   </include>
 
   <!-- Joy -->
-  <node name="rc" pkg="fcu_common" type="joy" output="screen">
+  <!-- <node name="rc" pkg="fcu_common" type="joy" output="screen">
     <param name="F_axis" value="1"/>
     <param name="x_axis" value="2"/>
     <param name="y_axis" value="3"/>
@@ -57,36 +57,19 @@
   </node>
   <node name="joy" pkg="joy" type="joy_node">
     <param name="autorepeat_rate" value="100"/>
-  </node>
+  </node> -->
 
   <!-- Position Controller -->
   <node name="controller" pkg="ros_copter" type="controller" output="screen">
-    <param name="u/P" value="0.0"/>
-    <param name="u/I" value="0.0"/>
-    <param name="u/D" value="0.0"/>
-
-    <param name="v/P" value="0.0"/>
-    <param name="v/I" value="0.0"/>
-    <param name="v/D" value="0.0"/>
-
-    <param name="x/P" value="0.0"/>
-    <param name="x/I" value="0.0"/>
-    <param name="x/D" value="0.0"/>
-
-    <param name="y/P" value="0.0"/>
-    <param name="y/I" value="0.0"/>
-    <param name="y/D" value="0.0"/>
-
-    <param name="z/P" value="0.5"/>
-    <param name="z/I" value="0.0"/>
-    <param name="z/D" value="0.0"/>
-
-    <param name="psi/P" value="0.0"/>
-    <param name="psi/I" value="0.0"/>
-    <param name="psi/D" value="0.0"/>
-
     <remap from="estimate" to="$(arg mav_name)/ground_truth/odometry"/>
   </node>
+
+  <!--Estimation-->
+   <node name="ekf" pkg="ros_copter"  type="ekf" output="screen">
+     <rosparam command="load" file="$(find ros_copter)/params/estimator.yaml" />
+     <remap from="/imu/data" to="/shredder/imu"/>
+     <!-- <remap from="mocap" to="/naze/CG"/>  -->
+   </node>
 
   <!-- FPV -->
   <!-- <node name="fpv" pkg="image_view" type="image_view">
