@@ -63,13 +63,15 @@
   <node name="controller" pkg="ros_copter" type="controller" output="screen">
     <remap from="estimate" to="$(arg mav_name)/ground_truth/odometry"/>
   </node>
-
+  
   <!--Estimation-->
    <node name="ekf" pkg="ros_copter"  type="ekf" output="screen">
      <rosparam command="load" file="$(find ros_copter)/params/estimator.yaml" />
      <remap from="/imu/data" to="/shredder/imu"/>
      <!-- <remap from="mocap" to="/naze/CG"/>  -->
    </node>
+  <!-- Waypoint Manager -->
+  <node name="waypoint_manager" pkg="ros_copter" type="waypoint_manager.py"/>
 
   <!-- FPV -->
   <!-- <node name="fpv" pkg="image_view" type="image_view">
