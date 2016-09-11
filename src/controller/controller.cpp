@@ -49,8 +49,8 @@ Controller::Controller() :
   max_.pitch = nh_private_.param<double>("max_pitch", 0.785);
   max_.yaw_rate = nh_private_.param<double>("max_yaw_rate", 3.14159);
   max_.throttle = nh_private_.param<double>("max_throttle", 1.0);
-  max_.u = nh_private_.param<double>("max_u", 20.0);
-  max_.v = nh_private_.param<double>("max_v", 20.0);
+  max_.u = nh_private_.param<double>("max_u", 1.0);
+  max_.v = nh_private_.param<double>("max_v", 1.0);
 
   _func = boost::bind(&Controller::reconfigure_callback, this, _1, _2);
   _server.setCallback(_func);

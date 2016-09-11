@@ -76,7 +76,7 @@ private:
   // Local Variables
   Eigen::Matrix<double, 3, 3> R_IMU_;
   Eigen::Matrix<double, 6, 6> R_Mocap_;
-  Eigen::Matrix<double, 5, 5> R_GPS_;
+  Eigen::Matrix<double, 3, 3> R_GPS_;
 
   Eigen::Matrix<double, NUM_STATES, NUM_STATES> Q_;
   Eigen::Matrix<double, NUM_STATES, NUM_STATES> P_;
@@ -86,7 +86,7 @@ private:
   double prev_p_, prev_q_, prev_r_;
   double gx_, gy_, gz_, az_, ax_, ay_;
   double lat_, lon_, alt_, vg_, chi_;
-  double lat0, lon0, alt0, gps_count;
+  double lat0_, lon0_, alt0_, gps_count_;
   double alpha_;
   bool flying_;
 
@@ -103,6 +103,7 @@ private:
   void predictTimerCallback(const ros::TimerEvent& event);
   void publishTimerCallback(const ros::TimerEvent& event);
   void publishEstimate();
+  void GPS_to_m(double* dlat, double* dlon, double* dx, double* dy);
   double LPF(double yn, double un);
   Eigen::Matrix<double, NUM_STATES, 1> f(const Eigen::Matrix<double, NUM_STATES, 1> x);
   Eigen::Matrix<double, NUM_STATES, NUM_STATES> dfdx(const Eigen::Matrix<double, NUM_STATES, 1> x);
