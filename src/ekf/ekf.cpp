@@ -60,7 +60,7 @@ void mocapFilter::predictTimerCallback(const ros::TimerEvent &event)
 void mocapFilter::imuCallback(const sensor_msgs::Imu msg)
 {
   if(!flying_){
-    if(fabs(msg.linear_acceleration.z) > 11.0){
+    if(fabs(msg.linear_acceleration.z) > 10.0){
       ROS_WARN("Now flying");
       flying_ = true;
       std_msgs::Bool flying;
@@ -153,15 +153,15 @@ void mocapFilter::updateIMU(sensor_msgs::Imu msg)
   Eigen::Matrix<double, 3, NUM_STATES> C;
   C.setZero();
   C(0,THETA) = G*ct;
-//  C(0,AX) = -1.0;
+  C(0,AX) = -1.0;
 
   C(1,PHI) = -G*ct*cp;
   C(1,THETA) = G*st*sp;
-//  C(1,AY) = -1.0;
+  C(1,AY) = -1.0;
 
   C(2,PHI) = G*ct*sp;
   C(2,THETA) = G*st*cp;
-//  C(2,AZ) = -1.0;
+  C(2,AZ) = -1.0;
 
   Eigen::Matrix<double, NUM_STATES, 3> L;
   L.setZero();
@@ -320,7 +320,7 @@ Eigen::Matrix<double, NUM_STATES, NUM_STATES> mocapFilter::dfdx(const Eigen::Mat
   A(PE,W) = cp*st*ss-sp*cs;
   A(PE,PHI) = (cp*st*ss-sp*cs)*v + (-sp*st*ss-cp*cs)*w;
   A(PE,THETA) = -st*ss*u + (sp*ct*ss)*v + (cp*ct*ss)*w;
-  A(PE,PSI) = -ct*ss*u  + (sp*st*cs-cp*ss)*v + (cp*st*cs+sp*ss)*w;
+  A(PE,PSI) = ct*cs*u  + (sp*st*cs-cp*ss)*v + (cp*st*cs+sp*ss)*w;
 
   A(PD,U) = -st;
   A(PD,V) = sp*ct;
