@@ -70,7 +70,7 @@ The Dynamics are defined as follows:
 					\end{pmatrix}
 \end{equation}
 
-Which means the Jacobian, A is defined as 
+Which means the Jacobian, A is defined as
 
 \begin{equation}
   \centering
@@ -98,14 +98,14 @@ Which means the Jacobian, A is defined as
   0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
 
 			 \end{pmatrix}
-			 $}	
+			 $}
 \end{equation}
 
 with
 \begin{equation}
 	\begin{aligned}
 		C_{06} &= (\cp\sit\cs+\sip\sis)v + (-\sip\sit\cs+\cp\sis)w \\
-		C_{07} &= -\sit\cs u + \sip\ct\cs v + \cp\ct\sis w \\
+		C_{07} &= -\sit\cs u + \sip\ct\cs v + \cp\ct\cs w \\
 		C_{08} &= -\ct\sis u + (-\sip\sit\sis-\cp\cs)v + (-\cp\sit\sis+\sip\cs)w \\
 		C_{16} &= (\cp\sit\sis-\sip\cs)v + (-\sip \sit \sis-\cp\cs)w \\
 		C_{17} &= -\sit\cs u + (\sip\ct\sis)v + (\cp\ct\sis)w \\
@@ -117,13 +117,13 @@ with
 		C_{67} &= \tfrac{\sip q + \cp r}{c^{2}_{\theta}} \\
 		C_{76} &= -\sip q-\cp r \\
 		C_{86} &= \tfrac{q \cp-r \sip}{\ct} \\
-		C_{87} &= \tfrac{-(q \sip+r \cp) \tant}{\ct} \\
+		C_{87} &= \tfrac{(q \sip+r \cp) \tant}{\ct} \\
 	\end{aligned}
 \end{equation}
 
 \section{IMU Measurements}
 
-Because IMU measurements are defined as 
+Because IMU measurements are defined as
 \begin{equation}
 \begin{aligned}
 	a_{i_{true}} &= a_{i_{meas}} + \alpha_i + \eta \\
@@ -141,12 +141,12 @@ the measurement model appears as follows:
 	a_{y_{true}} \\
 	a_{z_{true}} \\
 	\end{pmatrix}
-	&= 
+	&=
 	\begin{pmatrix}
 	\dot{u} + qw - rv + g\sit \\
 	\dot{v} + ru - pw - g\ct\sip \\
 	\dot{w} + pv - qu - g\ct\cp \\
-	\end{pmatrix} \\		
+	\end{pmatrix} \\
 	\begin{pmatrix}
 	a_{x_{meas}} \\
 	a_{y_{meas}} \\
@@ -174,8 +174,8 @@ And, after making the assumption that $\dot{u}$, $\dot{v}$, $\dot{w}$, and the c
 	a_{y_{meas}} \\
 	a_{z_{meas}} \end{pmatrix}
 	\approx \begin{pmatrix}
-	g\sit \\
-	-g\ct\sip \\
+	-g\sit \\
+	g\ct\sip \\
 	-g\ct\cp \end{pmatrix}
 	- \begin{pmatrix}
 	\alpha_x \\
@@ -188,9 +188,9 @@ and therefore
 \makebox[\textwidth][c]{$
 	\tfrac{\partial h}{\partial x} = \begin{pmatrix}
 	% position			 velocity 			angle 											  alphas			     betas
-		0 & 0 & 0 &    0 & 0 & 0 &    0        & g\ct      & 0 &    -1 & 0  & 0  &   0 & 0 & 0 \\
-		0 & 0 & 0 &    0 & 0 & 0 &    -g\ct\cp & g\sit\sip & 0 &    0  & -1 & 0  &   0 & 0 & 0 \\
-		0 & 0 & 0 &    0 & 0 & 0 &    g\ct\sip & g\sit\cp  & 0 &    0  & 0  & -1 &   0 & 0 & 0 \end{pmatrix}
+		0 & 0 & 0 &    0 & 0 & 0 &    0        & -g\ct      & 0 &    -1 & 0  & 0  &   0 & 0 & 0 \\
+		0 & 0 & 0 &    0 & 0 & 0 &    g\ct\cp  & -g\sit\sip & 0 &    0  & -1 & 0  &   0 & 0 & 0 \\
+		0 & 0 & 0 &    0 & 0 & 0 &    g\ct\sip & g\sit\cp   & 0 &    0  & 0  & -1 &   0 & 0 & 0 \end{pmatrix}
 		$}
 \end{equation}
 
@@ -224,7 +224,7 @@ Therefore:
 
 
 \section{GPS Measurements}
-GPS is used to directly update the position states of the filter 
+GPS is used to directly update the position states of the filter
 
 The UAV book tells us to take the derivative of GPS to create a pseudo-velocity measurement.  I think this is weird, but I may end up doing that too.
 \begin{equation}

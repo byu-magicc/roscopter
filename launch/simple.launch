@@ -54,6 +54,7 @@
      <remap from="/imu/data" to="/shredder/imu"/>
      <remap from="mocap" to="/shredder/ground_truth/odometry"/>
    </node>
+
   <!-- Waypoint Manager -->
   <node name="waypoint_manager" pkg="ros_copter" type="waypoint_manager.py"/>
 

@@ -152,11 +152,11 @@ void mocapFilter::updateIMU(sensor_msgs::Imu msg)
 
   Eigen::Matrix<double, 3, NUM_STATES> C;
   C.setZero();
-  C(0,THETA) = G*ct;
+  C(0,THETA) = -G*ct;
   C(0,AX) = -1.0;
 
-  C(1,PHI) = -G*ct*cp;
-  C(1,THETA) = G*st*sp;
+  C(1,PHI) = G*ct*cp;
+  C(1,THETA) = -G*st*sp;
   C(1,AY) = -1.0;
 
   C(2,PHI) = G*ct*sp;
@@ -312,15 +312,15 @@ Eigen::Matrix<double, NUM_STATES, NUM_STATES> mocapFilter::dfdx(const Eigen::Mat
   A(PN,V) = sp*st*cs-cp*ss;
   A(PN,W) = cp*st*cs+sp*ss;
   A(PN,PHI) = (cp*st*cs+sp*ss)*v + (-sp*st*cs+cp*ss)*w;
-  A(PN,THETA) = -st*cs*u + (sp*ct*cs)*v + (cp*ct*ss)*w;
+  A(PN,THETA) = -st*cs*u + (sp*ct*cs)*v + (cp*ct*cs)*w;
   A(PN,PSI) = -ct*ss*u + (-sp*st*ss-cp*cs)*v + (-cp*st*ss+sp*cs)*w;
 
-  A(PE,U) = cp*ss;
+  A(PE,U) = ct*ss;
   A(PE,V) = sp*st*ss+cp*cs;
   A(PE,W) = cp*st*ss-sp*cs;
   A(PE,PHI) = (cp*st*ss-sp*cs)*v + (-sp*st*ss-cp*cs)*w;
-  A(PE,THETA) = -st*ss*u + (sp*ct*ss)*v + (cp*ct*ss)*w;
-  A(PE,PSI) = ct*cs*u  + (sp*st*cs-cp*ss)*v + (cp*st*cs+sp*ss)*w;
+  A(PE,THETA) = -st*cs*u + (sp*ct*ss)*v + (cp*ct*ss)*w;
+  A(PE,PSI) = -ct*ss*u  + (sp*st*cs-cp*ss)*v + (cp*st*cs+sp*ss)*w;
 
   A(PD,U) = -st;
   A(PD,V) = sp*ct;
@@ -360,7 +360,7 @@ Eigen::Matrix<double, NUM_STATES, NUM_STATES> mocapFilter::dfdx(const Eigen::Mat
   A(THETA,BZ) = -sp;
 
   A(PSI,PHI) = (q*cp-r*sp)/ct;
-  A(PSI,THETA) = -(q*sp+r*cp)*tt/ct;
+  A(PSI,THETA) = (q*sp+r*cp)*tt/ct;
   A(PSI,BY) = sp/ct;
   A(PSI,BZ) = cp/ct;
 
