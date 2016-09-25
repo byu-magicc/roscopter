@@ -1,0 +1,282 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{epstopdf}
+\usepackage[hang,small,bf]{caption}
+\usepackage{natbib}
+\usepackage{graphicx}
+\graphicspath{figures/}
+\newcommand{\irow}[1]{% inline row vector
+  \begin{smallmatrix}(\,#1\,)\end{smallmatrix}%
+}
+\newcommand{\cp}{c_{\phi}}
+\newcommand{\ct}{c_{\theta}}
+\newcommand{\cs}{c_{\psi}}
+\newcommand{\sip}{s_{\phi}}
+\newcommand{\sit}{s_{\theta}}
+\newcommand{\sis}{s_{\psi}}
+\newcommand{\tanp}{t_{\phi}}
+\newcommand{\tant}{t_{\theta}}
+\setcounter{MaxMatrixCols}{20}
+
+
+\title{EKF Jacobian Definition for ROS-Copter}
+\author{James Jackson}
+\date{December 2015}
+
+\begin{document}
+
+\maketitle
+
+\abstract{}
+
+\section{Definitions}
+
+The state, $x$ is defined as follows:
+
+\begin{equation}
+	x = \irow{
+	    p_n & p_e & p_d & u & v & w & \phi & \theta & \psi & \alpha_x & \alpha_y & \alpha_z & \beta_x & \beta_y & \beta_z
+	    }
+\end{equation}
+
+By mechanization, $u$ is defined as accelerometer and gyro inputs, or:
+\begin{equation}
+	u = \irow{
+			a_z & g_x & g_y & g_z
+			}
+\end{equation}
+
+where $a_z$, $g_x$, $g_y$, and $g_z$ are defined as the measured acceleration and angular rates.
+
+
+\section{Dynamics}
+The Dynamics are defined as follows:
+
+\begin{equation}
+	f(x,u) = \begin{pmatrix}
+						\dot{p_n} \\ \dot{p_e} \\ \dot{p_d} \\ \dot{u} \\ \dot{v} \\ \dot{w} \\ \dot{\phi} \\ \dot{\theta} \\ \dot{\psi} \\ \dot{\alpha_x} \\ \dot{\alpha_y} \\ \dot{\alpha_z} \\ \dot{\beta_x} \\ \dot{\beta_y} \\ \dot{\beta_z} \end{pmatrix} =
+					\begin{pmatrix}
+					\ct\cs u + \left(\sip\sit\cs-\cp\sis\right) v + \left(\cp\sit\cs+\sip\sis\right)w \\
+					\ct\cs u + \left(\sip\sit\sis+\cp\cs\right) v + \left(\cp\sit\sis-\sip\cs\right)w \\
+					-\sit  u + \sip\ct v                          +\cp\ct w          \\
+					rv-qw - g\sit \\
+					pw-ru + g\ct\sip \\
+					qu-pv + g\ct\cp + (a_z + \alpha_z) \\
+					p + \sip\tant q + \cp\tant r \\
+					\cp q - \sip r \\
+					q \tfrac{\sip}{\ct} + r \tfrac{\cp}{\ct} \\
+					0 \\ 0 \\ 0 \\ 0 \\ 0 \\ 0 \\
+					\end{pmatrix}
+\end{equation}
+
+Which means the Jacobian, A is defined as
+
+\begin{equation}
+  \centering
+	\makebox[\textwidth][c]{$
+	\small
+	\tfrac{\partial f}{\partial x} = \begin{pmatrix}
+	0 & 0 & 0 &  \ct\cs   & \sip\sit\cs-\cp\sis      & \cp\sit\cs+\sip\sis 			& C_{06} & C_{07} &	C_{08} &	0 & 0 & 0 & 0 & 0 & 0 \\
+	0 & 0 & 0 &  \ct\sis & (\sip \sit \sis+\cp \cs) & (\cp \sit \sis-\sip \cs) &	C_{16} & C_{17} & C_{18} &	0 & 0 & 0 & 0 & 0 & 0 \\
+	0 & 0 & 0 & -\sit     & \sip\ct                  & \cp\ct 									&	C_{26} & C_{27} & C_{28} &	0 & 0 & 0 & 0 & 0 & 0 \\
+
+	0 & 0 & 0 & 0  & r  & -q & 0          & -g \ct      & 0 & 0 & 0 & 0 & 0  &  -w &  v  \\
+  0 & 0 & 0 & -r & 0 & p  & g \ct \cp   & -g \sit \sip & 0 & 0 & 0 & 0 & w  &  0  & -u  \\
+  0 & 0 & 0 & q  & -p & 0 & -g \ct \sip & -g \sit \cp & 0 & 0 & 0 & 1 & -v &  u  & 0  \\
+
+  0 & 0 & 0 & 0 & 0 & 0 & C_{66} & C_{67} & 0 & 0 & 0 & 0 & 1 & \sip \tant        & \cp \tant \\
+  0 & 0 & 0 & 0 & 0 & 0 & C_{76} & 0      & 0 & 0 & 0 & 0 & 0 & \cp               &    -\sip \\
+  0 & 0 & 0 & 0 & 0 & 0 & C_{86} & C_{87} & 0 & 0 & 0 & 0 & 0 & \tfrac{\sip}{\ct} & \tfrac{\cp}{\ct} \\
+
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+
+			 \end{pmatrix}
+			 $}
+\end{equation}
+
+with
+\begin{equation}
+	\begin{aligned}
+		C_{06} &= (\cp\sit\cs+\sip\sis)v + (-\sip\sit\cs+\cp\sis)w \\
+		C_{07} &= -\sit\cs u + \sip\ct\cs v + \cp\ct\cs w \\
+		C_{08} &= -\ct\sis u + (-\sip\sit\sis-\cp\cs)v + (-\cp\sit\sis+\sip\cs)w \\
+		C_{16} &= (\cp\sit\sis-\sip\cs)v + (-\sip \sit \sis-\cp\cs)w \\
+		C_{17} &= -\sit\cs u + (\sip\ct\sis)v + (\cp\ct\sis)w \\
+		C_{18} &= -\ct\cs u  + (\sip\sit\cs-\cp\sis)v + (\cp\sit\cs+\sip\sis)w \\
+		C_{26} &= \cp\ct v   - \sip\ct w \\
+		C_{27} &= -\ct u     - \sip\sit v - \cp\sit w \\
+		C_{28} &= 0 \\
+		C_{66} &= \cp \tant q-\sip \tant r\\
+		C_{67} &= \tfrac{\sip q + \cp r}{c^{2}_{\theta}} \\
+		C_{76} &= -\sip q-\cp r \\
+		C_{86} &= \tfrac{q \cp-r \sip}{\ct} \\
+		C_{87} &= \tfrac{(q \sip+r \cp) \tant}{\ct} \\
+	\end{aligned}
+\end{equation}
+
+\section{IMU Measurements}
+
+Because IMU measurements are defined as
+\begin{equation}
+\begin{aligned}
+	a_{i_{true}} &= a_{i_{meas}} + \alpha_i + \eta \\
+	a_{i_{meas}} &= a_{i_{true}} - \alpha_i - \eta
+\end{aligned}
+\end{equation}
+
+the measurement model appears as follows:
+
+
+\begin{equation}
+\begin{aligned}
+	\begin{pmatrix}
+	a_{x_{true}} \\
+	a_{y_{true}} \\
+	a_{z_{true}} \\
+	\end{pmatrix}
+	&=
+	\begin{pmatrix}
+	\dot{u} + qw - rv + g\sit \\
+	\dot{v} + ru - pw - g\ct\sip \\
+	\dot{w} + pv - qu - g\ct\cp \\
+	\end{pmatrix} \\
+	\begin{pmatrix}
+	a_{x_{meas}} \\
+	a_{y_{meas}} \\
+	a_{z_{meas}} \end{pmatrix}
+	&= \begin{pmatrix}
+	\dot{u} + qw - rv + g\sit \\
+	\dot{v} + ru - pw - g\ct\sip \\
+	\dot{w} + pv - qu - g\ct\cp \end{pmatrix}
+		- \begin{pmatrix}
+	\alpha_x \\
+	\alpha_y \\
+	\alpha_z \end{pmatrix}
+	- \begin{pmatrix}
+	\eta \\
+	\eta \\
+	\eta \end{pmatrix}
+\end{aligned}
+\end{equation}
+
+And, after making the assumption that $\dot{u}$, $\dot{v}$, $\dot{w}$, and the coriolis terms are small,
+
+\begin{equation}
+	h(x,u) = 	\begin{pmatrix}
+	a_{x_{meas}} \\
+	a_{y_{meas}} \\
+	a_{z_{meas}} \end{pmatrix}
+	\approx \begin{pmatrix}
+	-g\sit \\
+	g\ct\sip \\
+	-g\ct\cp \end{pmatrix}
+	- \begin{pmatrix}
+	\alpha_x \\
+	\alpha_y \\
+	\alpha_z \end{pmatrix}
+\end{equation}
+
+and therefore
+\begin{equation}
+\makebox[\textwidth][c]{$
+	\tfrac{\partial h}{\partial x} = \begin{pmatrix}
+	% position			 velocity 			angle 											  alphas			     betas
+		0 & 0 & 0 &    0 & 0 & 0 &    0        & -g\ct      & 0 &    -1 & 0  & 0  &   0 & 0 & 0 \\
+		0 & 0 & 0 &    0 & 0 & 0 &    g\ct\cp  & -g\sit\sip & 0 &    0  & -1 & 0  &   0 & 0 & 0 \\
+		0 & 0 & 0 &    0 & 0 & 0 &    g\ct\sip & g\sit\cp   & 0 &    0  & 0  & -1 &   0 & 0 & 0 \end{pmatrix}
+		$}
+\end{equation}
+
+
+\section{Motion Capture Measurements}
+Motion Capture measurements are used to directly update the position and attitude states.
+
+\begin{equation}
+	h(x,u) = \begin{pmatrix}
+	  p_n \\
+	  p_e \\
+	  p_d \\
+	  \phi \\
+	  \theta \\
+	  \psi \end{pmatrix}
+\end{equation}.
+
+Therefore:
+\begin{equation}
+\makebox[\textwidth][c]{$
+	\tfrac{\partial h}{\partial x} = \begin{pmatrix}
+	% position			 velocity 			angle 				 alphas			     betas
+		1 & 0 & 0 &    0 & 0 & 0 &    0 & 0 & 0 &    0 & 0 & 0 &   0 & 0 & 0 \\
+		0 & 1 & 0 &    0 & 0 & 0 &    0 & 0 & 0 &    0 & 0 & 0 &   0 & 0 & 0 \\
+		0 & 0 & 1 &    0 & 0 & 0 &    0 & 0 & 0 &    0 & 0 & 0 &   0 & 0 & 0 \\
+		0 & 0 & 0 &    0 & 0 & 0 &    1 & 0 & 0 &    0 & 0 & 0 &   0 & 0 & 0 \\
+		0 & 0 & 0 &    0 & 0 & 0 &    0 & 1 & 0 &    0 & 0 & 0 &   0 & 0 & 0 \\
+		0 & 0 & 0 &    0 & 0 & 0 &    0 & 0 & 1 &    0 & 0 & 0 &   0 & 0 & 0 \end{pmatrix}
+		$}
+\end{equation}
+
+
+\section{GPS Measurements}
+GPS is used to directly update the position states of the filter
+
+The UAV book tells us to take the derivative of GPS to create a pseudo-velocity measurement.  I think this is weird, but I may end up doing that too.
+\begin{equation}
+	h(x,u) = \begin{pmatrix}
+	p_n \\
+	p_e \\
+	p_d \end{pmatrix}
+\end{equation}
+
+Therefore
+\begin{equation}
+	\makebox[\textwidth][c]{$
+	\tfrac{\partial h}{\partial x} = \begin{pmatrix}
+	% position			 velocity 			angle 				 alphas			     betas
+		1 & 0 & 0 &    0 & 0 & 0 &    0 & 0 & 0 &    0 & 0 & 0 &   0 & 0 & 0 \\
+		0 & 1 & 0 &    0 & 0 & 0 &    0 & 0 & 0 &    0 & 0 & 0 &   0 & 0 & 0 \\
+		0 & 0 & 1 &    0 & 0 & 0 &    0 & 0 & 0 &    0 & 0 & 0 &   0 & 0 & 0 \end{pmatrix}
+		$}
+\end{equation}
+
+
+\section{VO Measurements}
+For now, I'm using VO as a pseudo-global measurement.  This is wrong, because it is unobservable.  To fix this, though requires a relative estimator, which I don't want to implement right now.  Instead, I'm going to pretend that VO gives me a global position and attitude measurement.  This will cause problems if operated for a long time, but will probably work for small flights and tests.  In this case, it's exactly like the motion capture measurement model, with
+\begin{equation}
+	h(x,u) = \begin{pmatrix}
+	  p_n \\
+	  p_e \\
+	  p_d \\
+	  \phi \\
+	  \theta \\
+	  \psi \end{pmatrix}
+\end{equation}.
+
+and
+
+\begin{equation}
+\makebox[\textwidth][c]{$
+	\tfrac{\partial h}{\partial x} = \begin{pmatrix}
+	% position			 velocity 			angle 				 alphas			     betas
+		1 & 0 & 0 &    0 & 0 & 0 &    0 & 0 & 0 &    0 & 0 & 0 &   0 & 0 & 0 \\
+		0 & 1 & 0 &    0 & 0 & 0 &    0 & 0 & 0 &    0 & 0 & 0 &   0 & 0 & 0 \\
+		0 & 0 & 1 &    0 & 0 & 0 &    0 & 0 & 0 &    0 & 0 & 0 &   0 & 0 & 0 \\
+		0 & 0 & 0 &    0 & 0 & 0 &    1 & 0 & 0 &    0 & 0 & 0 &   0 & 0 & 0 \\
+		0 & 0 & 0 &    0 & 0 & 0 &    0 & 1 & 0 &    0 & 0 & 0 &   0 & 0 & 0 \\
+		0 & 0 & 0 &    0 & 0 & 0 &    0 & 0 & 1 &    0 & 0 & 0 &   0 & 0 & 0 \end{pmatrix}
+		$}
+\end{equation}
+
+
+
+
+
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}

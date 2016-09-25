@@ -14,9 +14,9 @@ class WaypointManager():
 
         # get parameters
         # how close does the MAV need to get before going to the next waypoint?
-        self.threshold = rospy.get_param('~threshold', 2)
+        self.threshold = rospy.get_param('~threshold', .5)
         self.cyclical_path = rospy.get_param('~cycle', True)
-        self.waypoint_filename = rospy.get_param('~waypoint_filename', "/home/jarvis/waypoints.csv")
+        self.waypoint_filename = rospy.get_param('~waypoint_filename', "/home/magicc/lanl_ws/waypoint.csv")
 
         self.prev_time = rospy.Time.now()
 
@@ -86,7 +86,7 @@ class WaypointManager():
             waypoint_msg.z = next_waypoint[2]
             self.waypoint_pub_.publish(waypoint_msg)
 
-            
+
 if __name__ == '__main__':
     rospy.init_node('waypoint_manager', anonymous=True)
     try:

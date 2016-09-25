@@ -13,6 +13,7 @@
 #include <deque>
 #include <lib/eigen.h>
 #include <eigen_conversions/eigen_msg.h>
+#include <fcu_common/GPS.h>
 
 // state numbers
 #define PN 0
@@ -54,6 +55,7 @@ private:
   // Publishers and Subscribers
   ros::Subscriber mocap_sub_;
   ros::Subscriber imu_sub_;
+  ros::Subscriber gps_sub_;
   ros::Publisher estimate_pub_;
   ros::Publisher bias_pub_;
   ros::Publisher is_flying_pub_;
@@ -74,6 +76,7 @@ private:
   // Local Variables
   Eigen::Matrix<double, 3, 3> R_IMU_;
   Eigen::Matrix<double, 6, 6> R_Mocap_;
+  Eigen::Matrix<double, 3, 3> R_GPS_;
 
   Eigen::Matrix<double, NUM_STATES, NUM_STATES> Q_;
   Eigen::Matrix<double, NUM_STATES, NUM_STATES> P_;
@@ -82,20 +85,25 @@ private:
   ros::Time previous_predict_time_;
   double prev_p_, prev_q_, prev_r_;
   double gx_, gy_, gz_, az_, ax_, ay_;
+  double lat_, lon_, alt_, vg_, chi_;
+  double lat0_, lon0_, alt0_, gps_count_;
   double alpha_;
   bool flying_;
 
   // Functions
   void mocapCallback(const geometry_msgs::TransformStamped msg);
   void imuCallback(const sensor_msgs::Imu msg);
+  void gpsCallback(const fcu_common::GPS msg);
   void predictStep();
   void updateStep();
   void updateIMU(sensor_msgs::Imu msg);
   void updateMocap(geometry_msgs::TransformStamped msg);
+  void updateGPS(fcu_common::GPS msg);
   void initializeX(geometry_msgs::TransformStamped msg);
   void predictTimerCallback(const ros::TimerEvent& event);
   void publishTimerCallback(const ros::TimerEvent& event);
   void publishEstimate();
+  void GPS_to_m(double* dlat, double* dlon, double* dx, double* dy);
   double LPF(double yn, double un);
   Eigen::Matrix<double, NUM_STATES, 1> f(const Eigen::Matrix<double, NUM_STATES, 1> x);
   Eigen::Matrix<double, NUM_STATES, NUM_STATES> dfdx(const Eigen::Matrix<double, NUM_STATES, 1> x);
