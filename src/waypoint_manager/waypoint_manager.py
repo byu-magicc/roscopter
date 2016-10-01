@@ -2,10 +2,11 @@
 # license removed for brevity
 import rospy
 import time
-from geometry_msgs.msg import Vector3
+from fcu_common.msg import ExtendedCommand
 from nav_msgs.msg import Odometry
 from ros_copter.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
 import csv
+import tf
 import numpy as np
 
 class WaypointManager():
@@ -16,7 +17,7 @@ class WaypointManager():
         # how close does the MAV need to get before going to the next waypoint?
         self.threshold = rospy.get_param('~threshold', 2)
         self.cyclical_path = rospy.get_param('~cycle', True)
-        self.waypoint_filename = rospy.get_param('~waypoint_filename', "/home/jarvis/waypoints.csv")
+        self.waypoint_filename = rospy.get_param('~waypoint_filename', "/home/jarvis/roscopter/src/ros_copter/params/waypoints.csv")
 
         self.prev_time = rospy.Time.now()
 
@@ -25,9 +26,11 @@ class WaypointManager():
         self.remove_waypoint_service = rospy.Service('remove_waypoint', RemoveWaypoint, self.addWaypointCallback)
         self.set_waypoint_from_file_service = rospy.Service('set_waypoints_from_file', SetWaypointsFromFile, self.addWaypointCallback)
 
+        print("1")
+
         # Set Up Publishers and Subscribers
         self.xhat_sub_ = rospy.Subscriber('shredder/ground_truth/odometry', Odometry, self.odometryCallback, queue_size=5)
-        self.waypoint_pub_ = rospy.Publisher('waypoint', Vector3, queue_size=5, latch=True)
+        self.waypoint_pub_ = rospy.Publisher('high_level_command', ExtendedCommand, queue_size=5, latch=True)
 
         # Start Up Waypoint List
         self.waypoint_list = []
@@ -36,17 +39,26 @@ class WaypointManager():
             file = csv.reader(open(self.waypoint_filename, 'r'))
             print("Waypoints file")
             for row in file:
-                print(map(float, row))
-                self.waypoint_list.append(map(float, row))
+                data = map(float, row)
+                # Wrap yaw from -PI to PI
+                while data[3] <= -3.141593:
+                    data[3] += 2*3.141593
+                while data[3] > 3.141503:
+                    data[3] -= 2*3.141593
+                print(data)
+                self.waypoint_list.append(data)
 
         self.current_waypoint_index = 0
 
-        waypoint_msg = Vector3()
+        command_msg = ExtendedCommand()
         current_waypoint = np.array(self.waypoint_list[0])
-        waypoint_msg.x = current_waypoint[0]
-        waypoint_msg.y = current_waypoint[1]
-        waypoint_msg.z = current_waypoint[2]
-        self.waypoint_pub_.publish(waypoint_msg)
+
+        command_msg.x = current_waypoint[0]
+        command_msg.y = current_waypoint[1]
+        command_msg.F = current_waypoint[2]
+        command_msg.z = current_waypoint[3]
+        command_msg.mode = ExtendedCommand.MODE_XPOS_YPOS_YAW_ALTITUDE
+        self.waypoint_pub_.publish(command_msg)
 
         while not rospy.is_shutdown():
             # wait for new messages and call the callback when they arrive
@@ -66,9 +78,12 @@ class WaypointManager():
     def odometryCallback(self, msg):
         # Get error between waypoint and current state
         current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
+        (r, p, y) = tf.transformations.euler_from_quaternion([msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w])
         current_position = np.array([msg.pose.pose.position.x,
                                      msg.pose.pose.position.y,
-                                     msg.pose.pose.position.z])
+                                     msg.pose.pose.position.z,
+                                     y])
+
         error = np.linalg.norm(current_position - current_waypoint)
 
         if error < self.threshold:
@@ -80,13 +95,15 @@ class WaypointManager():
                 if self.current_waypoint_index > len(self.waypoint_list):
                     self.current_waypoint_index -=1
             next_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
-            waypoint_msg = Vector3()
-            waypoint_msg.x = next_waypoint[0]
-            waypoint_msg.y = next_waypoint[1]
-            waypoint_msg.z = next_waypoint[2]
-            self.waypoint_pub_.publish(waypoint_msg)
+            command_msg = ExtendedCommand()
+            command_msg.x = next_waypoint[0]
+            command_msg.y = next_waypoint[1]
+            command_msg.F = next_waypoint[2]
+            command_msg.z = next_waypoint[3]
+            command_msg.mode = ExtendedCommand.MODE_XPOS_YPOS_YAW_ALTITUDE
+            self.waypoint_pub_.publish(command_msg)
 
-            
+
 if __name__ == '__main__':
     rospy.init_node('waypoint_manager', anonymous=True)
     try:

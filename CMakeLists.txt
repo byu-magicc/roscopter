@@ -22,11 +22,6 @@ generate_dynamic_reconfigure_options(
 
 set(CMAKE_CXX_FLAGS "-std=c++0x")
 
-add_message_files(
-  FILES
-  FilterState.msg
-)
-
 add_service_files(
   FILES
   AddWaypoint.srv
@@ -58,7 +53,7 @@ add_library(ros_copter
   include/lib/eigen.h
   src/lib/eigen.cpp
 )
-add_dependencies(ros_copter ros_copter_generate_messages_cpp fcu_common_generate_messages_cpp)
+add_dependencies(ros_copter fcu_common_generate_messages_cpp)
 target_link_libraries(ros_copter ${catkin_LIBRARIES})
 
 
@@ -68,15 +63,12 @@ add_executable(ekf
   src/ekf/ekf.cpp
   include/ekf/ekf.h
 )
-add_dependencies(ekf ros_copter_generate_messages_cpp fcu_common_generate_messages_cpp)
+add_dependencies(ekf fcu_common_generate_messages_cpp)
 target_link_libraries(ekf ${catkin_LIBRARIES})
 
 add_executable(controller
   src/controller/controller_node.cpp
   src/controller/controller.cpp
   include/controller/controller.h)
-add_dependencies(controller
-  ros_copter_generate_messages_cpp
-  fcu_common_generate_messages_cpp
-  ros_copter_gencfg)
+add_dependencies(controller fcu_common_generate_messages_cpp ros_copter_gencfg)
 target_link_libraries(controller ${catkin_LIBRARIES})
