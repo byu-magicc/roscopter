@@ -30,7 +30,7 @@ class WaypointManager():
 
         # Set Up Publishers and Subscribers
         self.xhat_sub_ = rospy.Subscriber('shredder/ground_truth/odometry', Odometry, self.odometryCallback, queue_size=5)
-        self.waypoint_pub_ = rospy.Publisher('high_level_command', ExtendedCommand, queue_size=5, latch=True)
+        self.waypoint_pub_ = rospy.Publisher('waypoint', ExtendedCommand, queue_size=5, latch=True)
 
         # Start Up Waypoint List
         self.waypoint_list = []
