@@ -9,13 +9,13 @@
   <arg name="mav_name"            default="shredder"/>
   <arg name="enable_ground_truth" default="true" />
   <arg name="log_file"            default="$(arg mav_name)" />
-  <arg name="color"               default="White"/>
+  <arg name="color"               default="Blue"/>
   <arg name="x"                   default="0"/>
   <arg name="y"                   default="0"/>
   <arg name="z"                   default="0.1"/>
   <arg name="yaw"                 default="0"/>
 
-  <arg name="world_file" default="basic.world"/>
+  <arg name="world_file" default="better_crazy_world.sdf"/>
 
   <!-- Start Simulator -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
@@ -39,24 +39,22 @@
   <!-- Position Controller -->
   <node name="controller" pkg="ros_copter" type="controller" output="screen">
     <remap from="estimate" to="$(arg mav_name)/ground_truth/odometry"/>
-    <param name="max_u" value="1.0"/>
-    <param name="max_v" value="1.0"/>
-    <param name="max_roll" value="0.3"/>
-    <param name="max_pitch" value="0.3"/>
-    <param name="psi_P" value="0.0"/>
-    <param name="psi_I" value="0.0"/>
-    <param name="psi_D" value="0.0"/>
   </node>
 
+  <!-- Is Flying Publisher -->
+  <node pkg="rostopic" type="rostopic" name="is_flying_pub" args="pub /is_flying std_msgs/Bool true"/>
+
   <!--Estimation-->
-   <node name="ekf" pkg="ros_copter"  type="ekf" output="screen">
+   <!-- <node name="ekf" pkg="ros_copter"  type="ekf" output="screen">
      <rosparam command="load" file="$(find ros_copter)/params/estimator.yaml" />
      <remap from="/imu/data" to="/shredder/imu"/>
      <remap from="mocap" to="/shredder/ground_truth/odometry"/>
-   </node>
+   </node> -->
 
   <!-- Waypoint Manager -->
-  <node name="waypoint_manager" pkg="ros_copter" type="waypoint_manager.py"/>
+  <node name="waypoint_manager" pkg="ros_copter" type="waypoint_manager.py">
+    <param name="waypoint_filename" value="$(find ros_copter)/params/waypoints.csv"/>
+  </node>
 
   <!-- FPV -->
   <!-- <node name="fpv" pkg="image_view" type="image_view">
