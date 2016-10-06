@@ -15,7 +15,7 @@ class WaypointManager():
 
         # get parameters
         # how close does the MAV need to get before going to the next waypoint?
-        self.threshold = rospy.get_param('~threshold', .5)
+        self.threshold = rospy.get_param('~threshold', 5)
         self.cyclical_path = rospy.get_param('~cycle', True)
         self.waypoint_filename = rospy.get_param('~waypoint_filename', "waypoints.csv")
 

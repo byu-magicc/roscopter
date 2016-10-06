@@ -15,7 +15,7 @@
   <arg name="z"                   default="0.1"/>
   <arg name="yaw"                 default="0"/>
 
-  <arg name="world_file" default="better_crazy_world.sdf"/>
+  <arg name="world_file" default="cylinders.world"/>
 
   <!-- Start Simulator -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
