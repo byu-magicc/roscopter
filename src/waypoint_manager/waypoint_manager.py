@@ -8,6 +8,7 @@ from ros_copter.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
 import csv
 import tf
 import numpy as np
+import sys
 
 class WaypointManager():
 
@@ -17,7 +18,7 @@ class WaypointManager():
         # how close does the MAV need to get before going to the next waypoint?
         self.threshold = rospy.get_param('~threshold', 5)
         self.cyclical_path = rospy.get_param('~cycle', True)
-        self.waypoint_filename = rospy.get_param('~waypoint_filename', "waypoints.csv")
+        self.waypoint_filename = rospy.get_param('~waypoint_filename', "/home/jarvis/roscopter/src/ros_copter/params/waypoints.csv")
 
         self.prev_time = rospy.Time.now()
 
@@ -26,19 +27,16 @@ class WaypointManager():
         self.remove_waypoint_service = rospy.Service('remove_waypoint', RemoveWaypoint, self.addWaypointCallback)
         self.set_waypoint_from_file_service = rospy.Service('set_waypoints_from_file', SetWaypointsFromFile, self.addWaypointCallback)
 
-        print("1")
-
         # Set Up Publishers and Subscribers
-        self.xhat_sub_ = rospy.Subscriber('shredder/ground_truth/odometry', Odometry, self.odometryCallback, queue_size=5)
+        self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
         self.waypoint_pub_ = rospy.Publisher('waypoint', ExtendedCommand, queue_size=5, latch=True)
 
-        # Start Up Waypoint List
         self.waypoint_list = []
-        print(self.waypoint_filename)
-        if self.waypoint_filename:
-            file = csv.reader(open(self.waypoint_filename, 'r'))
-            print("Waypoints file")
-            for row in file:
+        with open(self.waypoint_filename, 'rb') as csvfile:
+            dialect = csv.Sniffer().sniff(csvfile.read(10))
+            csvfile.seek(0)
+            reader = csv.reader(csvfile, dialect)
+            for row in reader:
                 data = map(float, row)
                 # Wrap yaw from -PI to PI
                 while data[3] <= -3.141593:
@@ -62,7 +60,6 @@ class WaypointManager():
 
         while not rospy.is_shutdown():
             # wait for new messages and call the callback when they arrive
-            print("spinning")
             rospy.spin()
 
 
