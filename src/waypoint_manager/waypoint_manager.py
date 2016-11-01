@@ -5,9 +5,10 @@ import time
 from fcu_common.msg import ExtendedCommand
 from nav_msgs.msg import Odometry
 from ros_copter.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
-import csv
+import yaml
 import tf
 import numpy as np
+import os
 
 class WaypointManager():
 
@@ -17,7 +18,7 @@ class WaypointManager():
         # how close does the MAV need to get before going to the next waypoint?
         self.threshold = rospy.get_param('~threshold', 5)
         self.cyclical_path = rospy.get_param('~cycle', True)
-        self.waypoint_filename = rospy.get_param('~waypoint_filename', "waypoints.csv")
+        self.waypoint_filename = rospy.get_param('~waypoint_filename', '../../params/waypoints.yaml')
 
         self.prev_time = rospy.Time.now()
 
@@ -26,27 +27,24 @@ class WaypointManager():
         self.remove_waypoint_service = rospy.Service('remove_waypoint', RemoveWaypoint, self.addWaypointCallback)
         self.set_waypoint_from_file_service = rospy.Service('set_waypoints_from_file', SetWaypointsFromFile, self.addWaypointCallback)
 
-        print("1")
-
         # Set Up Publishers and Subscribers
         self.xhat_sub_ = rospy.Subscriber('shredder/ground_truth/odometry', Odometry, self.odometryCallback, queue_size=5)
         self.waypoint_pub_ = rospy.Publisher('waypoint', ExtendedCommand, queue_size=5, latch=True)
 
         # Start Up Waypoint List
-        self.waypoint_list = []
-        print(self.waypoint_filename)
-        if self.waypoint_filename:
-            file = csv.reader(open(self.waypoint_filename, 'r'))
-            print("Waypoints file")
-            for row in file:
-                data = map(float, row)
-                # Wrap yaw from -PI to PI
-                while data[3] <= -3.141593:
-                    data[3] += 2*3.141593
-                while data[3] > 3.141503:
-                    data[3] -= 2*3.141593
-                print(data)
-                self.waypoint_list.append(data)
+        try:
+            print('opening ' + self.waypoint_filename)
+            file = open(self.waypoint_filename, 'r')
+            self.waypoint_list = yaml.safe_load(file)
+            print "loaded file"
+        except:
+            print "something broke while opening " + location
+            print "working directory = " + os.getcwd()
+
+        if not self.waypoint_list:
+            print "UNABLE TO LOAD WAYPOINTS FILE ***************************"
+        else:
+            print self.waypoint_list
 
         self.current_waypoint_index = 0
 
