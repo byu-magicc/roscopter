@@ -9,6 +9,7 @@ import yaml
 import tf
 import numpy as np
 import os
+import math
 
 class WaypointManager():
 
@@ -33,13 +34,10 @@ class WaypointManager():
 
         # Start Up Waypoint List
         try:
-            print('opening ' + self.waypoint_filename)
             file = open(self.waypoint_filename, 'r')
             self.waypoint_list = yaml.safe_load(file)
-            print "loaded file"
         except:
-            print "something broke while opening " + location
-            print "working directory = " + os.getcwd()
+            print "error opening " + self.waypoint_filename
 
         if not self.waypoint_list:
             print "UNABLE TO LOAD WAYPOINTS FILE ***************************"
@@ -54,7 +52,12 @@ class WaypointManager():
         command_msg.x = current_waypoint[0]
         command_msg.y = current_waypoint[1]
         command_msg.F = current_waypoint[2]
-        command_msg.z = current_waypoint[3]
+        if len(current_waypoint) > 3:
+            command_msg.z = current_waypoint[3]
+        else:
+            next_point = self.waypoint_list[(self.current_waypoint_index + 1) % len(self.waypoint_list)]
+            delta = next_point - current_waypoint
+            command_msg.z = math.atan2(delta[1], delta[0])
         command_msg.mode = ExtendedCommand.MODE_XPOS_YPOS_YAW_ALTITUDE
         self.waypoint_pub_.publish(command_msg)
 
@@ -79,8 +82,7 @@ class WaypointManager():
         (r, p, y) = tf.transformations.euler_from_quaternion([msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w])
         current_position = np.array([msg.pose.pose.position.x,
                                      msg.pose.pose.position.y,
-                                     msg.pose.pose.position.z,
-                                     y])
+                                     msg.pose.pose.position.z])
 
         error = np.linalg.norm(current_position - current_waypoint)
 
@@ -97,7 +99,12 @@ class WaypointManager():
             command_msg.x = next_waypoint[0]
             command_msg.y = next_waypoint[1]
             command_msg.F = next_waypoint[2]
-            command_msg.z = next_waypoint[3]
+            if len(current_waypoint) > 3:
+                command_msg.z = current_waypoint[3]
+            else:
+                next_point = self.waypoint_list[(self.current_waypoint_index + 1) % len(self.waypoint_list)]
+                delta = next_point - current_waypoint
+                command_msg.z = math.atan2(delta[1], delta[0])
             command_msg.mode = ExtendedCommand.MODE_XPOS_YPOS_YAW_ALTITUDE
             self.waypoint_pub_.publish(command_msg)
 
