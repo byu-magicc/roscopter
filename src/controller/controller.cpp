@@ -56,7 +56,7 @@ Controller::Controller() :
   _server.setCallback(_func);
 
   // Set up Publishers and Subscriber
-  state_sub_ = nh_.subscribe("/shredder/ground_truth/odometry", 1, &Controller::stateCallback, this);
+  state_sub_ = nh_.subscribe("shredder/ground_truth/odometry", 1, &Controller::stateCallback, this);
   is_flying_sub_ = nh_.subscribe("is_flying", 1, &Controller::isFlyingCallback, this);
   cmd_sub_ = nh_.subscribe("high_level_command", 1, &Controller::cmdCallback, this);
 
