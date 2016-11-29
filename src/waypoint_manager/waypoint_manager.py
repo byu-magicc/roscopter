@@ -8,8 +8,12 @@ from ros_copter.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
 import yaml
 import tf
 import numpy as np
+<<<<<<< HEAD
 import os
 import math
+=======
+import sys
+>>>>>>> master
 
 class WaypointManager():
 
@@ -29,7 +33,7 @@ class WaypointManager():
         self.set_waypoint_from_file_service = rospy.Service('set_waypoints_from_file', SetWaypointsFromFile, self.addWaypointCallback)
 
         # Set Up Publishers and Subscribers
-        self.xhat_sub_ = rospy.Subscriber('shredder/ground_truth/odometry', Odometry, self.odometryCallback, queue_size=5)
+        self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
         self.waypoint_pub_ = rospy.Publisher('waypoint', ExtendedCommand, queue_size=5, latch=True)
 
         # Start Up Waypoint List
@@ -63,7 +67,6 @@ class WaypointManager():
 
         while not rospy.is_shutdown():
             # wait for new messages and call the callback when they arrive
-            print("spinning")
             rospy.spin()
 
 
