@@ -8,12 +8,9 @@ from ros_copter.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
 import yaml
 import tf
 import numpy as np
-<<<<<<< HEAD
 import os
 import math
-=======
 import sys
->>>>>>> master
 
 class WaypointManager():
 

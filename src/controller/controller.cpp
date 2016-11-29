@@ -241,6 +241,12 @@ void Controller::computeControl(double dt)
     xc_.ax = saturate(PID_u_.computePID(xc_.u, xhat_.u, dt), max_.roll, -max_.roll);
     xc_.ay = saturate(PID_v_.computePID(xc_.v, xhat_.v, dt), max_.pitch, -max_.pitch);
     xc_.az = PID_z_.computePID(xc_.pd, xhat_.pd, dt);
+
+    // saturate az so that we don't shoot off into the sky if we are too high above our setpoint
+    if(xc_.az > 1.0)
+    {
+        xc_.az = 1.0;
+    }
     mode_flag = fcu_common::ExtendedCommand::MODE_XACC_YACC_YAWRATE_AZ;
   }
 
