@@ -53,7 +53,9 @@
 
   <!-- Waypoint Manager -->
   <node name="waypoint_manager" pkg="ros_copter" type="waypoint_manager.py">
+    <rosparam command="load" file="$(find ros_copter)/params/waypoints.yaml"/>
     <param name="waypoint_filename" value="$(find ros_copter)/params/waypoints.csv"/>
+    <remap from="state" to="shredder/ground_truth/odometry"/>
   </node>
 
   <!-- FPV -->

@@ -17,6 +17,14 @@ class WaypointManager():
     def __init__(self):
 
         # get parameters
+        try:
+            param_namespace = '~/waypoint_manager'
+            self.param = rospy.get_param(param_namespace)
+        except KeyError:
+            rospy.logfatal('waypoints not set')
+            rospy.signal_shutdown('Parameters not set')
+
+
         # how close does the MAV need to get before going to the next waypoint?
         self.threshold = rospy.get_param('~threshold', 5)
         self.cyclical_path = rospy.get_param('~cycle', True)
@@ -31,19 +39,9 @@ class WaypointManager():
 
         # Set Up Publishers and Subscribers
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
-        self.waypoint_pub_ = rospy.Publisher('waypoint', ExtendedCommand, queue_size=5, latch=True)
+        self.waypoint_pub_ = rospy.Publisher('high_level_command', ExtendedCommand, queue_size=5, latch=True)
 
-        # Start Up Waypoint List
-        try:
-            file = open(self.waypoint_filename, 'r')
-            self.waypoint_list = yaml.safe_load(file)
-        except:
-            print "error opening " + self.waypoint_filename
-
-        if not self.waypoint_list:
-            print "UNABLE TO LOAD WAYPOINTS FILE ***************************"
-        else:
-            print self.waypoint_list
+        self.waypoint_list = self.param['waypoints']
 
         self.current_waypoint_index = 0
 
