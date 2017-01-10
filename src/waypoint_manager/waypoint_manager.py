@@ -82,7 +82,7 @@ class WaypointManager():
                                      msg.pose.pose.position.y,
                                      msg.pose.pose.position.z])
 
-        error = np.linalg.norm(current_position - current_waypoint)
+        error = np.linalg.norm(current_position - current_waypoint[0:3])
 
         if error < self.threshold:
             # Get new waypoint index
