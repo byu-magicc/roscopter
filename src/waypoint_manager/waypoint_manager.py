@@ -18,7 +18,7 @@ class WaypointManager():
 
         # get parameters
         try:
-            param_namespace = '~/waypoint_manager'
+            param_namespace = 'waypoint_manager'
             self.param = rospy.get_param(param_namespace)
         except KeyError:
             rospy.logfatal('waypoints not set')
