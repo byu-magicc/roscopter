@@ -2,7 +2,7 @@
 # license removed for brevity
 import rospy
 import time
-from fcu_common.msg import ExtendedCommand
+from fcu_common.msg import Command
 from nav_msgs.msg import Odometry
 from ros_copter.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
 import yaml
@@ -18,8 +18,7 @@ class WaypointManager():
 
         # get parameters
         try:
-            param_namespace = '~/waypoint_manager'
-            self.param = rospy.get_param(param_namespace)
+            self.waypoint_list = rospy.get_param('~waypoints')
         except KeyError:
             rospy.logfatal('waypoints not set')
             rospy.signal_shutdown('Parameters not set')
@@ -28,7 +27,6 @@ class WaypointManager():
         # how close does the MAV need to get before going to the next waypoint?
         self.threshold = rospy.get_param('~threshold', 5)
         self.cyclical_path = rospy.get_param('~cycle', True)
-        self.waypoint_filename = rospy.get_param('~waypoint_filename', '../../params/waypoints.yaml')
 
         self.prev_time = rospy.Time.now()
 
@@ -39,13 +37,11 @@ class WaypointManager():
 
         # Set Up Publishers and Subscribers
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
-        self.waypoint_pub_ = rospy.Publisher('high_level_command', ExtendedCommand, queue_size=5, latch=True)
-
-        self.waypoint_list = self.param['waypoints']
+        self.waypoint_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
 
         self.current_waypoint_index = 0
 
-        command_msg = ExtendedCommand()
+        command_msg = Command()
         current_waypoint = np.array(self.waypoint_list[0])
 
         command_msg.x = current_waypoint[0]
@@ -57,7 +53,7 @@ class WaypointManager():
             next_point = self.waypoint_list[(self.current_waypoint_index + 1) % len(self.waypoint_list)]
             delta = next_point - current_waypoint
             command_msg.z = math.atan2(delta[1], delta[0])
-        command_msg.mode = ExtendedCommand.MODE_XPOS_YPOS_YAW_ALTITUDE
+        command_msg.mode = Command.MODE_XPOS_YPOS_YAW_ALTITUDE
         self.waypoint_pub_.publish(command_msg)
 
         while not rospy.is_shutdown():
@@ -93,7 +89,7 @@ class WaypointManager():
                 if self.current_waypoint_index > len(self.waypoint_list):
                     self.current_waypoint_index -=1
             next_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
-            command_msg = ExtendedCommand()
+            command_msg = Command()
             command_msg.x = next_waypoint[0]
             command_msg.y = next_waypoint[1]
             command_msg.F = next_waypoint[2]
@@ -103,7 +99,7 @@ class WaypointManager():
                 next_point = self.waypoint_list[(self.current_waypoint_index + 1) % len(self.waypoint_list)]
                 delta = next_point - current_waypoint
                 command_msg.z = math.atan2(delta[1], delta[0])
-            command_msg.mode = ExtendedCommand.MODE_XPOS_YPOS_YAW_ALTITUDE
+            command_msg.mode = Command.MODE_XPOS_YPOS_YAW_ALTITUDE
             self.waypoint_pub_.publish(command_msg)
 
 if __name__ == '__main__':

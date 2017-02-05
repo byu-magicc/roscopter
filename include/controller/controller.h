@@ -2,7 +2,7 @@
 #define CONTROLLER_H
 
 #include <ros/ros.h>
-#include <fcu_common/ExtendedCommand.h>
+#include <fcu_common/Command.h>
 #include <fcu_common/simple_pid.h>
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Bool.h>
@@ -89,7 +89,7 @@ private:
   // Memory for sharing information between functions
   state_t xhat_; // estimate
   max_t max_;
-  fcu_common::ExtendedCommand command_;
+  fcu_common::Command command_;
   state_t xc_; // command
   double prev_time_;
   uint8_t control_mode_;
@@ -97,7 +97,7 @@ private:
   // Functions
   void stateCallback(const nav_msgs::OdometryConstPtr &msg);
   void isFlyingCallback(const std_msgs::BoolConstPtr &msg);
-  void cmdCallback(const fcu_common::ExtendedCommandConstPtr &msg);
+  void cmdCallback(const fcu_common::CommandConstPtr &msg);
 
   void computeControl(double dt);
   void resetIntegrators();
