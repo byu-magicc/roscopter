@@ -9,7 +9,7 @@ Controller::Controller() :
   nh_private_("~")
 {
   // retrieve params
-  thrust_eq_= nh_private_.param<double>("equilibrium_thrust", 0.34);
+  thrust_eq_= nh_private_.param<double>("equilibrium_thrust", 0.68);
   is_flying_ = false;
 
   // Set PID Gains
@@ -45,9 +45,9 @@ Controller::Controller() :
   D = nh_private_.param<double>("psi_D", 1.0);
   PID_psi_.setGains(P, I, D, tau);
 
-  max_.roll = nh_private_.param<double>("max_roll", 0.785);
-  max_.pitch = nh_private_.param<double>("max_pitch", 0.785);
-  max_.yaw_rate = nh_private_.param<double>("max_yaw_rate", 3.14159);
+  max_.roll = nh_private_.param<double>("max_roll", 0.15);
+  max_.pitch = nh_private_.param<double>("max_pitch", 0.15);
+  max_.yaw_rate = nh_private_.param<double>("max_yaw_rate", 45.0*M_PI/180.0);
   max_.throttle = nh_private_.param<double>("max_throttle", 1.0);
   max_.u = nh_private_.param<double>("max_u", 1.0);
   max_.v = nh_private_.param<double>("max_v", 1.0);
