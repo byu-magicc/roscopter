@@ -256,7 +256,6 @@ void Controller::computeControl(double dt)
 
     // Nested Loop for Altitude
     xc_.w = saturate(PID_w_.computePIDDirect(xc_.pd, xhat_.pd, xhat_.w, dt), max_.w, -max_.w);
-    ROS_INFO("desired w = %f, actual w = %f", xc_.w, xhat_.w);
     xc_.az = saturate(PID_z_.computePID(xc_.w, xhat_.w, dt), 1.0, -1.0);
     mode_flag = fcu_common::Command::MODE_XACC_YACC_YAWRATE_AZ;
   }
