@@ -47,6 +47,7 @@ typedef struct
   double throttle;
   double u;
   double v;
+  double w;
 } max_t;
 
 class Controller
@@ -76,6 +77,7 @@ private:
   // PID Controllers
   fcu_common::SimplePID PID_u_;
   fcu_common::SimplePID PID_v_;
+  fcu_common::SimplePID PID_w_;
   fcu_common::SimplePID PID_x_;
   fcu_common::SimplePID PID_y_;
   fcu_common::SimplePID PID_z_;

@@ -25,6 +25,12 @@ Controller::Controller() :
   D = nh_private_.param<double>("v_D", 1.0);
   PID_v_.setGains(P, I, D, tau);
 
+
+  P = nh_private_.param<double>("w_P", 1.0);
+  I = nh_private_.param<double>("w_I", 1.0);
+  D = nh_private_.param<double>("w_D", 1.0);
+  PID_w_.setGains(P, I, D, tau);
+
   P = nh_private_.param<double>("x_P", 1.0);
   I = nh_private_.param<double>("x_I", 1.0);
   D = nh_private_.param<double>("x_D", 1.0);
@@ -51,6 +57,7 @@ Controller::Controller() :
   max_.throttle = nh_private_.param<double>("max_throttle", 1.0);
   max_.u = nh_private_.param<double>("max_u", 1.0);
   max_.v = nh_private_.param<double>("max_v", 1.0);
+  max_.w = nh_private_.param<double>("max_w", 1.0);
 
   _func = boost::bind(&Controller::reconfigure_callback, this, _1, _2);
   _server.setCallback(_func);
@@ -166,6 +173,12 @@ void Controller::reconfigure_callback(ros_copter::ControllerConfig &config, uint
   D = config.v_D;
   PID_v_.setGains(P, I, D, tau);
 
+  P = config.w_P;
+  I = config.w_I;
+  D = config.w_D;
+  ROS_INFO("new gains %f", P);
+  PID_w_.setGains(P, I, D, tau);
+
   P = config.x_P;
   I = config.x_I;
   D = config.x_D;
@@ -192,7 +205,7 @@ void Controller::reconfigure_callback(ros_copter::ControllerConfig &config, uint
   max_.throttle = config.max_throttle;
   max_.u = config.max_u;
   max_.v = config.max_v;
-  ROS_INFO("new gains");
+  max_.w = config.max_w;
 
   resetIntegrators();
 }
@@ -240,13 +253,10 @@ void Controller::computeControl(double dt)
     /// TODO: Maxes are wrong
     xc_.ax = saturate(PID_u_.computePID(xc_.u, xhat_.u, dt), max_.roll, -max_.roll);
     xc_.ay = saturate(PID_v_.computePID(xc_.v, xhat_.v, dt), max_.pitch, -max_.pitch);
-    xc_.az = PID_z_.computePID(xc_.pd, xhat_.pd, dt);
 
-    // saturate az so that we don't shoot off into the sky if we are too high above our setpoint
-    if(xc_.az > 1.0)
-    {
-        xc_.az = 1.0;
-    }
+    // Nested Loop for Altitude
+    xc_.w = saturate(PID_w_.computePIDDirect(xc_.pd, xhat_.pd, xhat_.w, dt), max_.w, -max_.w);
+    xc_.az = saturate(PID_z_.computePID(xc_.w, xhat_.w, dt), 1.0, -1.0);
     mode_flag = fcu_common::Command::MODE_XACC_YACC_YAWRATE_AZ;
   }
 
@@ -269,9 +279,9 @@ void Controller::computeControl(double dt)
     // Pack up and send the command
     command_.mode = fcu_common::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE;
     command_.F = saturate(xc_.throttle, max_.throttle, 0.0);
-    command_.x = xc_.phi;
-    command_.y = xc_.theta;
-    command_.z = xc_.r;
+    command_.x = saturate(xc_.phi, max_.roll, -max_.roll);
+    command_.y = saturate(xc_.theta, max_.pitch, -max_.pitch);
+    command_.z = saturate(xc_.r, max_.yaw_rate, -max_.yaw_rate);
   }
 }
 
@@ -303,3 +313,4 @@ double Controller::sgn(double x)
 }
 
 } // namespace controller
+
