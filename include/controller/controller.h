@@ -72,6 +72,9 @@ private:
 
   // Paramters
   double thrust_eq_;
+  double mass_;
+  double max_thrust_;
+  double drag_constant_;
   bool is_flying_;
 
   // PID Controllers
@@ -89,10 +92,10 @@ private:
   void reconfigure_callback(ros_copter::ControllerConfig &config, uint32_t level);
 
   // Memory for sharing information between functions
-  state_t xhat_; // estimate
-  max_t max_;
+  state_t xhat_ = {}; // estimate
+  max_t max_ = {};
   fcu_common::Command command_;
-  state_t xc_; // command
+  state_t xc_ = {}; // command
   double prev_time_;
   uint8_t control_mode_;
 
