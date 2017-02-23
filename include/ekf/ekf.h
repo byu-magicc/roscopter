@@ -82,6 +82,7 @@ private:
   Eigen::Matrix<double, NUM_STATES, NUM_STATES> P_;
   Eigen::Matrix<double, NUM_STATES, 1> x_hat_;
 
+  ros::Time current_time_;
   ros::Time previous_predict_time_;
   double prev_p_, prev_q_, prev_r_;
   double gx_, gy_, gz_, az_, ax_, ay_;
@@ -100,8 +101,6 @@ private:
   void updateMocap(geometry_msgs::TransformStamped msg);
   void updateGPS(fcu_common::GPS msg);
   void initializeX(geometry_msgs::TransformStamped msg);
-  void predictTimerCallback(const ros::TimerEvent& event);
-  void publishTimerCallback(const ros::TimerEvent& event);
   void publishEstimate();
   void GPS_to_m(double* dlat, double* dlon, double* dx, double* dy);
   double LPF(double yn, double un);

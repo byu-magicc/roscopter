@@ -120,7 +120,7 @@ void Controller::stateCallback(const nav_msgs::OdometryConstPtr &msg)
   else
   {
     resetIntegrators();
-    prev_time_ = ros::Time::now().toSec();
+    prev_time_ = msg->header.stamp.toSec();
   }
   }
 
