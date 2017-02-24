@@ -28,8 +28,6 @@ mocapFilter::mocapFilter() :
   estimate_pub_ = nh_.advertise<nav_msgs::Odometry>("estimate", 1);
   bias_pub_ = nh_.advertise<sensor_msgs::Imu>("estimate/bias", 1);
   is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1);
-  predict_timer_ = nh_.createTimer(ros::Duration(1.0/inner_loop_rate_), &mocapFilter::predictTimerCallback, this);
-  publish_timer_ = nh_.createTimer(ros::Duration(1.0/publish_rate_), &mocapFilter::publishTimerCallback, this);
 
   lat0_ = 0;
   lon0_ = 0;
@@ -39,20 +37,6 @@ mocapFilter::mocapFilter() :
   x_hat_.setZero();
   flying_ = false;
   ROS_INFO("Done");
-  return;
-}
-
-void mocapFilter::publishTimerCallback(const ros::TimerEvent &event)
-{
-  publishEstimate();
-  return;
-}
-
-void mocapFilter::predictTimerCallback(const ros::TimerEvent &event)
-{
-  if(flying_){
-    predictStep();
-  }
   return;
 }
 
@@ -66,11 +50,15 @@ void mocapFilter::imuCallback(const sensor_msgs::Imu msg)
       std_msgs::Bool flying;
       flying.data = true;
       is_flying_pub_.publish(flying);
-      previous_predict_time_ = ros::Time::now();
+      previous_predict_time_ = msg.header.stamp;
     }
   }
-  if(flying_){
+  else if(flying_)
+  {
+    current_time_ = msg.header.stamp;
+    predictStep();
     updateIMU(msg);
+    publishEstimate();
   }
   return;
 }
@@ -121,12 +109,11 @@ void mocapFilter::initializeX(geometry_msgs::TransformStamped msg)
 
 void mocapFilter::predictStep()
 {
-  ros::Time now = ros::Time::now();
-  double dt = (now-previous_predict_time_).toSec();
+  double dt = (current_time_-previous_predict_time_).toSec();
   x_hat_ = x_hat_ + dt*f(x_hat_);
   Eigen::Matrix<double, NUM_STATES, NUM_STATES> A = dfdx(x_hat_);
   P_ = P_ + dt*(A*P_ + P_*A.transpose() + Q_);
-  previous_predict_time_ = now;
+  previous_predict_time_ = current_time_;
   return;
 }
 
@@ -409,7 +396,7 @@ void mocapFilter::publishEstimate()
   estimate.twist.covariance[5*6+5] = 0.05;
 
   estimate.header.frame_id = "body_link";
-  estimate.header.stamp = ros::Time::now();
+  estimate.header.stamp = current_time_;
   estimate_pub_.publish(estimate);
 
   sensor_msgs::Imu bias;
