@@ -262,7 +262,7 @@ void Controller::computeControl(double dt)
 
     // Nested Loop for Altitude
     double pddot = -sin(xhat_.theta) * xhat_.u + sin(xhat_.phi)*cos(xhat_.theta)*xhat_.v + cos(xhat_.phi)*cos(xhat_.theta)*xhat_.w;
-    double pddot_c = saturate(PID_w_.computePIDDirect(xc_.pd, xhat_.pd, pddot, dt), max_.w, -max_.w);
+    double pddot_c = saturate(PID_w_.computePID(xc_.pd, xhat_.pd, dt, pddot), max_.w, -max_.w);
     double max_az = (cos(xhat_.phi)*cos(xhat_.theta)) / thrust_eq_;
     xc_.az = saturate(PID_z_.computePID(pddot_c, pddot, dt), 1.0, -max_az);
     mode_flag = fcu_common::Command::MODE_XACC_YACC_YAWRATE_AZ;
