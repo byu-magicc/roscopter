@@ -12,48 +12,9 @@ Controller::Controller() :
   ros::NodeHandle nh_mav(ros::this_node::getNamespace());
   mass_ = nh_mav.param<double>("mass", 3.81);
   max_thrust_ = nh_mav.param<double>("max_F", 74.0);
-  drag_constant_ = nh_mav.param<double>("mu", 0.1);
+  drag_constant_ = nh_mav.param<double>("linear_mu", 0.1);
   thrust_eq_= (9.80665 * mass_) / max_thrust_;
   is_flying_ = false;
-
-  // Set PID Gains
-  double P, I, D, tau;
-  tau = nh_private_.param<double>("tau", 0.05);
-  P = nh_private_.param<double>("u_P", 1.0);
-  I = nh_private_.param<double>("u_I", 1.0);
-  D = nh_private_.param<double>("u_D", 1.0);
-  PID_u_.setGains(P, I, D, tau);
-
-  P = nh_private_.param<double>("v_P", 1.0);
-  I = nh_private_.param<double>("v_I", 1.0);
-  D = nh_private_.param<double>("v_D", 1.0);
-  PID_v_.setGains(P, I, D, tau);
-
-
-  P = nh_private_.param<double>("w_P", 1.0);
-  I = nh_private_.param<double>("w_I", 1.0);
-  D = nh_private_.param<double>("w_D", 1.0);
-  PID_w_.setGains(P, I, D, tau);
-
-  P = nh_private_.param<double>("x_P", 1.0);
-  I = nh_private_.param<double>("x_I", 1.0);
-  D = nh_private_.param<double>("x_D", 1.0);
-  PID_x_.setGains(P, I, D, tau);
-
-  P = nh_private_.param<double>("y_P", 1.0);
-  I = nh_private_.param<double>("y_I", 1.0);
-  D = nh_private_.param<double>("y_D", 1.0);
-  PID_y_.setGains(P, I, D, tau);
-
-  P = nh_private_.param<double>("z_P", 1.0);
-  I = nh_private_.param<double>("z_I", 1.0);
-  D = nh_private_.param<double>("z_D", 1.0);
-  PID_z_.setGains(P, I, D, tau);
-
-  P = nh_private_.param<double>("psi_P", 1.0);
-  I = nh_private_.param<double>("psi_I", 1.0);
-  D = nh_private_.param<double>("psi_D", 1.0);
-  PID_psi_.setGains(P, I, D, tau);
 
   max_.roll = nh_private_.param<double>("max_roll", 0.15);
   max_.pitch = nh_private_.param<double>("max_pitch", 0.15);
