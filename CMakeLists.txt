@@ -19,8 +19,8 @@ generate_dynamic_reconfigure_options(
   cfg/Controller.cfg
 )
 
-
-set(CMAKE_CXX_FLAGS "-std=c++0x")
+# Added "-fopenmp -O3" to make Eigen run REALLY fast
+set(CMAKE_CXX_FLAGS "-std=c++0x -fopenmp -O3")
 
 add_service_files(
   FILES
@@ -72,3 +72,11 @@ add_executable(controller
   include/controller/controller.h)
 add_dependencies(controller fcu_common_generate_messages_cpp ros_copter_gencfg)
 target_link_libraries(controller ${catkin_LIBRARIES})
+
+add_executable(mekf
+  src/mekf/mekf_node.cpp
+  src/mekf/mekf.cpp
+  include/mekf/mekf.h
+)
+add_dependencies(mekf fcu_common_generate_messages_cpp)
+target_link_libraries(mekf ${catkin_LIBRARIES})
