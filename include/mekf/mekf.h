@@ -95,8 +95,6 @@ private:
 
 
   // local variables
-  Eigen::Matrix<double, 3, 3> R_IMU_;
-
   Eigen::Matrix<double, 6, 6> Qu_;
   Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> Qx_;
   Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> P_;
@@ -121,6 +119,8 @@ private:
   Eigen::Matrix<double, NUM_STATES, 1> f(const Eigen::Matrix<double, NUM_STATES, 1> x);
   Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> dfdx(const Eigen::Matrix<double, NUM_STATES, 1> x);
   Eigen::Matrix<double, NUM_ERROR_STATES, 6> dfdu(const Eigen::Matrix<double, NUM_STATES, 1> x);
+  Eigen::Matrix<double, 4, 1> quatMul(const Eigen::Matrix<double, 4, 1> p, const Eigen::Matrix<double, 4, 1> q);
+  void stateUpdate(const Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x);
 
 };
 

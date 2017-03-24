@@ -18,7 +18,6 @@ kalmanFilter::kalmanFilter() :
   ros_copter::importMatrixFromParamServer(nh_private_, P_, "P0");
   ros_copter::importMatrixFromParamServer(nh_private_, Qu_, "Qu");
   ros_copter::importMatrixFromParamServer(nh_private_, Qx_, "Qx");
-  ros_copter::importMatrixFromParamServer(nh_private_, R_IMU_, "R_IMU");
 
   // setup publishers and subscribers
   imu_sub_   = nh_.subscribe("imu/data", 1, &kalmanFilter::imuCallback, this);
@@ -174,85 +173,10 @@ Eigen::Matrix<double, NUM_ERROR_STATES, 6> kalmanFilter::dfdu(const Eigen::Matri
 }
 
 
-// build and publish estimate messages
-void kalmanFilter::publishEstimate()
-{
-  nav_msgs::Odometry estimate;
-  // double pn(x_hat_(PN)), pe(x_hat_(PE)), pd(x_hat_(PD));
-  // double u(x_hat_(U)), v(x_hat_(V)), w(x_hat_(W));
-  // double phi(x_hat_(PHI)), theta(x_hat_(THETA)), psi(x_hat_(PSI));
-  // double bx(x_hat_(BX)), by(x_hat_(BY)), bz(x_hat_(BZ));
-
-  // tf::Quaternion q;
-  // q.setRPY(phi, theta, psi);
-  // geometry_msgs::Quaternion qmsg;
-  // tf::quaternionTFToMsg(q, qmsg);
-  // estimate.pose.pose.orientation = qmsg;
-
-  // estimate.pose.pose.position.x = pn;
-  // estimate.pose.pose.position.y = pe;
-  // estimate.pose.pose.position.z = pd;
-
-  // estimate.pose.covariance[0*6+0] = P_(PN, PN);
-  // estimate.pose.covariance[1*6+1] = P_(PE, PE);
-  // estimate.pose.covariance[2*6+2] = P_(PD, PD);
-  // estimate.pose.covariance[3*6+3] = P_(PHI, PHI);
-  // estimate.pose.covariance[4*6+4] = P_(THETA, THETA);
-  // estimate.pose.covariance[5*6+5] = P_(PSI, PSI);
-
-  // estimate.twist.twist.linear.x = u;
-  // estimate.twist.twist.linear.y = v;
-  // estimate.twist.twist.linear.z = w;
-  // estimate.twist.twist.angular.x = gx_+bx;
-  // estimate.twist.twist.angular.y = gy_+by;
-  // estimate.twist.twist.angular.z = gz_+bz;
-
-  // estimate.twist.covariance[0*6+0] = P_(U, U);
-  // estimate.twist.covariance[1*6+1] = P_(V, V);
-  // estimate.twist.covariance[2*6+2] = P_(W, W);
-  // estimate.twist.covariance[3*6+3] = 0.05;  // not being estimated
-  // estimate.twist.covariance[4*6+4] = 0.05;
-  // estimate.twist.covariance[5*6+5] = 0.05;
-
-  // estimate.header.frame_id = "body_link";
-  // estimate.header.stamp = current_time_;
-  // estimate_pub_.publish(estimate);
-
-  // sensor_msgs::Imu bias;
-  // bias.linear_acceleration.x = x_hat_(AX);
-  // bias.linear_acceleration.y = x_hat_(AY);
-  // bias.linear_acceleration.z = x_hat_(AZ);
-  // bias.linear_acceleration_covariance[0*3+0] = P_(AX,AX);
-  // bias.linear_acceleration_covariance[1*3+1] = P_(AY,AY);
-  // bias.linear_acceleration_covariance[2*3+2] = P_(AZ,AZ);
-
-  // bias.angular_velocity.x = x_hat_(BX);
-  // bias.angular_velocity.y = x_hat_(BY);
-  // bias.angular_velocity.z = x_hat_(BZ);
-  // bias.angular_velocity_covariance[0*3+0] = P_(BX,BX);
-  // bias.angular_velocity_covariance[1*3+1] = P_(BY,BY);
-  // bias.angular_velocity_covariance[2*3+2] = P_(BZ,BZ);
-
-  // bias_pub_.publish(bias);
-  // double ax(x_hat_(AX)), ay(x_hat_(AY)),az(x_hat_(AZ));
-}
-
-
-double kalmanFilter::LPF(double yn, double un)
-{
-  return alpha_*yn + (1 - alpha_)*un;
-}
-
-
+// update state using accelerometer x and y measurements, Section 4.3.1
 void kalmanFilter::updateIMU(sensor_msgs::Imu msg)
 {
-  //ROS_INFO_STREAM("Update IMU");
-  // double phi(x_hat_(PHI)), theta(x_hat_(THETA)), psi(x_hat_(PSI));
-  // double alpha_x(x_hat_(AX)), alpha_y(x_hat_(AY)), alpha_z(x_hat_(AZ));
-  // double ct = cos(theta);
-  // double cp = cos(phi);
-  // double st = sin(theta);
-  // double sp = sin(phi);
+  // collect measurements
   ygx_ = msg.angular_velocity.x;
   ygy_ = msg.angular_velocity.y;
   ygz_ = msg.angular_velocity.z;
@@ -260,27 +184,177 @@ void kalmanFilter::updateIMU(sensor_msgs::Imu msg)
   yay_ = msg.linear_acceleration.y;
   yaz_ = msg.linear_acceleration.z;
 
-  // Eigen::Matrix<double, 3, 1> y;
-  // y << yax_, yay_, yaz_;
+  // build measurement vector (only use x and y)
+  Eigen::Matrix<double, 2, 1> y;
+  y << yax_, yay_;
 
-  // Eigen::Matrix<double, 3, NUM_STATES> C;
-  // C.setZero();
-  // C(0,THETA) = -G*ct;
-  // C(0,AX) = -1.0;
+  // unpack the input
+  double u(x_hat_(U)), v(x_hat_(V)), w(x_hat_(W));
+  double p_hat(ygx_-x_hat_(GX)), q_hat(ygy_-x_hat_(GY)), r_hat(ygz_-x_hat_(GZ));
+  double bax(x_hat_(AX)), bay(x_hat_(AY));
 
-  // C(1,PHI) = G*ct*cp;
-  // C(1,THETA) = -G*st*sp;
-  // C(1,AY) = -1.0;
+  // measurement Jacobian, eq. 115
+  Eigen::Matrix<double, 2, NUM_ERROR_STATES> H;
+  H << 0, 0, 0, 0, 0, 0,      0,  r_hat, -q_hat,  0,  w, -v, 1, 0, 0,
+       0, 0, 0, 0, 0, 0, -r_hat,      0,  p_hat, -w,  0,  u, 0, 1, 0;
 
-  // C(2,PHI) = G*ct*sp;
-  // C(2,THETA) = G*st*cp;
-  // C(2,AZ) = -1.0;
+  // input noise selector, eq. 118
+  Eigen::Matrix<double, 2, 6> J;
+  J <<  0,  w, -v, 1, 0, 0,
+       -w,  0,  u, 0, 1, 0;
 
-  // Eigen::Matrix<double, NUM_STATES, 3> L;
-  // L.setZero();
-  // L = P_*C.transpose()*(R_IMU_ + C*P_*C.transpose()).inverse();
-  // P_ = (Eigen::MatrixXd::Identity(NUM_STATES,NUM_STATES) - L*C)*P_;
-  // x_hat_ = x_hat_ + L*(y - C*x_hat_);
+  // accelerometer noise matrix for x and y
+  // input noise selector, eq. 118
+  Eigen::Matrix<double, 2, 2> R;
+  R << Qu_(3,3), 0, 0, Qu_(4,4);
+
+  // compute Kalman gain, eq. 117
+  Eigen::Matrix<double, NUM_ERROR_STATES, 2> K;
+  K = P_*H.transpose()*(H*P_*H.transpose() + J*Qu_*J.transpose() + R).inverse();
+
+  // compute measurement error below, eq. 114
+  Eigen::Matrix<double, 2, 1> r;
+  r << yax_ - (bax - q_hat*w + r_hat*v),
+       yay_ - (bay + p_hat*w - r_hat*u);
+
+  // compute delta_x, eq. 88
+  Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x;
+  delta_x = K*r;
+
+  // update state and covariance
+  stateUpdate(delta_x);
+  P_ = (Eigen::MatrixXd::Identity(NUM_ERROR_STATES,NUM_ERROR_STATES) - K*H)*P_;
+}
+
+
+// build and publish estimate messages
+void kalmanFilter::publishEstimate()
+{
+  nav_msgs::Odometry estimate;
+  double pn(x_hat_(PN)), pe(x_hat_(PE)), pd(x_hat_(PD));
+  double qx(x_hat_(QX)), qy(x_hat_(QY)), qz(x_hat_(QZ)), qw(x_hat_(QW));
+  double u(x_hat_(U)), v(x_hat_(V)), w(x_hat_(W));
+  double gx(x_hat_(GX)), gy(x_hat_(GY)), gz(x_hat_(GZ));
+  double ax(x_hat_(AX)), ay(x_hat_(AY)), az(x_hat_(AZ));
+
+  estimate.pose.pose.position.x = pn;
+  estimate.pose.pose.position.y = pe;
+  estimate.pose.pose.position.z = pd;
+
+  estimate.pose.pose.orientation.x = qx;
+  estimate.pose.pose.orientation.y = qy;
+  estimate.pose.pose.orientation.z = qz;
+  estimate.pose.pose.orientation.w = qw;
+
+  estimate.pose.covariance[0*6+0] = P_(dPN, dPN);
+  estimate.pose.covariance[1*6+1] = P_(dPE, dPE);
+  estimate.pose.covariance[2*6+2] = P_(dPD, dPD);
+  estimate.pose.covariance[3*6+3] = P_(dPHI, dPHI);
+  estimate.pose.covariance[4*6+4] = P_(dTHETA, dTHETA);
+  estimate.pose.covariance[5*6+5] = P_(dPSI, dPSI);
+
+  estimate.twist.twist.linear.x = u;
+  estimate.twist.twist.linear.y = v;
+  estimate.twist.twist.linear.z = w;
+  estimate.twist.twist.angular.x = ygx_-gx;
+  estimate.twist.twist.angular.y = ygy_-gy;
+  estimate.twist.twist.angular.z = ygz_-gz;
+
+  estimate.twist.covariance[0*6+0] = P_(dU, dU);
+  estimate.twist.covariance[1*6+1] = P_(dV, dV);
+  estimate.twist.covariance[2*6+2] = P_(dW, dW);
+  estimate.twist.covariance[3*6+3] = 0.05;  // not being estimated
+  estimate.twist.covariance[4*6+4] = 0.05;
+  estimate.twist.covariance[5*6+5] = 0.05;
+
+  estimate.header.frame_id = "body_link";
+  estimate.header.stamp = current_time_;
+  estimate_pub_.publish(estimate);
+
+  sensor_msgs::Imu bias;
+  bias.linear_acceleration.x = x_hat_(AX);
+  bias.linear_acceleration.y = x_hat_(AY);
+  bias.linear_acceleration.z = x_hat_(AZ);
+  bias.linear_acceleration_covariance[0*3+0] = P_(dAX,dAX);
+  bias.linear_acceleration_covariance[1*3+1] = P_(dAY,dAY);
+  bias.linear_acceleration_covariance[2*3+2] = P_(dAZ,dAZ);
+
+  bias.angular_velocity.x = x_hat_(GX);
+  bias.angular_velocity.y = x_hat_(GY);
+  bias.angular_velocity.z = x_hat_(GZ);
+  bias.angular_velocity_covariance[0*3+0] = P_(dGX,dGX);
+  bias.angular_velocity_covariance[1*3+1] = P_(dGY,dGY);
+  bias.angular_velocity_covariance[2*3+2] = P_(dGZ,dGZ);
+
+  bias_pub_.publish(bias);
+}
+
+
+// low pass filter
+double kalmanFilter::LPF(double yn, double un)
+{
+  return alpha_*yn + (1 - alpha_)*un;
+}
+
+
+// quaternion multiply, eq. 4
+Eigen::Matrix<double, 4, 1> kalmanFilter::quatMul(const Eigen::Matrix<double, 4, 1> p, const Eigen::Matrix<double, 4, 1> q)
+{
+  // unpack elements of p
+  double px = p(0);
+  double py = p(1);
+  double pz = p(2);
+  double pw = p(3);
+
+  // perform multiplication
+  Eigen::Matrix<double, 4, 4> P;
+  P <<  pw, -pz,  py,  px,
+        pz,  pw, -px,  py,
+       -py,  px,  pw,  pz,
+       -px, -py, -pz,  pw;
+
+  return P*q;
+}
+
+
+// update the state estimate, eq. 90 and 91
+void kalmanFilter::stateUpdate(const Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x)
+{
+  // separate vector and quaternion parts of x_hat_ and associated parts of delta_x
+  // described in paragraph below eq. 89
+  Eigen::Matrix<double, 12, 1> x_hat_v;
+  x_hat_v << x_hat_(PN), x_hat_(PE), x_hat_(PD), x_hat_(U), x_hat_(V), x_hat_(W), x_hat_(GX), x_hat_(GY), x_hat_(GZ), x_hat_(AX), x_hat_(AY), x_hat_(AZ);
+
+  Eigen::Matrix<double, 4, 1> x_hat_q;
+  x_hat_q << x_hat_(QX), x_hat_(QY), x_hat_(QZ), x_hat_(QW);
+
+  Eigen::Matrix<double, 12, 1> delta_v;
+  delta_v << delta_x(dPN), delta_x(dPE), delta_x(dPD), delta_x(dU), delta_x(dV), delta_x(dW), delta_x(dGX), delta_x(dGY), delta_x(dGZ), delta_x(dAX), delta_x(dAY), delta_x(dAZ);
+
+  Eigen::Matrix<double, 4, 1> delta_theta_q;
+  delta_theta_q << 0.5*delta_x(dPHI), 0.5*delta_x(dTHETA), 0.5*delta_x(dPSI), 1;
+
+  // update state and covariance
+  x_hat_v += delta_v;
+  x_hat_q = quatMul(x_hat_q, delta_theta_q);
+
+  // fill in new values of x_hat_
+  x_hat_(PN) = x_hat_v(0);
+  x_hat_(PE) = x_hat_v(1);
+  x_hat_(PD) = x_hat_v(2);
+  x_hat_(QX) = x_hat_q(0);
+  x_hat_(QY) = x_hat_q(1);
+  x_hat_(QZ) = x_hat_q(2);
+  x_hat_(QW) = x_hat_q(3);
+  x_hat_(U)  = x_hat_v(3);
+  x_hat_(V)  = x_hat_v(4);
+  x_hat_(W)  = x_hat_v(5);
+  x_hat_(GX) = x_hat_v(6);
+  x_hat_(GY) = x_hat_v(7);
+  x_hat_(GZ) = x_hat_v(8);
+  x_hat_(AX) = x_hat_v(9);
+  x_hat_(AY) = x_hat_v(10);
+  x_hat_(AZ) = x_hat_v(11);
 }
 
 

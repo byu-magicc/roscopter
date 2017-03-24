@@ -41,6 +41,9 @@ rho = Symbol('rho')
 phi = Symbol('phi')
 theta = Symbol('theta')
 psi = Symbol('psi')
+sigma_ax2 = Symbol('sigma_ax2')
+sigma_ay2 = Symbol('sigma_ay2')
+sigma_az2 = Symbol('sigma_az2')
 
 # define vectors (b is for bold)
 pb = Matrix([[pn], [pe], [pd]]) # position
@@ -55,6 +58,7 @@ yab = Matrix([[yax], [yay], [yaz]]) # accelerometer measurement
 omegab_hat = Matrix([[p_hat], [q_hat], [r_hat]]) # gyro best estimate
 dvb_hat = Matrix([[ax_hat], [ay_hat], [az_hat]]) # accel best estimate
 k = Matrix([[0], [0], [1]])
+beta_a = Matrix([[bax], [bay], [baz]])
 
 '''================================================================='''
 # functions
@@ -102,31 +106,50 @@ def quatRot(q):
 # compute some additional matrices and vectors
 Rqb = quatRot(qb)
 
-# dynamics eq. 105
+# eq. 105
 omegab_hatq = Matrix([[omegab_hat[0,0]], [omegab_hat[1,0]], [omegab_hat[2,0]], [0]])
 f = zeros(16,1)
 f[0:3,:] = Rqb.T*vb
 f[3:7,:] = 0.5*quatMul(qb,omegab_hatq)
 f[7:10,:] = skew(vb)*omegab_hat + Rqb*Gb + k*k.T*dvb_hat
 
-A = zeros(15,15)
-A[0:3,3:6] = -Rqb.T*skew(vb)
-A[0:3,6:9] = Rqb.T
-A[3:6,3:6] = -skew(omegab_hat)
-A[3:6,9:12] = -I3
-A[6:9,3:6] = skew(Rqb*Gb)
-A[6:9,6:9] = -skew(omegab_hat)
-A[6:9,9:12] = -skew(vb)
-A[6:9,12:15] = -k*k.T
+# eq. 107
+F = zeros(15,15)
+F[0:3,3:6] = -Rqb.T*skew(vb)
+F[0:3,6:9] = Rqb.T
+F[3:6,3:6] = -skew(omegab_hat)
+F[3:6,9:12] = -I3
+F[6:9,3:6] = skew(Rqb*Gb)
+F[6:9,6:9] = -skew(omegab_hat)
+F[6:9,9:12] = -skew(vb)
+F[6:9,12:15] = -k*k.T
 
+# eq. 108
 G = zeros(15,6)
 G[3:6,0:3] = -I3
 G[6:9,0:3] = -skew(vb)
 G[6:9,3:6] = -k*k.T
 
+# eq. 115
+H_acc = zeros(3,15)
+H_acc[:,6:9] = -skew(omegab_hat)
+H_acc[:,9:12] = -skew(vb)
+H_acc[:,12:15] = I3
+
+# eq. 118
+J_acc = zeros(3,6)
+J_acc[:,0:3] = -skew(vb)
+J_acc[:,3:6] = I3
+
+# eq. 114
+h_hat_acc = skew(vb)*omegab_hat - yaz*k + beta_a
+
 # to display this using ascii-art, open terminal and run "isympy" to start the
 # IPython console using Sympy. Then run "run filename.py"
 
 print('\nf = '), print(simplify(f))
-print('\nA = '), print(simplify(A))
+print('\nF = '), print(simplify(F))
 print('\nG = '), print(simplify(G))
+print('\nH_acc = '), print(simplify(H_acc))
+print('\nJ_acc = '), print(simplify(J_acc))
+print('\nh_hat_acc = '), print(simplify(h_hat_acc))
