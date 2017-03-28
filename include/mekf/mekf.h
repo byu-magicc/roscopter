@@ -68,59 +68,60 @@ class kalmanFilter
 
 public:
 
-  kalmanFilter();
+	kalmanFilter();
 
 private:
 
-  // node handles, publishers, subscribers
-  ros::NodeHandle nh_;
-  ros::NodeHandle nh_private_;
+	// node handles, publishers, subscribers
+	ros::NodeHandle nh_;
+	ros::NodeHandle nh_private_;
 
-  // publishers and subscribers
-  ros::Subscriber imu_sub_;
-  ros::Subscriber mocap_sub_;
+	// publishers and subscribers
+	ros::Subscriber imu_sub_;
+	ros::Subscriber mocap_sub_;
 
-  ros::Publisher estimate_pub_;
-  ros::Publisher bias_pub_;
-  ros::Publisher is_flying_pub_;
+	ros::Publisher estimate_pub_;
+	ros::Publisher bias_pub_;
+	ros::Publisher is_flying_pub_;
 
-  // parameters
-  double mass_;
+	// parameters
+	double mass_;
 
-  struct inertia{
-    double x;
-    double y;
-    double z;
-  } J_;
+	struct inertia
+	{
+		double x;
+		double y;
+		double z;
+	} J_;
 
 
-  // local variables
-  Eigen::Matrix<double, 6, 6> Qu_;
-  Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> Qx_;
-  Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> P_;
-  Eigen::Matrix<double, NUM_STATES, 1> x_hat_;
+	// local variables
+	Eigen::Matrix<double, 6, 6> Qu_;
+	Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> Qx_;
+	Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> P_;
+	Eigen::Matrix<double, NUM_STATES, 1> x_hat_;
 
-  ros::Time current_time_;
-  ros::Time previous_time_;
+	ros::Time current_time_;
+	ros::Time previous_time_;
 
-  double p_prev_, q_prev_, r_prev_;
-  double ygx_, ygy_, ygz_, yaz_, yax_, yay_;
-  double alpha_;
-  int N_;
-  bool flying_;
+	double p_prev_, q_prev_, r_prev_;
+	double ygx_, ygy_, ygz_, yaz_, yax_, yay_;
+	double alpha_;
+	int N_;
+	bool flying_;
 
-  // functions
-  void imuCallback(const sensor_msgs::Imu msg);
-  void predictStep();
-  void updateStep();
-  void updateIMU(sensor_msgs::Imu msg);
-  void publishEstimate();
-  double LPF(double yn, double un);
-  Eigen::Matrix<double, NUM_STATES, 1> f(const Eigen::Matrix<double, NUM_STATES, 1> x);
-  Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> dfdx(const Eigen::Matrix<double, NUM_STATES, 1> x);
-  Eigen::Matrix<double, NUM_ERROR_STATES, 6> dfdu(const Eigen::Matrix<double, NUM_STATES, 1> x);
-  Eigen::Matrix<double, 4, 1> quatMul(const Eigen::Matrix<double, 4, 1> p, const Eigen::Matrix<double, 4, 1> q);
-  void stateUpdate(const Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x);
+	// functions
+	void imuCallback(const sensor_msgs::Imu msg);
+	void predictStep();
+	void updateStep();
+	void updateIMU(sensor_msgs::Imu msg);
+	void publishEstimate();
+	double LPF(double yn, double un);
+	Eigen::Matrix<double, NUM_STATES, 1> f(const Eigen::Matrix<double, NUM_STATES, 1> x);
+	Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> dfdx(const Eigen::Matrix<double, NUM_STATES, 1> x);
+	Eigen::Matrix<double, NUM_ERROR_STATES, 6> dfdu(const Eigen::Matrix<double, NUM_STATES, 1> x);
+	Eigen::Matrix<double, 4, 1> quatMul(const Eigen::Matrix<double, 4, 1> p, const Eigen::Matrix<double, 4, 1> q);
+	void stateUpdate(const Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x);
 
 };
 
