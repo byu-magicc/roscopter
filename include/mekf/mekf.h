@@ -101,8 +101,8 @@ private:
 
 	// parameters
 	double mass_;
-  Eigen::Matrix<double, 3, 1> k_, g_;
-  Eigen::Matrix<double, 3, 3> M_, I3_;
+	Eigen::Matrix<double, 3, 1> k_, g_;
+	Eigen::Matrix<double, 3, 3> M_, I3_;
 
 	struct inertia
 	{
@@ -133,7 +133,7 @@ private:
 	void updateStep();
 	void updateIMU(const sensor_msgs::Imu msg);
 	void publishEstimate();
-  void stateUpdate(const Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x);
+	void stateUpdate(const Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x);
 
 	double LPF(double yn, double un);
 
@@ -141,8 +141,8 @@ private:
 	Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> dfdx(const Eigen::Matrix<double, NUM_STATES, 1> x);
 	Eigen::Matrix<double, NUM_ERROR_STATES, 6> dfdu(const Eigen::Matrix<double, NUM_STATES, 1> x);
 	Eigen::Matrix<double, 4, 1> quatMul(const Eigen::Matrix<double, 4, 1> p, const Eigen::Matrix<double, 4, 1> q);
-  Eigen::Matrix<double, 3, 3> Rq(const Eigen::Matrix<double, 4, 1> q);
-  Eigen::Matrix<double, 3, 3> skew(const Eigen::Matrix<double, 3, 1> vec);
+	Eigen::Matrix<double, 3, 3> Rq(const Eigen::Matrix<double, 4, 1> q);
+	Eigen::Matrix<double, 3, 3> skew(const Eigen::Matrix<double, 3, 1> vec);
 
 };
 
