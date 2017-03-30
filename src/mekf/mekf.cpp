@@ -13,6 +13,7 @@ kalmanFilter::kalmanFilter() :
 {
 	// retrieve params
 	nh_private_.param<double>("alpha", alpha_, 0.2);
+	nh_private_.param<double>("mass", mass_, 1);
 	nh_private_.param<int>("euler_integration_steps", N_, 20);
 	ros_copter::importMatrixFromParamServer(nh_private_, x_hat_, "x0");
 	ros_copter::importMatrixFromParamServer(nh_private_, P_, "P0");
@@ -28,6 +29,10 @@ kalmanFilter::kalmanFilter() :
 
 	// initialize variables
 	flying_ = false;
+	k_ << 0, 0, 1;
+	g_ << 0, 0, G;
+	M_ << 1/mass_, 0, 0, 0, 1/mass_, 0, 0, 0, 0;
+	I3_ << 1, 0, 0, 0, 1, 0, 0, 0, 1;
 }
 
 
@@ -92,30 +97,27 @@ void kalmanFilter::predictStep()
 // state estimate dynamics
 Eigen::Matrix<double, NUM_STATES, 1> kalmanFilter::f(const Eigen::Matrix<double, NUM_STATES, 1> x)
 {
-	// unpack the input
-	double qx(x(QX)), qy(x(QY)), qz(x(QZ)), qw(x(QW));
-	double u(x(U)), v(x(V)), w(x(W));
-	double p_hat(ygx_-x(GX)), q_hat(ygy_-x(GY)), r_hat(ygz_-x(GZ));
-	double az_hat(yaz_-x(AZ));
+	// unpack the input and create relevant matrices
+  Eigen::Matrix<double, 4, 1> q_hat;
+  Eigen::Matrix<double, 3, 1> v_hat;
+  Eigen::Matrix<double, 3, 1> omega_hat;
+  Eigen::Matrix<double, 4, 1> omega_hat_4x1;
+  Eigen::Matrix<double, 3, 1> a_hat;
+
+  q_hat         <<        x(QX),        x(QY),        x(QZ), x(QW);
+  v_hat         <<         x(U),         x(V),         x(W);
+  omega_hat     <<   ygx_-x(GX),   ygy_-x(GY),   ygz_-x(GZ);
+  a_hat         <<   yax_-x(AX),   yay_-x(AY),   yaz_-x(AZ);
+  omega_hat_4x1 << omega_hat(0), omega_hat(1), omega_hat(2), 0;
+
+	double mu_hat(x(MU));
 
 	// eq. 105
 	Eigen::Matrix<double, NUM_STATES, 1> xdot;
-	xdot <<  u*(2*qw*qw + 2*qx*qx - 1) - 2*v*(qw*qz - qx*qy) + 2*w*(qw*qy + qx*qz),
-	       2*u*(qw*qz + qx*qy) + v*(2*qw*qw + 2*qy*qy - 1) - 2*w*(qw*qx - qy*qz),
-	      -2*u*(qw*qy - qx*qz) + 2*v*(qw*qx + qy*qz) + w*(2*qw*qw + 2*qz*qz - 1),
-	                                  0.5*p_hat*qw - 0.5*q_hat*qz + 0.5*qy*r_hat,
-	                                  0.5*p_hat*qz + 0.5*q_hat*qw - 0.5*qx*r_hat,
-	                                 -0.5*p_hat*qy + 0.5*q_hat*qx + 0.5*qw*r_hat,
-	                                 -0.5*p_hat*qx - 0.5*q_hat*qy - 0.5*qz*r_hat,
-	                                    -2*G*(qw*qy - qx*qz) - q_hat*w + r_hat*v,
-	                                     2*G*(qw*qx + qy*qz) + p_hat*w - r_hat*u,
-	                      G*(2*qw*qw + 2*qz*qz - 1) + az_hat - p_hat*v + q_hat*u,
-	                                                                           0,
-	                                                                           0,
-	                                                                           0,
-	                                                                           0,
-	                                                                           0,
-	                                                                           0;
+	xdot.setZero();
+	xdot.block(0,0,3,1) = Rq(q_hat).transpose()*v_hat;
+	xdot.block(3,0,4,1) = 0.5*quatMul(q_hat,omega_hat_4x1);
+	xdot.block(7,0,3,1) = skew(v_hat)*omega_hat+Rq(q_hat)*g_+k_*k_.transpose()*a_hat-mu_hat*M_*v_hat;
 
 	// all other state derivatives are zero
 	return xdot;
@@ -125,28 +127,29 @@ Eigen::Matrix<double, NUM_STATES, 1> kalmanFilter::f(const Eigen::Matrix<double,
 // error state propagation Jacobian
 Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> kalmanFilter::dfdx(const Eigen::Matrix<double, NUM_STATES, 1> x)
 {
-	// unpack the input
-	double qx(x(QX)), qy(x(QY)), qz(x(QZ)), qw(x(QW));
-	double u(x(U)), v(x(V)), w(x(W));
-	double p_hat(ygx_-x(GX)), q_hat(ygy_-x(GY)), r_hat(ygz_-x(GZ));
+	// unpack the input and create relevant matrices
+  Eigen::Matrix<double, 4, 1> q_hat;
+  Eigen::Matrix<double, 3, 1> v_hat;
+  Eigen::Matrix<double, 3, 1> omega_hat;
+
+  q_hat    <<       x(QX),      x(QY),      x(QZ), x(QW);
+  v_hat    <<        x(U),       x(V),       x(W);
+  omega_hat << ygx_-x(GX), ygy_-x(GY), ygz_-x(GZ);
+
+  double mu_hat(x(MU));
 
 	// eq. 107
 	Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> A;
-	A << 0, 0, 0,        2*v*(qw*qy + qx*qz) + 2*w*(qw*qz - qx*qy), -2*u*(qw*qy + qx*qz) + w*(2*qw*qw + 2*qx*qx - 1), -2*u*(qw*qz - qx*qy) - v*(2*qw*qw + 2*qx*qx - 1), 2*qw*qw + 2*qx*qx - 1,    -2*qw*qz + 2*qx*qy,     2*qw*qy + 2*qx*qz,  0,  0,  0, 0, 0,  0,
-	   0, 0, 0, -2*v*(qw*qx - qy*qz) - w*(2*qw*qw + 2*qy*qy - 1),        2*u*(qw*qx - qy*qz) + 2*w*(qw*qz + qx*qy),  u*(2*qw*qw + 2*qy*qy - 1) - 2*v*(qw*qz + qx*qy),     2*qw*qz + 2*qx*qy, 2*qw*qw + 2*qy*qy - 1,    -2*qw*qx + 2*qy*qz,  0,  0,  0, 0, 0,  0,
-	   0, 0, 0,  v*(2*qw*qw + 2*qz*qz - 1) - 2*w*(qw*qx + qy*qz), -u*(2*qw*qw + 2*qz*qz - 1) - 2*w*(qw*qy - qx*qz),        2*u*(qw*qx + qy*qz) + 2*v*(qw*qy - qx*qz),    -2*qw*qy + 2*qx*qz,     2*qw*qx + 2*qy*qz, 2*qw*qw + 2*qz*qz - 1,  0,  0,  0, 0, 0,  0,
-	   0, 0, 0,                                                0,                                            r_hat,                                           -q_hat,                     0,                     0,                     0, -1,  0,  0, 0, 0,  0,
-	   0, 0, 0,                                           -r_hat,                                                0,                                            p_hat,                     0,                     0,                     0,  0, -1,  0, 0, 0,  0,
-	   0, 0, 0,                                            q_hat,                                           -p_hat,                                                0,                     0,                     0,                     0,  0,  0, -1, 0, 0,  0,
-	   0, 0, 0,                                                0,                       G*(-2*qw*qw - 2*qz*qz + 1),                              2*G*(qw*qx + qy*qz),                     0,                 r_hat,                -q_hat,  0,  w, -v, 0, 0,  0,
-	   0, 0, 0,                        G*(2*qw*qw + 2*qz*qz - 1),                                                0,                              2*G*(qw*qy - qx*qz),                -r_hat,                     0,                 p_hat, -w,  0,  u, 0, 0,  0,
-	   0, 0, 0,                             -2*G*(qw*qx + qy*qz),                             2*G*(-qw*qy + qx*qz),                                                0,                 q_hat,                -p_hat,                     0,  v, -u,  0, 0, 0, -1,
-	   0, 0, 0,                                                0,                                                0,                                                0,                     0,                     0,                     0,  0,  0,  0, 0, 0,  0,
-	   0, 0, 0,                                                0,                                                0,                                                0,                     0,                     0,                     0,  0,  0,  0, 0, 0,  0,
-	   0, 0, 0,                                                0,                                                0,                                                0,                     0,                     0,                     0,  0,  0,  0, 0, 0,  0,
-	   0, 0, 0,                                                0,                                                0,                                                0,                     0,                     0,                     0,  0,  0,  0, 0, 0,  0,
-	   0, 0, 0,                                                0,                                                0,                                                0,                     0,                     0,                     0,  0,  0,  0, 0, 0,  0,
-	   0, 0, 0,                                                0,                                                0,                                                0,                     0,                     0,                     0,  0,  0,  0, 0, 0,  0;
+	A.setZero();
+	A.block(0,3,3,3)  = -Rq(q_hat).transpose()*skew(v_hat);
+	A.block(0,6,3,3)  = Rq(q_hat).transpose();
+	A.block(3,3,3,3)  = -skew(omega_hat);
+	A.block(3,9,3,3)  = -I3_;
+	A.block(6,3,3,3)  = skew(Rq(q_hat)*g_);
+	A.block(6,6,3,3)  = -skew(omega_hat)-mu_hat*M_;
+	A.block(6,9,3,3)  = -skew(v_hat);
+	A.block(6,12,3,3) = -k_*k_.transpose();
+	A.block(6,21,3,1) = -M_*v_hat;
 
 	// all other states are zero
 	return A;
@@ -156,25 +159,17 @@ Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> kalmanFilter::dfdx(con
 // error state propagation Jacobian
 Eigen::Matrix<double, NUM_ERROR_STATES, 6> kalmanFilter::dfdu(const Eigen::Matrix<double, NUM_STATES, 1> x)
 {
-	double u(x(U)), v(x(V)), w(x(W));
+	// unpack the input and create relevant matrices
+  Eigen::Matrix<double, 3, 1> v_hat;
+
+  v_hat << x(U), x(V), x(W);
 
 	// eq. 108
 	Eigen::Matrix<double, NUM_ERROR_STATES, 6> A;
-	A <<  0,  0,  0, 0, 0,  0,
-	    0,  0,  0, 0, 0,  0,
-	    0,  0,  0, 0, 0,  0,
-	   -1,  0,  0, 0, 0,  0,
-	    0, -1,  0, 0, 0,  0,
-	    0,  0, -1, 0, 0,  0,
-	    0,  w, -v, 0, 0,  0,
-	   -w,  0,  u, 0, 0,  0,
-	    v, -u,  0, 0, 0, -1,
-	    0,  0,  0, 0, 0,  0,
-	    0,  0,  0, 0, 0,  0,
-	    0,  0,  0, 0, 0,  0,
-	    0,  0,  0, 0, 0,  0,
-	    0,  0,  0, 0, 0,  0,
-	    0,  0,  0, 0, 0,  0;
+	A.setZero();
+	A.block(3,0,3,3) = -I3_;
+	A.block(6,0,3,3) = -skew(v_hat);
+	A.block(6,3,3,3) = -k_*k_.transpose();
 
 	// all other states are zero
 	return A;
@@ -182,7 +177,7 @@ Eigen::Matrix<double, NUM_ERROR_STATES, 6> kalmanFilter::dfdu(const Eigen::Matri
 
 
 // update state using accelerometer x and y measurements, Section 4.3.1
-void kalmanFilter::updateIMU(sensor_msgs::Imu msg)
+void kalmanFilter::updateIMU(const sensor_msgs::Imu msg)
 {
 	// collect IMU measurements
 	ygx_ = msg.angular_velocity.x;
@@ -192,52 +187,52 @@ void kalmanFilter::updateIMU(sensor_msgs::Imu msg)
 	yay_ = msg.linear_acceleration.y;
 	yaz_ = msg.linear_acceleration.z;
 
-	// only apply update when accelerometer is approximately measuring gravity
-	double tol = 0.1;
-	if (fabs(yax_) < tol && fabs(yay_) < tol && fabs(yaz_) > G*(1-tol) && fabs(yaz_) < G*(1+tol))
-	{
-		// build measurement vector (only use x and y)
-		Eigen::Matrix<double, 2, 1> y;
-		y << yax_, yay_;
+	// // only apply update when accelerometer is approximately measuring gravity
+	// double tol = 0.1;
+	// if (fabs(yax_) < tol && fabs(yay_) < tol && fabs(yaz_) > G*(1-tol) && fabs(yaz_) < G*(1+tol))
+	// {
+	// 	// build measurement vector (only use x and y)
+	// 	Eigen::Matrix<double, 2, 1> y;
+	// 	y << yax_, yay_;
 
-		// unpack the input
-		double u(x_hat_(U)), v(x_hat_(V)), w(x_hat_(W));
-		double p_hat(ygx_-x_hat_(GX)), q_hat(ygy_-x_hat_(GY)), r_hat(ygz_-x_hat_(GZ));
-		double bax(x_hat_(AX)), bay(x_hat_(AY));
+	// 	// unpack the input
+	// 	double u(x_hat_(U)), v(x_hat_(V)), w(x_hat_(W));
+	// 	double p_hat(ygx_-x_hat_(GX)), q_hat(ygy_-x_hat_(GY)), r_hat(ygz_-x_hat_(GZ));
+	// 	double bax(x_hat_(AX)), bay(x_hat_(AY));
 
-		// measurement Jacobian, eq. 115
-		Eigen::Matrix<double, 2, NUM_ERROR_STATES> H;
-		H << 0, 0, 0, 0, 0, 0,      0,  r_hat, -q_hat,  0,  w, -v, 1, 0, 0,
-		     0, 0, 0, 0, 0, 0, -r_hat,      0,  p_hat, -w,  0,  u, 0, 1, 0;
+	// 	// measurement Jacobian, eq. 115
+	// 	Eigen::Matrix<double, 2, NUM_ERROR_STATES> H;
+	// 	H << 0, 0, 0, 0, 0, 0,      0,  r_hat, -q_hat,  0,  w, -v, 1, 0, 0,
+	// 	     0, 0, 0, 0, 0, 0, -r_hat,      0,  p_hat, -w,  0,  u, 0, 1, 0;
 
-		// input noise selector, eq. 118
-		Eigen::Matrix<double, 2, 6> J;
-		J <<  0,  w, -v, 1, 0, 0,
-		     -w,  0,  u, 0, 1, 0;
+	// 	// input noise selector, eq. 118
+	// 	Eigen::Matrix<double, 2, 6> J;
+	// 	J <<  0,  w, -v, 1, 0, 0,
+	// 	     -w,  0,  u, 0, 1, 0;
 
-		// accelerometer noise matrix for x and y
-		// input noise selector, eq. 118
-		Eigen::Matrix<double, 2, 2> R;
-		R << Qu_(3,3),        0, 
-		            0, Qu_(4,4);
+	// 	// accelerometer noise matrix for x and y
+	// 	// input noise selector, eq. 118
+	// 	Eigen::Matrix<double, 2, 2> R;
+	// 	R << Qu_(3,3),        0, 
+	// 	            0, Qu_(4,4);
 
-		// compute Kalman gain, eq. 117
-		Eigen::Matrix<double, NUM_ERROR_STATES, 2> K;
-		K = P_*H.transpose()*(H*P_*H.transpose() + J*Qu_*J.transpose() + R).inverse();
+	// 	// compute Kalman gain, eq. 117
+	// 	Eigen::Matrix<double, NUM_ERROR_STATES, 2> K;
+	// 	K = P_*H.transpose()*(H*P_*H.transpose() + J*Qu_*J.transpose() + R).inverse();
 
-		// compute measurement error below, eq. 114
-		Eigen::Matrix<double, 2, 1> r;
-		r << yax_ - (bax - q_hat*w + r_hat*v),
-		     yay_ - (bay + p_hat*w - r_hat*u);
+	// 	// compute measurement error below, eq. 114
+	// 	Eigen::Matrix<double, 2, 1> r;
+	// 	r << yax_ - (bax - q_hat*w + r_hat*v),
+	// 	     yay_ - (bay + p_hat*w - r_hat*u);
 
-		// compute delta_x, eq. 88
-		Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x;
-		delta_x = K*r;
+	// 	// compute delta_x, eq. 88
+	// 	Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x;
+	// 	delta_x = K*r;
 
-		// update state and covariance
-		stateUpdate(delta_x);
-		P_ = (Eigen::MatrixXd::Identity(NUM_ERROR_STATES,NUM_ERROR_STATES) - K*H)*P_;
-	}
+	// 	// update state and covariance
+	// 	stateUpdate(delta_x);
+	// 	P_ = (Eigen::MatrixXd::Identity(NUM_ERROR_STATES,NUM_ERROR_STATES) - K*H)*P_;
+	// }
 }
 
 
@@ -314,20 +309,45 @@ double kalmanFilter::LPF(double yn, double un)
 // quaternion multiply, eq. 4
 Eigen::Matrix<double, 4, 1> kalmanFilter::quatMul(const Eigen::Matrix<double, 4, 1> p, const Eigen::Matrix<double, 4, 1> q)
 {
-	// unpack elements of p
-	double px = p(0);
-	double py = p(1);
-	double pz = p(2);
-	double pw = p(3);
+	// create needed matrices/vectors
+  Eigen::Matrix<double, 3, 1> p_bar;
+  p_bar << p(0), p(1), p(2);
+
+  double pw(p(3));
 
 	// perform multiplication
 	Eigen::Matrix<double, 4, 4> P;
-	P <<  pw, -pz,  py,  px,
-	      pz,  pw, -px,  py,
-	     -py,  px,  pw,  pz,
-	     -px, -py, -pz,  pw;
+	P.block(0,0,3,3) = pw*I3_+skew(p_bar);
+	P.block(0,3,3,1) = p_bar;
+	P.block(3,0,1,3) = -p_bar.transpose();
+	P(3,3) = pw;
 
 	return P*q;
+}
+
+
+// 3x3 rotation matrix from quaternion, eq. 15
+Eigen::Matrix<double, 3, 3> kalmanFilter::Rq(const Eigen::Matrix<double, 4, 1> q)
+{
+  // create needed matrices/vectors
+  Eigen::Matrix<double, 3, 1> q_bar;
+  q_bar << q(0), q(1), q(2);
+
+  double qw(q(3));
+
+  // compute rotation matrix
+  return (2*qw*qw-1)*I3_-2*qw*skew(q_bar)+2*q_bar*q_bar.transpose();
+}
+
+
+// skew symmetric matrix from vector, eq. 5
+Eigen::Matrix<double, 3, 3> kalmanFilter::skew(const Eigen::Matrix<double, 3, 1> vec)
+{
+  Eigen::Matrix<double, 3, 3> A;
+  A <<       0, -vec(2),  vec(1),
+        vec(2),       0, -vec(0),
+       -vec(1),  vec(0),       0;
+  return A;
 }
 
 
@@ -336,39 +356,48 @@ void kalmanFilter::stateUpdate(const Eigen::Matrix<double, NUM_ERROR_STATES, 1> 
 {
 	// separate vector and quaternion parts of x_hat_ and associated parts of delta_x
 	// described in paragraph below eq. 89
-	Eigen::Matrix<double, 12, 1> x_hat_v;
-	x_hat_v << x_hat_(PN), x_hat_(PE), x_hat_(PD), x_hat_(U), x_hat_(V), x_hat_(W), x_hat_(GX), x_hat_(GY), x_hat_(GZ), x_hat_(AX), x_hat_(AY), x_hat_(AZ);
+	Eigen::Matrix<double, 16, 1> x_hat_v;
+	Eigen::Matrix<double,  4, 1> x_hat_q;
+	Eigen::Matrix<double,  4, 1> x_hat_q_k;
+	Eigen::Matrix<double, 16, 1> delta_v;
+	Eigen::Matrix<double,  3, 1> delta_theta;
+	Eigen::Matrix<double,  3, 1> delta_theta_k;
+	Eigen::Matrix<double,  4, 1> delta_theta_q;
+	Eigen::Matrix<double,  4, 1> delta_theta_q_k;
 
-	Eigen::Matrix<double, 4, 1> x_hat_q;
-	x_hat_q << x_hat_(QX), x_hat_(QY), x_hat_(QZ), x_hat_(QW);
+	x_hat_v.block(0,0,3,1) = x_hat_.block(PN,0,3,1);
+	x_hat_v.block(3,0,12,1) = x_hat_.block(U,0,12,1);
+	x_hat_v(15) = x_hat_(MU);
 
-	Eigen::Matrix<double, 12, 1> delta_v;
-	delta_v << delta_x(dPN), delta_x(dPE), delta_x(dPD), delta_x(dU), delta_x(dV), delta_x(dW), delta_x(dGX), delta_x(dGY), delta_x(dGZ), delta_x(dAX), delta_x(dAY), delta_x(dAZ);
+	x_hat_q = x_hat_.block(QX,0,4,1);
+	x_hat_q_k = x_hat_.block(QXK,0,4,1);
 
-	Eigen::Matrix<double, 4, 1> delta_theta_q;
-	delta_theta_q << 0.5*delta_x(dPHI), 0.5*delta_x(dTHETA), 0.5*delta_x(dPSI), 1;
+	delta_v.block(0,0,3,1) = delta_x.block(dPN,0,3,1);
+	delta_v.block(3,0,12,1) = delta_x.block(dU,0,12,1);
+	delta_v(15) = delta_x(dMU);
 
-	// update state and covariance
+	delta_theta = delta_x.block(dPHI,0,3,1);
+	delta_theta_k = delta_x.block(dPHIK,0,3,1);
+
+	delta_theta_q.block(0,0,3,1) = 0.5*delta_theta;
+	delta_theta_q(3) = 1;
+	delta_theta_q /= sqrt(1+0.25*delta_theta.transpose()*delta_theta);
+
+	delta_theta_q_k.block(0,0,3,1) = 0.5*delta_theta_k;
+	delta_theta_q_k(3) = 1;
+	delta_theta_q_k /= sqrt(1+0.25*delta_theta_k.transpose()*delta_theta_k);
+
+	// update body and keyframe states
 	x_hat_v += delta_v;
 	x_hat_q = quatMul(x_hat_q, delta_theta_q);
+	x_hat_q_k = quatMul(x_hat_q_k, delta_theta_q_k);
 
 	// fill in new values of x_hat_
-	x_hat_(PN) = x_hat_v(0);
-	x_hat_(PE) = x_hat_v(1);
-	x_hat_(PD) = x_hat_v(2);
-	x_hat_(QX) = x_hat_q(0);
-	x_hat_(QY) = x_hat_q(1);
-	x_hat_(QZ) = x_hat_q(2);
-	x_hat_(QW) = x_hat_q(3);
-	x_hat_(U)  = x_hat_v(3);
-	x_hat_(V)  = x_hat_v(4);
-	x_hat_(W)  = x_hat_v(5);
-	x_hat_(GX) = x_hat_v(6);
-	x_hat_(GY) = x_hat_v(7);
-	x_hat_(GZ) = x_hat_v(8);
-	x_hat_(AX) = x_hat_v(9);
-	x_hat_(AY) = x_hat_v(10);
-	x_hat_(AZ) = x_hat_v(11);
+	x_hat_.block(PN,0,3,1) = x_hat_v.block(0,0,3,1);
+	x_hat_.block(QX,0,4,1) = x_hat_q;
+	x_hat_.block(U,0,12,1) = x_hat_v.block(3,0,12,1);
+	x_hat_.block(QXK,0,4,1) = x_hat_q_k;
+	x_hat_(MU) = x_hat_v(15);
 }
 
 

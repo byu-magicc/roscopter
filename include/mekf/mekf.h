@@ -36,8 +36,16 @@
 #define AX 13
 #define AY 14
 #define AZ 15
+#define PNK 16
+#define PEK 17
+#define PDK 18
+#define QXK 19
+#define QYK 20
+#define QZK 21
+#define QWK 22
+#define MU 23
 
-#define NUM_STATES 16
+#define NUM_STATES 24
 
 // error state numbers
 #define dPN 0
@@ -55,8 +63,15 @@
 #define dAX 12
 #define dAY 13
 #define dAZ 14
+#define dPNK 15
+#define dPEK 16
+#define dPDK 17
+#define dPHIK 18
+#define dTHETAK 19
+#define dPSIK 20
+#define dMU 21
 
-#define NUM_ERROR_STATES 15
+#define NUM_ERROR_STATES 22
 
 #define G 9.80
 
@@ -86,6 +101,8 @@ private:
 
 	// parameters
 	double mass_;
+  Eigen::Matrix<double, 3, 1> k_, g_;
+  Eigen::Matrix<double, 3, 3> M_, I3_;
 
 	struct inertia
 	{
@@ -114,14 +131,18 @@ private:
 	void imuCallback(const sensor_msgs::Imu msg);
 	void predictStep();
 	void updateStep();
-	void updateIMU(sensor_msgs::Imu msg);
+	void updateIMU(const sensor_msgs::Imu msg);
 	void publishEstimate();
+  void stateUpdate(const Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x);
+
 	double LPF(double yn, double un);
+
 	Eigen::Matrix<double, NUM_STATES, 1> f(const Eigen::Matrix<double, NUM_STATES, 1> x);
 	Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> dfdx(const Eigen::Matrix<double, NUM_STATES, 1> x);
 	Eigen::Matrix<double, NUM_ERROR_STATES, 6> dfdu(const Eigen::Matrix<double, NUM_STATES, 1> x);
 	Eigen::Matrix<double, 4, 1> quatMul(const Eigen::Matrix<double, 4, 1> p, const Eigen::Matrix<double, 4, 1> q);
-	void stateUpdate(const Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x);
+  Eigen::Matrix<double, 3, 3> Rq(const Eigen::Matrix<double, 4, 1> q);
+  Eigen::Matrix<double, 3, 3> skew(const Eigen::Matrix<double, 3, 1> vec);
 
 };
 
