@@ -98,17 +98,17 @@ void kalmanFilter::predictStep()
 Eigen::Matrix<double, NUM_STATES, 1> kalmanFilter::f(const Eigen::Matrix<double, NUM_STATES, 1> x)
 {
 	// unpack the input and create relevant matrices
-  Eigen::Matrix<double, 4, 1> q_hat;
-  Eigen::Matrix<double, 3, 1> v_hat;
-  Eigen::Matrix<double, 3, 1> omega_hat;
-  Eigen::Matrix<double, 4, 1> omega_hat_4x1;
-  Eigen::Matrix<double, 3, 1> a_hat;
+	Eigen::Matrix<double, 4, 1> q_hat;
+	Eigen::Matrix<double, 3, 1> v_hat;
+	Eigen::Matrix<double, 3, 1> omega_hat;
+	Eigen::Matrix<double, 4, 1> omega_hat_4x1;
+	Eigen::Matrix<double, 3, 1> a_hat;
 
-  q_hat         <<        x(QX),        x(QY),        x(QZ), x(QW);
-  v_hat         <<         x(U),         x(V),         x(W);
-  omega_hat     <<   ygx_-x(GX),   ygy_-x(GY),   ygz_-x(GZ);
-  a_hat         <<   yax_-x(AX),   yay_-x(AY),   yaz_-x(AZ);
-  omega_hat_4x1 << omega_hat(0), omega_hat(1), omega_hat(2), 0;
+	q_hat         <<        x(QX),        x(QY),        x(QZ), x(QW);
+	v_hat         <<         x(U),         x(V),         x(W);
+	omega_hat     <<   ygx_-x(GX),   ygy_-x(GY),   ygz_-x(GZ);
+	a_hat         <<   yax_-x(AX),   yay_-x(AY),   yaz_-x(AZ);
+	omega_hat_4x1 << omega_hat(0), omega_hat(1), omega_hat(2), 0;
 
 	double mu_hat(x(MU));
 
@@ -128,15 +128,15 @@ Eigen::Matrix<double, NUM_STATES, 1> kalmanFilter::f(const Eigen::Matrix<double,
 Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> kalmanFilter::dfdx(const Eigen::Matrix<double, NUM_STATES, 1> x)
 {
 	// unpack the input and create relevant matrices
-  Eigen::Matrix<double, 4, 1> q_hat;
-  Eigen::Matrix<double, 3, 1> v_hat;
-  Eigen::Matrix<double, 3, 1> omega_hat;
+	Eigen::Matrix<double, 4, 1> q_hat;
+	Eigen::Matrix<double, 3, 1> v_hat;
+	Eigen::Matrix<double, 3, 1> omega_hat;
 
-  q_hat    <<       x(QX),      x(QY),      x(QZ), x(QW);
-  v_hat    <<        x(U),       x(V),       x(W);
-  omega_hat << ygx_-x(GX), ygy_-x(GY), ygz_-x(GZ);
+	q_hat     <<      x(QX),      x(QY),      x(QZ), x(QW);
+	v_hat     <<       x(U),       x(V),       x(W);
+	omega_hat << ygx_-x(GX), ygy_-x(GY), ygz_-x(GZ);
 
-  double mu_hat(x(MU));
+	double mu_hat(x(MU));
 
 	// eq. 107
 	Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> A;
@@ -160,9 +160,9 @@ Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> kalmanFilter::dfdx(con
 Eigen::Matrix<double, NUM_ERROR_STATES, 6> kalmanFilter::dfdu(const Eigen::Matrix<double, NUM_STATES, 1> x)
 {
 	// unpack the input and create relevant matrices
-  Eigen::Matrix<double, 3, 1> v_hat;
+	Eigen::Matrix<double, 3, 1> v_hat;
 
-  v_hat << x(U), x(V), x(W);
+	v_hat << x(U), x(V), x(W);
 
 	// eq. 108
 	Eigen::Matrix<double, NUM_ERROR_STATES, 6> A;
@@ -187,52 +187,71 @@ void kalmanFilter::updateIMU(const sensor_msgs::Imu msg)
 	yay_ = msg.linear_acceleration.y;
 	yaz_ = msg.linear_acceleration.z;
 
-	// // only apply update when accelerometer is approximately measuring gravity
-	// double tol = 0.1;
-	// if (fabs(yax_) < tol && fabs(yay_) < tol && fabs(yaz_) > G*(1-tol) && fabs(yaz_) < G*(1+tol))
-	// {
-	// 	// build measurement vector (only use x and y)
-	// 	Eigen::Matrix<double, 2, 1> y;
-	// 	y << yax_, yay_;
+	// build measurement vector
+	Eigen::Matrix<double, 2, 1> y;
+	y << yax_, yay_;
 
-	// 	// unpack the input
-	// 	double u(x_hat_(U)), v(x_hat_(V)), w(x_hat_(W));
-	// 	double p_hat(ygx_-x_hat_(GX)), q_hat(ygy_-x_hat_(GY)), r_hat(ygz_-x_hat_(GZ));
-	// 	double bax(x_hat_(AX)), bay(x_hat_(AY));
+	// unpack the input and create relevant matrices
+	Eigen::Matrix<double, 4, 1> q_hat;
+	Eigen::Matrix<double, 3, 1> v_hat;
+	Eigen::Matrix<double, 3, 1> omega_hat;
+	Eigen::Matrix<double, 3, 1> ba_hat;
 
-	// 	// measurement Jacobian, eq. 115
-	// 	Eigen::Matrix<double, 2, NUM_ERROR_STATES> H;
-	// 	H << 0, 0, 0, 0, 0, 0,      0,  r_hat, -q_hat,  0,  w, -v, 1, 0, 0,
-	// 	     0, 0, 0, 0, 0, 0, -r_hat,      0,  p_hat, -w,  0,  u, 0, 1, 0;
+	q_hat     <<       x_hat_(QX),        x_hat_(QY),        x_hat_(QZ), x_hat_(QW);
+	v_hat     <<        x_hat_(U),         x_hat_(V),         x_hat_(W);
+	omega_hat <<  ygx_-x_hat_(GX),   ygy_-x_hat_(GY),   ygz_-x_hat_(GZ);
+	ba_hat    <<  x_hat_(AX), x_hat_(AY), x_hat_(AZ);
 
-	// 	// input noise selector, eq. 118
-	// 	Eigen::Matrix<double, 2, 6> J;
-	// 	J <<  0,  w, -v, 1, 0, 0,
-	// 	     -w,  0,  u, 0, 1, 0;
+	double mu_hat(x_hat_(MU));
 
-	// 	// accelerometer noise matrix for x and y
-	// 	// input noise selector, eq. 118
-	// 	Eigen::Matrix<double, 2, 2> R;
-	// 	R << Qu_(3,3),        0, 
-	// 	            0, Qu_(4,4);
+	// measurement Jacobian, eq. 115
+	Eigen::Matrix<double, 3, NUM_ERROR_STATES> H3;
+	Eigen::Matrix<double, 2, NUM_ERROR_STATES> H;
+	H3.setZero();
+	H3.block(0,dU,3,3) = -skew(omega_hat)-mu_hat*M_;
+	H3.block(0,dGX,3,3) = -skew(v_hat);
+	H3.block(0,dAX,3,3) = I3_;
+	H3.block(0,dMU,3,1) = -M_*v_hat;
+	H = H3.block(0,0,2,NUM_ERROR_STATES);
 
-	// 	// compute Kalman gain, eq. 117
-	// 	Eigen::Matrix<double, NUM_ERROR_STATES, 2> K;
-	// 	K = P_*H.transpose()*(H*P_*H.transpose() + J*Qu_*J.transpose() + R).inverse();
+	// input noise selector, eq. 118
+	Eigen::Matrix<double, 3, 6> J3;
+	Eigen::Matrix<double, 2, 6> J;
+	J3.setZero();
+	J3.block(0,0,3,3) = -skew(v_hat);
+	J3.block(0,3,3,3) = I3_;
+	J = J3.block(0,0,2,6);
 
-	// 	// compute measurement error below, eq. 114
-	// 	Eigen::Matrix<double, 2, 1> r;
-	// 	r << yax_ - (bax - q_hat*w + r_hat*v),
-	// 	     yay_ - (bay + p_hat*w - r_hat*u);
+	// compute the residual covariance
+	Eigen::Matrix<double, 2, 2> S;
+	S = H*P_*H.transpose() + J*Qu_*J.transpose();
 
-	// 	// compute delta_x, eq. 88
-	// 	Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x;
-	// 	delta_x = K*r;
+	// compute Kalman gain, eq. 117
+	Eigen::Matrix<double, NUM_ERROR_STATES, 2> K;
+	K = P_*H.transpose()*S.inverse();
 
-	// 	// update state and covariance
-	// 	stateUpdate(delta_x);
-	// 	P_ = (Eigen::MatrixXd::Identity(NUM_ERROR_STATES,NUM_ERROR_STATES) - K*H)*P_;
-	// }
+	// compute measurement error below, eq. 114
+	Eigen::Matrix<double, 3, 1> h_hat3;
+	Eigen::Matrix<double, 2, 1> h_hat; 
+	Eigen::Matrix<double, 2, 1> r;
+	h_hat3 = skew(v_hat)*omega_hat-mu_hat*M_*v_hat+ba_hat;
+	h_hat = h_hat3.block(0,0,2,1);
+	r = y - h_hat;
+
+	// compute delta_x, eq. 88
+	Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x;
+	delta_x = K*r;
+
+	// update state and covariance
+	stateUpdate(delta_x);
+	P_ = (Eigen::MatrixXd::Identity(NUM_ERROR_STATES,NUM_ERROR_STATES) - K*H)*P_;
+
+	// normalize quaternion portion of state
+	double x_hat_q_norm = sqrt(x_hat_(QX)*x_hat_(QX) + x_hat_(QY)*x_hat_(QY) + x_hat_(QZ)*x_hat_(QZ) + x_hat_(QW)*x_hat_(QW));
+	x_hat_(QX) /= x_hat_q_norm;
+	x_hat_(QY) /= x_hat_q_norm;
+	x_hat_(QZ) /= x_hat_q_norm;
+	x_hat_(QW) /= x_hat_q_norm;
 }
 
 
@@ -310,10 +329,10 @@ double kalmanFilter::LPF(double yn, double un)
 Eigen::Matrix<double, 4, 1> kalmanFilter::quatMul(const Eigen::Matrix<double, 4, 1> p, const Eigen::Matrix<double, 4, 1> q)
 {
 	// create needed matrices/vectors
-  Eigen::Matrix<double, 3, 1> p_bar;
-  p_bar << p(0), p(1), p(2);
+	Eigen::Matrix<double, 3, 1> p_bar;
+	p_bar << p(0), p(1), p(2);
 
-  double pw(p(3));
+	double pw(p(3));
 
 	// perform multiplication
 	Eigen::Matrix<double, 4, 4> P;
@@ -329,25 +348,25 @@ Eigen::Matrix<double, 4, 1> kalmanFilter::quatMul(const Eigen::Matrix<double, 4,
 // 3x3 rotation matrix from quaternion, eq. 15
 Eigen::Matrix<double, 3, 3> kalmanFilter::Rq(const Eigen::Matrix<double, 4, 1> q)
 {
-  // create needed matrices/vectors
-  Eigen::Matrix<double, 3, 1> q_bar;
-  q_bar << q(0), q(1), q(2);
+	// create needed matrices/vectors
+	Eigen::Matrix<double, 3, 1> q_bar;
+	q_bar << q(0), q(1), q(2);
 
-  double qw(q(3));
+	double qw(q(3));
 
-  // compute rotation matrix
-  return (2*qw*qw-1)*I3_-2*qw*skew(q_bar)+2*q_bar*q_bar.transpose();
+	// compute rotation matrix
+	return (2*qw*qw-1)*I3_-2*qw*skew(q_bar)+2*q_bar*q_bar.transpose();
 }
 
 
 // skew symmetric matrix from vector, eq. 5
 Eigen::Matrix<double, 3, 3> kalmanFilter::skew(const Eigen::Matrix<double, 3, 1> vec)
 {
-  Eigen::Matrix<double, 3, 3> A;
-  A <<       0, -vec(2),  vec(1),
-        vec(2),       0, -vec(0),
-       -vec(1),  vec(0),       0;
-  return A;
+	Eigen::Matrix<double, 3, 3> A;
+	A <<       0, -vec(2),  vec(1),
+		  vec(2),       0, -vec(0),
+		 -vec(1),  vec(0),       0;
+	return A;
 }
 
 
