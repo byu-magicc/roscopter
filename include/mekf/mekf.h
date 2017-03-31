@@ -2,7 +2,6 @@
 #define MEKF_H
 
 #include <stdio.h>
-#include <std_msgs/Bool.h>
 #include <deque>
 
 #include <eigen3/Eigen/Core>
@@ -13,6 +12,8 @@
 
 #include <ros/ros.h>
 #include <tf/tf.h>
+#include <std_msgs/Bool.h>
+#include <std_msgs/Float64.h>
 #include <sensor_msgs/Imu.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <nav_msgs/Odometry.h>
@@ -98,6 +99,7 @@ private:
 	ros::Publisher estimate_pub_;
 	ros::Publisher bias_pub_;
 	ros::Publisher is_flying_pub_;
+	ros::Publisher drag_pub_;
 
 	// parameters
 	double mass_;

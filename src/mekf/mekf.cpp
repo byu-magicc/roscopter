@@ -26,6 +26,7 @@ kalmanFilter::kalmanFilter() :
 	estimate_pub_  = nh_.advertise<nav_msgs::Odometry>("estimate", 1);
 	bias_pub_      = nh_.advertise<sensor_msgs::Imu>("estimate/bias", 1);
 	is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1);
+	drag_pub_ = nh_.advertise<std_msgs::Float64>("estimate/drag", 1);
 
 	// initialize variables
 	flying_ = false;
@@ -192,15 +193,11 @@ void kalmanFilter::updateIMU(const sensor_msgs::Imu msg)
 	y << yax_, yay_;
 
 	// unpack the input and create relevant matrices
-	Eigen::Matrix<double, 4, 1> q_hat;
 	Eigen::Matrix<double, 3, 1> v_hat;
-	Eigen::Matrix<double, 3, 1> omega_hat;
 	Eigen::Matrix<double, 3, 1> ba_hat;
 
-	q_hat     <<       x_hat_(QX),        x_hat_(QY),        x_hat_(QZ), x_hat_(QW);
-	v_hat     <<        x_hat_(U),         x_hat_(V),         x_hat_(W);
-	omega_hat <<  ygx_-x_hat_(GX),   ygy_-x_hat_(GY),   ygz_-x_hat_(GZ);
-	ba_hat    <<  x_hat_(AX), x_hat_(AY), x_hat_(AZ);
+	v_hat  <<   x_hat_(U),  x_hat_(V),  x_hat_(W);
+	ba_hat <<  x_hat_(AX), x_hat_(AY), x_hat_(AZ);
 
 	double mu_hat(x_hat_(MU));
 
@@ -208,7 +205,7 @@ void kalmanFilter::updateIMU(const sensor_msgs::Imu msg)
 	Eigen::Matrix<double, 3, NUM_ERROR_STATES> H3;
 	Eigen::Matrix<double, 2, NUM_ERROR_STATES> H;
 	H3.setZero();
-	H3.block(0,dU,3,3) = -skew(omega_hat)-mu_hat*M_;
+	H3.block(0,dU,3,3) = -mu_hat*M_;
 	H3.block(0,dGX,3,3) = -skew(v_hat);
 	H3.block(0,dAX,3,3) = I3_;
 	H3.block(0,dMU,3,1) = -M_*v_hat;
@@ -234,7 +231,7 @@ void kalmanFilter::updateIMU(const sensor_msgs::Imu msg)
 	Eigen::Matrix<double, 3, 1> h_hat3;
 	Eigen::Matrix<double, 2, 1> h_hat; 
 	Eigen::Matrix<double, 2, 1> r;
-	h_hat3 = skew(v_hat)*omega_hat-mu_hat*M_*v_hat+ba_hat;
+	h_hat3 = -mu_hat*M_*v_hat+ba_hat;
 	h_hat = h_hat3.block(0,0,2,1);
 	r = y - h_hat;
 
@@ -315,6 +312,11 @@ void kalmanFilter::publishEstimate()
 	bias.angular_velocity_covariance[2*3+2] = P_(dGZ,dGZ);
 
 	bias_pub_.publish(bias);
+
+	std_msgs::Float64 drag;
+	drag.data = x_hat_(MU);
+
+	drag_pub_.publish(drag);
 }
 
 
