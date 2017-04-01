@@ -14,6 +14,7 @@ kalmanFilter::kalmanFilter() :
 	// retrieve params
 	nh_private_.param<double>("alpha", alpha_, 0.2);
 	nh_private_.param<double>("mass", mass_, 1);
+  nh_private_.param<double>("Ralt", R_alt_, 0.05);
 	nh_private_.param<int>("euler_integration_steps", N_, 20);
 	ros_copter::importMatrixFromParamServer(nh_private_, x_hat_, "x0");
 	ros_copter::importMatrixFromParamServer(nh_private_, P_, "P0");
@@ -22,6 +23,7 @@ kalmanFilter::kalmanFilter() :
 
 	// setup publishers and subscribers
 	imu_sub_   = nh_.subscribe("imu/data", 1, &kalmanFilter::imuCallback, this);
+	alt_sub_   = nh_.subscribe("alt/data", 1, &kalmanFilter::altCallback, this);
 
 	estimate_pub_  = nh_.advertise<nav_msgs::Odometry>("estimate", 1);
 	bias_pub_      = nh_.advertise<sensor_msgs::Imu>("estimate/bias", 1);
@@ -62,6 +64,49 @@ void kalmanFilter::imuCallback(const sensor_msgs::Imu msg)
 		updateIMU(msg);
 		publishEstimate();
 	}
+	return;
+}
+
+
+// update with sonar measurements
+void kalmanFilter::altCallback(const sensor_msgs::Range msg)
+{
+  // unpack measurement
+  double y_alt = msg.range;
+
+  // measurement model, eq. 120
+  double h_alt = -x_hat_(2);
+
+  // measurement Jacobian, eq. 121
+  Eigen::Matrix<double, 1, NUM_ERROR_STATES> H;
+  H.setZero();
+  H(2) = -1;
+
+  // compute the residual covariance
+  double S = H*P_*H.transpose() + R_alt_;
+
+  // compute Kalman gain
+  Eigen::Matrix<double, NUM_ERROR_STATES, 1> K;
+  K = P_*H.transpose()/S;
+
+  // compute measurement error
+  double r = y_alt - h_alt;
+
+  // compute delta_x, eq. 88
+  Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x;
+  delta_x = K*r;
+
+  // update state and covariance
+  stateUpdate(delta_x);
+  P_ = (Eigen::MatrixXd::Identity(NUM_ERROR_STATES,NUM_ERROR_STATES) - K*H)*P_;
+
+  // normalize quaternion portion of state
+  double x_hat_q_norm = sqrt(x_hat_(QX)*x_hat_(QX) + x_hat_(QY)*x_hat_(QY) + x_hat_(QZ)*x_hat_(QZ) + x_hat_(QW)*x_hat_(QW));
+  x_hat_(QX) /= x_hat_q_norm;
+  x_hat_(QY) /= x_hat_q_norm;
+  x_hat_(QZ) /= x_hat_q_norm;
+  x_hat_(QW) /= x_hat_q_norm;
+
 	return;
 }
 

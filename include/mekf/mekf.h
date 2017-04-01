@@ -15,6 +15,7 @@
 #include <std_msgs/Bool.h>
 #include <std_msgs/Float64.h>
 #include <sensor_msgs/Imu.h>
+#include <sensor_msgs/Range.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <nav_msgs/Odometry.h>
 
@@ -94,7 +95,7 @@ private:
 
 	// publishers and subscribers
 	ros::Subscriber imu_sub_;
-	ros::Subscriber mocap_sub_;
+	ros::Subscriber alt_sub_;
 
 	ros::Publisher estimate_pub_;
 	ros::Publisher bias_pub_;
@@ -125,12 +126,13 @@ private:
 
 	double p_prev_, q_prev_, r_prev_;
 	double ygx_, ygy_, ygz_, yaz_, yax_, yay_;
-	double alpha_;
+	double alpha_, R_alt_;
 	int N_;
 	bool flying_;
 
 	// functions
 	void imuCallback(const sensor_msgs::Imu msg);
+	void altCallback(const sensor_msgs::Range msg);
 	void predictStep();
 	void updateStep();
 	void updateIMU(const sensor_msgs::Imu msg);
