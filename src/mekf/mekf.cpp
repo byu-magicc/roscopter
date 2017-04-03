@@ -14,7 +14,7 @@ kalmanFilter::kalmanFilter() :
 	// retrieve params
 	nh_private_.param<double>("alpha", alpha_, 0.2);
 	nh_private_.param<double>("mass", mass_, 1);
-  nh_private_.param<double>("Ralt", R_alt_, 0.05);
+	nh_private_.param<double>("Ralt", R_alt_, 0.05);
 	nh_private_.param<int>("euler_integration_steps", N_, 20);
 	ros_copter::importMatrixFromParamServer(nh_private_, x_hat_, "x0");
 	ros_copter::importMatrixFromParamServer(nh_private_, P_, "P0");
@@ -22,8 +22,8 @@ kalmanFilter::kalmanFilter() :
 	ros_copter::importMatrixFromParamServer(nh_private_, Qx_, "Qx");
 
 	// setup publishers and subscribers
-	imu_sub_   = nh_.subscribe("imu/data", 1, &kalmanFilter::imuCallback, this);
-	alt_sub_   = nh_.subscribe("alt/data", 1, &kalmanFilter::altCallback, this);
+	imu_sub_ = nh_.subscribe("imu/data", 1, &kalmanFilter::imuCallback, this);
+	alt_sub_ = nh_.subscribe("alt/data", 1, &kalmanFilter::altCallback, this);
 
 	estimate_pub_  = nh_.advertise<nav_msgs::Odometry>("estimate", 1);
 	bias_pub_      = nh_.advertise<sensor_msgs::Imu>("estimate/bias", 1);
@@ -71,41 +71,41 @@ void kalmanFilter::imuCallback(const sensor_msgs::Imu msg)
 // update with sonar measurements
 void kalmanFilter::altCallback(const sensor_msgs::Range msg)
 {
-  // unpack measurement
-  double y_alt = msg.range;
+	// unpack measurement
+	double y_alt = msg.range;
 
-  // measurement model, eq. 120
-  double h_alt = -x_hat_(2);
+	// measurement model, eq. 120
+	double h_alt = -x_hat_(2);
 
-  // measurement Jacobian, eq. 121
-  Eigen::Matrix<double, 1, NUM_ERROR_STATES> H;
-  H.setZero();
-  H(2) = -1;
+	// measurement Jacobian, eq. 121
+	Eigen::Matrix<double, 1, NUM_ERROR_STATES> H;
+	H.setZero();
+	H(2) = -1;
 
-  // compute the residual covariance
-  double S = H*P_*H.transpose() + R_alt_;
+	// compute the residual covariance
+	double S = H*P_*H.transpose() + R_alt_;
 
-  // compute Kalman gain
-  Eigen::Matrix<double, NUM_ERROR_STATES, 1> K;
-  K = P_*H.transpose()/S;
+	// compute Kalman gain
+	Eigen::Matrix<double, NUM_ERROR_STATES, 1> K;
+	K = P_*H.transpose()/S;
 
-  // compute measurement error
-  double r = y_alt - h_alt;
+	// compute measurement error
+	double r = y_alt - h_alt;
 
-  // compute delta_x, eq. 88
-  Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x;
-  delta_x = K*r;
+	// compute delta_x, eq. 88
+	Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x;
+	delta_x = K*r;
 
-  // update state and covariance
-  stateUpdate(delta_x);
-  P_ = (Eigen::MatrixXd::Identity(NUM_ERROR_STATES,NUM_ERROR_STATES) - K*H)*P_;
+	// update state and covariance
+	stateUpdate(delta_x);
+	P_ = (Eigen::MatrixXd::Identity(NUM_ERROR_STATES,NUM_ERROR_STATES) - K*H)*P_;
 
-  // normalize quaternion portion of state
-  double x_hat_q_norm = sqrt(x_hat_(QX)*x_hat_(QX) + x_hat_(QY)*x_hat_(QY) + x_hat_(QZ)*x_hat_(QZ) + x_hat_(QW)*x_hat_(QW));
-  x_hat_(QX) /= x_hat_q_norm;
-  x_hat_(QY) /= x_hat_q_norm;
-  x_hat_(QZ) /= x_hat_q_norm;
-  x_hat_(QW) /= x_hat_q_norm;
+	// normalize quaternion portion of state
+	double x_hat_q_norm = sqrt(x_hat_(QX)*x_hat_(QX) + x_hat_(QY)*x_hat_(QY) + x_hat_(QZ)*x_hat_(QZ) + x_hat_(QW)*x_hat_(QW));
+	x_hat_(QX) /= x_hat_q_norm;
+	x_hat_(QY) /= x_hat_q_norm;
+	x_hat_(QZ) /= x_hat_q_norm;
+	x_hat_(QW) /= x_hat_q_norm;
 
 	return;
 }
@@ -251,7 +251,6 @@ void kalmanFilter::updateIMU(const sensor_msgs::Imu msg)
 	Eigen::Matrix<double, 2, NUM_ERROR_STATES> H;
 	H3.setZero();
 	H3.block(0,dU,3,3) = -mu_hat*M_;
-	H3.block(0,dGX,3,3) = -skew(v_hat);
 	H3.block(0,dAX,3,3) = I3_;
 	H3.block(0,dMU,3,1) = -M_*v_hat;
 	H = H3.block(0,0,2,NUM_ERROR_STATES);
@@ -260,7 +259,6 @@ void kalmanFilter::updateIMU(const sensor_msgs::Imu msg)
 	Eigen::Matrix<double, 3, 6> J3;
 	Eigen::Matrix<double, 2, 6> J;
 	J3.setZero();
-	J3.block(0,0,3,3) = -skew(v_hat);
 	J3.block(0,3,3,3) = I3_;
 	J = J3.block(0,0,2,6);
 
