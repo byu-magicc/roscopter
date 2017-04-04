@@ -18,6 +18,7 @@
 #include <sensor_msgs/Range.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <nav_msgs/Odometry.h>
+#include <fcu_common/GPS.h>
 
 
 
@@ -76,6 +77,8 @@
 #define NUM_ERROR_STATES 22
 
 #define G 9.80
+#define EARTH_RADIUS 6371000
+#define PI 3.14159265359
 
 namespace mekf
 {
@@ -96,6 +99,7 @@ private:
 	// publishers and subscribers
 	ros::Subscriber imu_sub_;
 	ros::Subscriber alt_sub_;
+	ros::Subscriber gps_sub_;
 
 	ros::Publisher estimate_pub_;
 	ros::Publisher bias_pub_;
@@ -120,6 +124,7 @@ private:
 	Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> Qx_;
 	Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> P_;
 	Eigen::Matrix<double, NUM_STATES, 1> x_hat_;
+  Eigen::Matrix<double, 3, 3> R_gps_;
 
 	ros::Time current_time_;
 	ros::Time previous_time_;
@@ -127,12 +132,14 @@ private:
 	double p_prev_, q_prev_, r_prev_;
 	double ygx_, ygy_, ygz_, yaz_, yax_, yay_;
 	double alpha_, R_alt_;
+  double gps_lat0_, gps_lon0_, gps_alt0_;
 	int N_;
-	bool flying_;
+	bool flying_, first_gps_msg_;
 
 	// functions
 	void imuCallback(const sensor_msgs::Imu msg);
 	void altCallback(const sensor_msgs::Range msg);
+	void gpsCallback(const fcu_common::GPS msg);
 	void predictStep();
 	void updateStep();
 	void updateIMU(const sensor_msgs::Imu msg);

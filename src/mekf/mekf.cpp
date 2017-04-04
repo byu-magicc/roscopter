@@ -20,10 +20,12 @@ kalmanFilter::kalmanFilter() :
 	ros_copter::importMatrixFromParamServer(nh_private_, P_, "P0");
 	ros_copter::importMatrixFromParamServer(nh_private_, Qu_, "Qu");
 	ros_copter::importMatrixFromParamServer(nh_private_, Qx_, "Qx");
+  ros_copter::importMatrixFromParamServer(nh_private_, R_gps_, "Rgps");
 
 	// setup publishers and subscribers
 	imu_sub_ = nh_.subscribe("imu/data", 1, &kalmanFilter::imuCallback, this);
 	alt_sub_ = nh_.subscribe("alt/data", 1, &kalmanFilter::altCallback, this);
+	gps_sub_ = nh_.subscribe("gps/data", 1, &kalmanFilter::gpsCallback, this);
 
 	estimate_pub_  = nh_.advertise<nav_msgs::Odometry>("estimate", 1);
 	bias_pub_      = nh_.advertise<sensor_msgs::Imu>("estimate/bias", 1);
@@ -32,6 +34,10 @@ kalmanFilter::kalmanFilter() :
 
 	// initialize variables
 	flying_ = false;
+	first_gps_msg_ = true;
+	gps_lat0_ = 0;
+	gps_lon0_ = 0;
+	gps_alt0_ = 0;
 	k_ << 0, 0, 1;
 	g_ << 0, 0, G;
 	M_ << 1/mass_, 0, 0, 0, 1/mass_, 0, 0, 0, 0;
@@ -95,6 +101,74 @@ void kalmanFilter::altCallback(const sensor_msgs::Range msg)
 	// compute delta_x, eq. 88
 	Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x;
 	delta_x = K*r;
+
+	// update state and covariance
+	stateUpdate(delta_x);
+	P_ = (Eigen::MatrixXd::Identity(NUM_ERROR_STATES,NUM_ERROR_STATES) - K*H)*P_;
+
+	// normalize quaternion portion of state
+	double x_hat_q_norm = sqrt(x_hat_(QX)*x_hat_(QX) + x_hat_(QY)*x_hat_(QY) + x_hat_(QZ)*x_hat_(QZ) + x_hat_(QW)*x_hat_(QW));
+	x_hat_(QX) /= x_hat_q_norm;
+	x_hat_(QY) /= x_hat_q_norm;
+	x_hat_(QZ) /= x_hat_q_norm;
+	x_hat_(QW) /= x_hat_q_norm;
+
+	return;
+}
+
+
+// update with GPS measurements
+void kalmanFilter::gpsCallback(const fcu_common::GPS msg)
+{
+	// unpack measurement and convert to radians
+	double y_lat = msg.latitude*PI/180;
+	double y_lon = msg.longitude*PI/180;
+	double y_alt = msg.altitude;
+
+	// set origin with first message
+	if (first_gps_msg_ == true)
+	{
+		gps_lat0_ = y_lat;
+		gps_lon0_ = y_lon;
+		gps_alt0_ = y_alt;
+
+		first_gps_msg_ = false;
+
+		return;
+	}
+
+	// convert to cartesian coordinates
+  Eigen::Matrix<double, 3, 1> y_gps; 
+	double r = EARTH_RADIUS+y_alt;
+	double y_pn = r*sin(y_lat-gps_lat0_); // north from origin
+	double y_pe = r*cos(y_lat-gps_lat0_)*sin(y_lon-gps_lon0_); // east from origin
+	double y_pd = -(y_alt - gps_alt0_); // altitude relative to origin
+  y_gps << y_pn, y_pe, y_pd;
+
+	// measurement model
+  Eigen::Matrix<double, 3, 1> h_gps; 
+	h_gps << x_hat_(PN), x_hat_(PE), x_hat_(PD);
+
+	// measurement Jacobian
+	Eigen::Matrix<double, 3, NUM_ERROR_STATES> H;
+	H.setZero();
+  H.block(0,0,3,3) = I3_;
+
+	// compute the residual covariance
+  Eigen::Matrix<double, 3, 3> S; 
+	S = H*P_*H.transpose() + R_gps_;
+
+	// compute Kalman gain
+	Eigen::Matrix<double, NUM_ERROR_STATES, 3> K;
+	K = P_*H.transpose()*S.inverse();
+
+	// compute measurement error
+  Eigen::Matrix<double, 3, 1> residual;  
+	residual = y_gps - h_gps;
+
+	// compute delta_x
+	Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x;
+	delta_x = K*residual;
 
 	// update state and covariance
 	stateUpdate(delta_x);
