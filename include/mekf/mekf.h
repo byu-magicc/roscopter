@@ -124,15 +124,15 @@ private:
 	Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> Qx_;
 	Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> P_;
 	Eigen::Matrix<double, NUM_STATES, 1> x_hat_;
-  Eigen::Matrix<double, 3, 3> R_gps_;
+	Eigen::Matrix<double, 3, 3> R_gps_;
 
 	ros::Time current_time_;
 	ros::Time previous_time_;
 
 	double p_prev_, q_prev_, r_prev_;
 	double ygx_, ygy_, ygz_, yaz_, yax_, yay_;
-	double alpha_, R_alt_;
-  double gps_lat0_, gps_lon0_, gps_alt0_;
+	double R_alt_;
+	double gps_lat0_, gps_lon0_, gps_alt0_;
 	int N_;
 	bool flying_, first_gps_msg_;
 
@@ -146,7 +146,7 @@ private:
 	void publishEstimate();
 	void stateUpdate(const Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x);
 
-	double LPF(double yn, double un);
+	double LPF(double yn, double un, double alpha);
 
 	Eigen::Matrix<double, NUM_STATES, 1> f(const Eigen::Matrix<double, NUM_STATES, 1> x);
 	Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> dfdx(const Eigen::Matrix<double, NUM_STATES, 1> x);

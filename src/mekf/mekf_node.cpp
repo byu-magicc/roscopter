@@ -7,8 +7,8 @@ int main(int argc, char** argv)
 	ros::init(argc, argv, "mekf_node");
 	mekf::kalmanFilter Thing;
 
-	// run estimator at 200Hz
-	ros::Rate loop_rate(200);
+	// run estimator at 400Hz
+	ros::Rate loop_rate(400);
 	while (ros::ok())
 	{
 		ros::spinOnce();

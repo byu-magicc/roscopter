@@ -12,7 +12,6 @@ kalmanFilter::kalmanFilter() :
 	nh_private_(ros::NodeHandle("~/mekf"))
 {
 	// retrieve params
-	nh_private_.param<double>("alpha", alpha_, 0.2);
 	nh_private_.param<double>("mass", mass_, 1);
 	nh_private_.param<double>("Ralt", R_alt_, 0.05);
 	nh_private_.param<int>("euler_integration_steps", N_, 20);
@@ -20,7 +19,7 @@ kalmanFilter::kalmanFilter() :
 	ros_copter::importMatrixFromParamServer(nh_private_, P_, "P0");
 	ros_copter::importMatrixFromParamServer(nh_private_, Qu_, "Qu");
 	ros_copter::importMatrixFromParamServer(nh_private_, Qx_, "Qx");
-  ros_copter::importMatrixFromParamServer(nh_private_, R_gps_, "Rgps");
+  	ros_copter::importMatrixFromParamServer(nh_private_, R_gps_, "Rgps");
 
 	// setup publishers and subscribers
 	imu_sub_ = nh_.subscribe("imu/data", 1, &kalmanFilter::imuCallback, this);
@@ -48,6 +47,14 @@ kalmanFilter::kalmanFilter() :
 // the IMU serves as the heartbeat of the filter
 void kalmanFilter::imuCallback(const sensor_msgs::Imu msg)
 {
+	// collect IMU measurements
+	ygx_ = msg.angular_velocity.x;
+	ygy_ = msg.angular_velocity.y;
+	ygz_ = msg.angular_velocity.z;
+	yax_ = msg.linear_acceleration.x;
+	yay_ = msg.linear_acceleration.y;
+	yaz_ = msg.linear_acceleration.z;
+	
 	// wait for sufficient acceleration to start the filter
 	if(!flying_)
 	{
@@ -138,24 +145,24 @@ void kalmanFilter::gpsCallback(const fcu_common::GPS msg)
 	}
 
 	// convert to cartesian coordinates
-  Eigen::Matrix<double, 3, 1> y_gps; 
+  	Eigen::Matrix<double, 3, 1> y_gps; 
 	double r = EARTH_RADIUS+y_alt;
 	double y_pn = r*sin(y_lat-gps_lat0_); // north from origin
 	double y_pe = r*cos(y_lat-gps_lat0_)*sin(y_lon-gps_lon0_); // east from origin
 	double y_pd = -(y_alt - gps_alt0_); // altitude relative to origin
-  y_gps << y_pn, y_pe, y_pd;
+	y_gps << y_pn, y_pe, y_pd;
 
 	// measurement model
-  Eigen::Matrix<double, 3, 1> h_gps; 
+  	Eigen::Matrix<double, 3, 1> h_gps; 
 	h_gps << x_hat_(PN), x_hat_(PE), x_hat_(PD);
 
 	// measurement Jacobian
 	Eigen::Matrix<double, 3, NUM_ERROR_STATES> H;
 	H.setZero();
-  H.block(0,0,3,3) = I3_;
+	H.block(0,0,3,3) = I3_;
 
 	// compute the residual covariance
-  Eigen::Matrix<double, 3, 3> S; 
+	Eigen::Matrix<double, 3, 3> S; 
 	S = H*P_*H.transpose() + R_gps_;
 
 	// compute Kalman gain
@@ -163,7 +170,7 @@ void kalmanFilter::gpsCallback(const fcu_common::GPS msg)
 	K = P_*H.transpose()*S.inverse();
 
 	// compute measurement error
-  Eigen::Matrix<double, 3, 1> residual;  
+	Eigen::Matrix<double, 3, 1> residual;  
 	residual = y_gps - h_gps;
 
 	// compute delta_x
@@ -299,14 +306,6 @@ Eigen::Matrix<double, NUM_ERROR_STATES, 6> kalmanFilter::dfdu(const Eigen::Matri
 // update state using accelerometer x and y measurements, Section 4.3.1
 void kalmanFilter::updateIMU(const sensor_msgs::Imu msg)
 {
-	// collect IMU measurements
-	ygx_ = msg.angular_velocity.x;
-	ygy_ = msg.angular_velocity.y;
-	ygz_ = msg.angular_velocity.z;
-	yax_ = msg.linear_acceleration.x;
-	yay_ = msg.linear_acceleration.y;
-	yaz_ = msg.linear_acceleration.z;
-
 	// build measurement vector
 	Eigen::Matrix<double, 2, 1> y;
 	y << yax_, yay_;
@@ -438,9 +437,9 @@ void kalmanFilter::publishEstimate()
 
 
 // low pass filter
-double kalmanFilter::LPF(double yn, double un)
+double kalmanFilter::LPF(double yn, double un, double alpha)
 {
-	return alpha_*yn + (1 - alpha_)*un;
+	return alpha*yn + (1 - alpha)*un;
 }
 
 
