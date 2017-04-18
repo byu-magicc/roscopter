@@ -16,9 +16,11 @@
 #include <std_msgs/Float64.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/Range.h>
+#include <sensor_msgs/MagneticField.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <fcu_common/GPS.h>
+#include <fcu_common/Barometer.h>
 
 
 
@@ -39,16 +41,8 @@
 #define AX 13
 #define AY 14
 #define AZ 15
-#define PNK 16
-#define PEK 17
-#define PDK 18
-#define QXK 19
-#define QYK 20
-#define QZK 21
-#define QWK 22
-#define MU 23
 
-#define NUM_STATES 24
+#define NUM_STATES 16
 
 // error state numbers
 #define dPN 0
@@ -66,15 +60,8 @@
 #define dAX 12
 #define dAY 13
 #define dAZ 14
-#define dPNK 15
-#define dPEK 16
-#define dPDK 17
-#define dPHIK 18
-#define dTHETAK 19
-#define dPSIK 20
-#define dMU 21
 
-#define NUM_ERROR_STATES 22
+#define NUM_ERROR_STATES 15
 
 #define G 9.80
 #define EARTH_RADIUS 6371000
@@ -98,26 +85,19 @@ private:
 
 	// publishers and subscribers
 	ros::Subscriber imu_sub_;
-	ros::Subscriber alt_sub_;
 	ros::Subscriber gps_sub_;
+	ros::Subscriber mag_sub_;
+	ros::Subscriber att_sub_;
+	ros::Subscriber baro_sub_;
+	ros::Subscriber sonar_sub_;
 
 	ros::Publisher estimate_pub_;
 	ros::Publisher bias_pub_;
 	ros::Publisher is_flying_pub_;
-	ros::Publisher drag_pub_;
 
 	// parameters
-	double mass_;
 	Eigen::Matrix<double, 3, 1> k_, g_;
-	Eigen::Matrix<double, 3, 3> M_, I3_;
-
-	struct inertia
-	{
-		double x;
-		double y;
-		double z;
-	} J_;
-
+	Eigen::Matrix<double, 3, 3> I3_;
 
 	// local variables
 	Eigen::Matrix<double, 6, 6> Qu_;
@@ -131,22 +111,24 @@ private:
 
 	double p_prev_, q_prev_, r_prev_;
 	double ygx_, ygy_, ygz_, yaz_, yax_, yay_;
-	double R_alt_;
+	double R_sonar_, R_baro_, R_mag_;
 	double gps_lat0_, gps_lon0_, gps_alt0_;
+	double delta_d_;
 	int N_;
 	bool flying_, first_gps_msg_;
 
 	// functions
 	void imuCallback(const sensor_msgs::Imu msg);
-	void altCallback(const sensor_msgs::Range msg);
+	void baroCallback(const fcu_common::Barometer msg);
+	void sonarCallback(const sensor_msgs::Range msg);
+	void magCallback(const sensor_msgs::MagneticField msg);
 	void gpsCallback(const fcu_common::GPS msg);
 	void predictStep();
 	void updateStep();
 	void updateIMU(const sensor_msgs::Imu msg);
 	void publishEstimate();
+	void statePropagate(const Eigen::Matrix<double, NUM_STATES, 1> delta_x);
 	void stateUpdate(const Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x);
-
-	double LPF(double yn, double un, double alpha);
 
 	Eigen::Matrix<double, NUM_STATES, 1> f(const Eigen::Matrix<double, NUM_STATES, 1> x);
 	Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> dfdx(const Eigen::Matrix<double, NUM_STATES, 1> x);
@@ -154,6 +136,15 @@ private:
 	Eigen::Matrix<double, 4, 1> quatMul(const Eigen::Matrix<double, 4, 1> p, const Eigen::Matrix<double, 4, 1> q);
 	Eigen::Matrix<double, 3, 3> Rq(const Eigen::Matrix<double, 4, 1> q);
 	Eigen::Matrix<double, 3, 3> skew(const Eigen::Matrix<double, 3, 1> vec);
+	Eigen::Matrix<double, 4, 1> qexp(const Eigen::Matrix<double, 3, 1> delta);
+
+	Eigen::Matrix<double, 3, 3> R_v2_to_b(double phi);
+	Eigen::Matrix<double, 3, 3> R_v1_to_v2(double theta);
+	Eigen::Matrix<double, 3, 3> R_v_to_v1(double psi);
+
+	double phi(const Eigen::Matrix<double, 4, 1> q);
+	double theta(const Eigen::Matrix<double, 4, 1> q);
+	double psi(const Eigen::Matrix<double, 4, 1> q);
 
 };
 

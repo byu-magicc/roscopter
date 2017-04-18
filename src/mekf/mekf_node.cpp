@@ -5,15 +5,10 @@ int main(int argc, char** argv)
 {
 	// initialize filter
 	ros::init(argc, argv, "mekf_node");
-	mekf::kalmanFilter Thing;
+	mekf::kalmanFilter estimator;
 
-	// run estimator at 400Hz
-	ros::Rate loop_rate(400);
-	while (ros::ok())
-	{
-		ros::spinOnce();
-		loop_rate.sleep();
-	}
+	// allow each sensor to update as each is received
+	ros::spin();
 
 	return 0;
 }
