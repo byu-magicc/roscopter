@@ -105,7 +105,7 @@ private:
 	Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> Qx_;
 	Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> P_;
 	Eigen::Matrix<double, NUM_STATES, 1> x_hat_;
-	Eigen::Matrix<double, 3, 3> R_gps_;
+	Eigen::Matrix<double, 2, 2> R_gps_;
 	Eigen::Matrix<double, 2, 2> R_att_;
 
 	ros::Time current_time_;
