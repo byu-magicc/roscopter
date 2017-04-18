@@ -243,43 +243,53 @@ void kalmanFilter::sonarCallback(const sensor_msgs::Range msg)
 // update heading with magnetometer measurements
 void kalmanFilter::magCallback(const sensor_msgs::MagneticField msg)
 {
-	// unpack measurement
-	Eigen::Matrix<double, 3, 1> m0;
-	m0 << msg.magnetic_field.x, msg.magnetic_field.y, msg.magnetic_field.z;
-
-	// remove aircraft roll and pitch
+	// compute roll and pitch
 	Eigen::Matrix<double, 4, 1> q_hat = x_hat_.block(QX,0,4,1);
-	Eigen::Matrix<double, 3, 3> R_v22b = R_v2_to_b(phi(q_hat));
-	Eigen::Matrix<double, 3, 3> R_v12v2 = R_v1_to_v2(theta(q_hat));
-	Eigen::Matrix<double, 3, 1> m = R_v12v2.transpose()*R_v22b.transpose()*m0;
+	double phi_hat = phi(q_hat);
+	double theta_hat = theta(q_hat);
 
-	// compute heading measurement
-	double psi_m = -atan2(m(1), m(0));
-	double y_mag = delta_d_ + psi_m;
+	// the earth's magnetic field inclination is about 65 degrees here in Utah, so
+	// if the aircraft is rolled or pitched over around 25 degrees, we cannot observe
+	// the heading, check for this condition and skip update if condition is met
+	if (sqrt(phi_hat*phi_hat + theta_hat*theta_hat) <= 0.175) // less than 10 degrees tilt
+	{
+		// unpack measurement
+		Eigen::Matrix<double, 3, 1> m0;
+		m0 << msg.magnetic_field.x, msg.magnetic_field.y, msg.magnetic_field.z;
 
-	// measurement model
-	double h_mag = psi(q_hat);
+		// remove aircraft roll and pitch
+		Eigen::Matrix<double, 3, 3> R_v22b = R_v2_to_b(phi_hat);
+		Eigen::Matrix<double, 3, 3> R_v12v2 = R_v1_to_v2(theta_hat);
+		Eigen::Matrix<double, 3, 1> m = R_v12v2.transpose()*R_v22b.transpose()*m0;
 
-	// measurement Jacobian
-	Eigen::Matrix<double, 1, NUM_ERROR_STATES> H;
-	H.setZero();
-	H(dPSI) = 1;
+		// compute heading measurement
+		double psi_m = -atan2(m(1), m(0));
+		double y_mag = delta_d_ + psi_m;
 
-	// compute the residual covariance
-	double S = H*P_*H.transpose() + R_mag_;
+		// measurement model
+		double h_mag = psi(q_hat);
 
-	// compute Kalman gain
-	Eigen::Matrix<double, NUM_ERROR_STATES, 1> K = P_*H.transpose()/S;
+		// measurement Jacobian
+		Eigen::Matrix<double, 1, NUM_ERROR_STATES> H;
+		H.setZero();
+		H(dPSI) = 1;
 
-	// compute measurement error
-	double r = y_mag - h_mag;
+		// compute the residual covariance
+		double S = H*P_*H.transpose() + R_mag_;
 
-	// compute delta_x
-	Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x = K*r;
+		// compute Kalman gain
+		Eigen::Matrix<double, NUM_ERROR_STATES, 1> K = P_*H.transpose()/S;
 
-	// update state and covariance
-	stateUpdate(delta_x);
-	P_ = (Eigen::MatrixXd::Identity(NUM_ERROR_STATES,NUM_ERROR_STATES) - K*H)*P_;
+		// compute measurement error
+		double r = y_mag - h_mag;
+
+		// compute delta_x
+		Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x = K*r;
+
+		// update state and covariance
+		stateUpdate(delta_x);
+		P_ = (Eigen::MatrixXd::Identity(NUM_ERROR_STATES,NUM_ERROR_STATES) - K*H)*P_;
+	}
 
 	return;
 }
