@@ -22,6 +22,7 @@ kalmanFilter::kalmanFilter() :
 	ros_copter::importMatrixFromParamServer(nh_private_, Qu_, "Qu");
 	ros_copter::importMatrixFromParamServer(nh_private_, Qx_, "Qx");
   	ros_copter::importMatrixFromParamServer(nh_private_, R_gps_, "Rgps");
+  	ros_copter::importMatrixFromParamServer(nh_private_, R_att_, "Ratt");
 
 	// setup publishers and subscribers
 	imu_sub_ = nh_.subscribe("imu/data", 1, &kalmanFilter::imuCallback, this);
@@ -29,6 +30,7 @@ kalmanFilter::kalmanFilter() :
 	sonar_sub_ = nh_.subscribe("sonar/data", 1, &kalmanFilter::sonarCallback, this);
 	mag_sub_ = nh_.subscribe("magnetometer", 1, &kalmanFilter::magCallback, this);
 	gps_sub_ = nh_.subscribe("gps/data", 1, &kalmanFilter::gpsCallback, this);
+	att_sub_ = nh_.subscribe("attitude", 1, &kalmanFilter::attitudeCallback, this);
 
 	estimate_pub_  = nh_.advertise<nav_msgs::Odometry>("estimate", 1);
 	bias_pub_      = nh_.advertise<sensor_msgs::Imu>("estimate/bias", 1);
@@ -342,6 +344,46 @@ void kalmanFilter::gpsCallback(const fcu_common::GPS msg)
 	x_hat_(QY) /= x_hat_q_norm;
 	x_hat_(QZ) /= x_hat_q_norm;
 	x_hat_(QW) /= x_hat_q_norm;
+
+	return;
+}
+
+
+// update with ROSflight attitude estimate
+void kalmanFilter::attitudeCallback(const fcu_common::Attitude msg)
+{
+	// unpack measurement
+	Eigen::Matrix<double, 4, 1> q_meas;
+	q_meas << msg.attitude.x, msg.attitude.y, msg.attitude.z, msg.attitude.w;
+	Eigen::Matrix<double, 2, 1> y_att;
+	y_att << phi(q_meas), theta(q_meas);
+
+	// measurement model
+	Eigen::Matrix<double, 4, 1> q_hat = x_hat_.block(QX,0,4,1);
+	Eigen::Matrix<double, 2, 1> h_att;
+	h_att << phi(q_hat), theta(q_hat);
+
+	// measurement Jacobian
+	Eigen::Matrix<double, 2, NUM_ERROR_STATES> H;
+	H.setZero();
+	H(0,dPHI) = 1;
+	H(1,dTHETA) = 1;
+
+	// compute the residual covariance
+	Eigen::Matrix<double, 2, 2> S = H*P_*H.transpose() + R_att_;
+
+	// compute Kalman gain
+	Eigen::Matrix<double, NUM_ERROR_STATES, 2> K = P_*H.transpose()*S.inverse();
+
+	// compute measurement error
+	Eigen::Matrix<double, 2, 1> r = y_att - h_att;
+
+	// compute delta_x
+	Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x = K*r;
+
+	// update state and covariance
+	stateUpdate(delta_x);
+	P_ = (Eigen::MatrixXd::Identity(NUM_ERROR_STATES,NUM_ERROR_STATES) - K*H)*P_;
 
 	return;
 }

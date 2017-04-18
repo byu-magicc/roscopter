@@ -66,6 +66,9 @@ Rgps: [0.000441,  0,0,0,  # PN
        0.000441,  0,0,0,  # PE
        0.001681],         # PD
 
+Ratt: [0.0001, 0, 0,   # PHI
+       0.0001],        # THETA
+
 declination: 0.198584539676  # MAGNETIC DECLINATION (PROVO, UT)
 
 }

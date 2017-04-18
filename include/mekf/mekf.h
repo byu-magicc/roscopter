@@ -21,6 +21,7 @@
 #include <nav_msgs/Odometry.h>
 #include <fcu_common/GPS.h>
 #include <fcu_common/Barometer.h>
+#include <fcu_common/Attitude.h>
 
 
 
@@ -105,6 +106,7 @@ private:
 	Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> P_;
 	Eigen::Matrix<double, NUM_STATES, 1> x_hat_;
 	Eigen::Matrix<double, 3, 3> R_gps_;
+	Eigen::Matrix<double, 2, 2> R_att_;
 
 	ros::Time current_time_;
 	ros::Time previous_time_;
@@ -123,6 +125,7 @@ private:
 	void sonarCallback(const sensor_msgs::Range msg);
 	void magCallback(const sensor_msgs::MagneticField msg);
 	void gpsCallback(const fcu_common::GPS msg);
+	void attitudeCallback(const fcu_common::Attitude msg);
 	void predictStep();
 	void updateStep();
 	void updateIMU(const sensor_msgs::Imu msg);
