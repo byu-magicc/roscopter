@@ -117,7 +117,7 @@ and its estimated dynamics w.r.t. a fixed frame are defined by
 \dot{\hat{{\bf q}}}_b & =\dfrac{1}{2}\hat{{\bf q}}\otimes\begin{bmatrix}\hat{\boldsymbol{\omega}}\\0\end{bmatrix}\\
 \dot{\hat{{\bf v}}}_b & =\left\lfloor \hat{{\bf v}}\right\rfloor \hat{\boldsymbol{\omega}}+R\left(\hat{{\bf q}}\right){\bf g}+{\bf k}{\bf k}^{\top}\hat{{\bf a}}\\
 \dot{\hat{\boldsymbol{\beta}}}_{\boldsymbol{\omega}} & ={\bf 0}\\
-\dot{\hat{\boldsymbol{\beta}}}_{{\bf a}} & ={\bf 0}
+\dot{\hat{\boldsymbol{\beta}}}_{{\bf a}} & ={\bf 0},
 \end{align}
 where
 \begin{align}
@@ -142,12 +142,13 @@ The estimated state dynamics are defined by
 which are used to propagate the estimated state forward in time via Euler integration. The vector state is propagated by simply adding small changes, but the unit quaternion part of the state must be propagated on forward on its manifold \cite{key-1}. Thus, forward propagation of the state is completed by
 \begin{align}
 \hat{{\bf x}}_{\bf v}\left(t+\Delta t\right) & = \hat{\bf x}_{\bf v}\left(t\right) + \delta_{\bf v} \\
-\hat{{\bf x}}_{\bf q}\left(t+\Delta t\right) & = \hat{{\bf x}}_{\bf q}\left(t\right) \otimes \exp \frac{\delta_{\boldsymbol \theta}}{2},
+\hat{{\bf x}}_{\bf q}\left(t+\Delta t\right) & = \hat{{\bf x}}_{\bf q}\left(t\right) \otimes \exp_q \frac{\delta_{\boldsymbol \theta}}{2},
 \end{align}
 where
 \begin{align}
 \delta_{\bf v} & = \dot{\hat{{\bf x}}}_{\bf v} \cdot \Delta t \\
-\delta_{\boldsymbol \theta} & = \left(\dot{\hat{{\bf x}}}_{\bf q} \cdot \Delta t \right)^\lor.
+\delta_{\boldsymbol \theta} & = \left(\dot{\hat{{\bf x}}}_{\bf q} \cdot \Delta t \right)^\lor \\
+\exp_q{\delta} & = \begin{bmatrix} \frac{\sin{\lVert \delta \rVert}}{\lVert \delta \rVert}\delta \\ \cos{\lVert \delta \rVert} \end{bmatrix}.
 \end{align}
 
 The error state is given by
@@ -183,12 +184,11 @@ P\left( t+\Delta t \right) = P\left(t\right) + \dot{P}\cdot \Delta t.
 \end{equation}
 
 
-
 \section{Update}
 
 The measurement residual error for a general measurement with measurement model ${\bf h}$ is computed by
 \begin{equation}
-{\bf r} = {\bf z} - \left(\hat{{\bf x}}\right),
+{\bf r} = {\bf z} - {\bf h}\left(\hat{{\bf x}}\right),
 \end{equation}
 where ${\bf z}$ is a sensor measurement.
 
@@ -208,12 +208,8 @@ The update is usually given by
 but the quaternion portion cannot be correctly updated with addition. Separating $K{\bf r}$ into a vector state $\Delta{\bf v}$ and an attitude state $\Delta{\boldsymbol \theta}$, we perform the update by
 \begin{align}
 \hat{{\bf x}}_{\bf v}^+ & = \hat{{\bf x}}_{\bf v} + \Delta{\bf v} \\
-\hat{{\bf x}}_{\bf q}^+ & = \hat{{\bf x}}_{\bf q}\exp{\frac{\Delta{\boldsymbol \theta}}{2}},
+\hat{{\bf x}}_{\bf q}^+ & = \hat{{\bf x}}_{\bf q}\exp_q{\frac{\Delta{\boldsymbol \theta}}{2}}.
 \end{align}
-where
-\begin{equation}
-\exp{\delta} = \begin{bmatrix} \frac{\sin{\lVert \delta \rVert}}{\lVert \delta \rVert}\delta \\ \cos{\lVert \delta \rVert} \end{bmatrix}.
-\end{equation}
 
 The covariance is updated by
 \begin{equation}
@@ -322,8 +318,8 @@ H_{gps} & = \frac{\partial {\bf r}_{gps}}{\partial \delta {\bf x}} \\
 & = \begin{bmatrix} {\bf i}^\top & {\bf 0} & {\bf 0} & {\bf 0} & {\bf 0} \\
 {\bf j}^\top & {\bf 0} & {\bf 0} & {\bf 0} & {\bf 0} \\
 {\bf k}^\top & {\bf 0} & {\bf 0} & {\bf 0} & {\bf 0} \\
-{\bf 0} & \frac{\partial {\bf r}_{gps,V_g}}{\partial \delta {\bf v}_b} & \frac{\partial {\bf r}_{gps,V_g}}{\partial \delta {\boldsymbol \theta}_b} & {\bf 0} & {\bf 0} \\
-{\bf 0} & \frac{\partial {\bf r}_{gps,{\boldsymbol \theta}_b}}{\partial \delta {\bf v}_b} & \frac{\partial {\bf r}_{gps,{\boldsymbol \theta}_b}}{\partial \delta {\boldsymbol \theta}_b} & {\bf 0} & {\bf 0} \end{bmatrix},
+{\bf 0} & \frac{\partial {\bf r}_{gps,V_g}}{\partial \delta {\boldsymbol \theta}_b} & \frac{\partial {\bf r}_{gps,V_g}}{\partial \delta {\bf v}_b} & {\bf 0} & {\bf 0} \\
+{\bf 0} & \frac{\partial {\bf r}_{gps,{\boldsymbol \theta}_b}}{\partial \delta {\boldsymbol \theta}_b} & \frac{\partial {\bf r}_{gps,{\boldsymbol \theta}_b}}{\partial \delta {\bf v}_b} & {\bf 0} & {\bf 0} \end{bmatrix},
 \end{align}
 where
 \begin{align}
