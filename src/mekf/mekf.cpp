@@ -251,7 +251,7 @@ void kalmanFilter::magCallback(const sensor_msgs::MagneticField msg)
 	// the earth's magnetic field inclination is about 65 degrees here in Utah, so
 	// if the aircraft is rolled or pitched over around 25 degrees, we cannot observe
 	// the heading, check for this condition and skip update if condition is met
-	if (sqrt(phi_hat*phi_hat + theta_hat*theta_hat) <= 0.175) // less than 10 degrees tilt
+	if (sqrt(phi_hat*phi_hat + theta_hat*theta_hat) <= 0.3)
 	{
 		// unpack measurement
 		Eigen::Matrix<double, 3, 1> m0;
