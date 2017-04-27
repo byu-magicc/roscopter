@@ -209,7 +209,7 @@ void kalmanFilter::sonarCallback(const sensor_msgs::Range msg)
 	double y_alt = msg.range;
 
 	// only update if valid sensor measurements
-	if (fabs(x_hat_(PD)) <= 5)
+	if (y_alt > msg.min_range && y_alt < msg.max_range)
 	{
 		// measurement model, eq. 120
 		double h_alt = -x_hat_(PD);
