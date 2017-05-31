@@ -9,7 +9,8 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   eigen_conversions
   std_msgs
-  fcu_common
+  rosflight_msgs
+  rosflight_utils
   dynamic_reconfigure
 )
 find_package(Eigen REQUIRED)
@@ -53,7 +54,7 @@ add_library(ros_copter
   include/lib/eigen.h
   src/lib/eigen.cpp
 )
-add_dependencies(ros_copter fcu_common_generate_messages_cpp)
+add_dependencies(ros_copter rosflight_msgs_generate_messages_cpp)
 target_link_libraries(ros_copter ${catkin_LIBRARIES})
 
 
@@ -63,12 +64,12 @@ add_executable(ekf
   src/ekf/ekf.cpp
   include/ekf/ekf.h
 )
-add_dependencies(ekf fcu_common_generate_messages_cpp)
+add_dependencies(ekf rosflight_msgs_generate_messages_cpp)
 target_link_libraries(ekf ${catkin_LIBRARIES})
 
 add_executable(controller
   src/controller/controller_node.cpp
   src/controller/controller.cpp
   include/controller/controller.h)
-add_dependencies(controller fcu_common_generate_messages_cpp ros_copter_gencfg)
+add_dependencies(controller rosflight_msgs_generate_messages_cpp ros_copter_gencfg)
 target_link_libraries(controller ${catkin_LIBRARIES})
