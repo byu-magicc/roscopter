@@ -2,8 +2,8 @@
 #define CONTROLLER_H
 
 #include <ros/ros.h>
-#include <fcu_common/Command.h>
-#include <fcu_common/simple_pid.h>
+#include <rosflight_msgs/Command.h>
+#include <rosflight_utils/simple_pid.h>
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Bool.h>
 #include <tf/tf.h>
@@ -74,12 +74,12 @@ private:
   bool is_flying_;
 
   // PID Controllers
-  fcu_common::SimplePID PID_u_;
-  fcu_common::SimplePID PID_v_;
-  fcu_common::SimplePID PID_x_;
-  fcu_common::SimplePID PID_y_;
-  fcu_common::SimplePID PID_z_;
-  fcu_common::SimplePID PID_psi_;
+  rosflight_utils::SimplePID PID_u_;
+  rosflight_utils::SimplePID PID_v_;
+  rosflight_utils::SimplePID PID_x_;
+  rosflight_utils::SimplePID PID_y_;
+  rosflight_utils::SimplePID PID_z_;
+  rosflight_utils::SimplePID PID_psi_;
 
   // Dynamic Reconfigure Hooks
   dynamic_reconfigure::Server<ros_copter::ControllerConfig> _server;
@@ -89,7 +89,7 @@ private:
   // Memory for sharing information between functions
   state_t xhat_; // estimate
   max_t max_;
-  fcu_common::Command command_;
+  rosflight_msgs::Command command_;
   state_t xc_; // command
   double prev_time_;
   uint8_t control_mode_;
@@ -97,7 +97,7 @@ private:
   // Functions
   void stateCallback(const nav_msgs::OdometryConstPtr &msg);
   void isFlyingCallback(const std_msgs::BoolConstPtr &msg);
-  void cmdCallback(const fcu_common::CommandConstPtr &msg);
+  void cmdCallback(const rosflight_msgs::CommandConstPtr &msg);
 
   void computeControl(double dt);
   void resetIntegrators();
