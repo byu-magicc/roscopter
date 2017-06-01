@@ -13,7 +13,7 @@
 #include <deque>
 #include <lib/eigen.h>
 #include <eigen_conversions/eigen_msg.h>
-#include <fcu_common/GPS.h>
+#include <rosflight_msgs/GPS.h>
 
 // state numbers
 #define PN 0
@@ -93,12 +93,12 @@ private:
   // Functions
   void mocapCallback(const geometry_msgs::TransformStamped msg);
   void imuCallback(const sensor_msgs::Imu msg);
-  void gpsCallback(const fcu_common::GPS msg);
+  void gpsCallback(const rosflight_msgs::GPS msg);
   void predictStep();
   void updateStep();
   void updateIMU(sensor_msgs::Imu msg);
   void updateMocap(geometry_msgs::TransformStamped msg);
-  void updateGPS(fcu_common::GPS msg);
+  void updateGPS(rosflight_msgs::GPS msg);
   void initializeX(geometry_msgs::TransformStamped msg);
   void predictTimerCallback(const ros::TimerEvent& event);
   void publishTimerCallback(const ros::TimerEvent& event);
