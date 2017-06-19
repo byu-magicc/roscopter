@@ -19,9 +19,9 @@
 #include <sensor_msgs/MagneticField.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <nav_msgs/Odometry.h>
-#include <fcu_common/GPS.h>
-#include <fcu_common/Barometer.h>
-#include <fcu_common/Attitude.h>
+#include <rosflight_msgs/GPS.h>
+#include <rosflight_msgs/Barometer.h>
+#include <rosflight_msgs/Attitude.h>
 
 
 
@@ -121,11 +121,11 @@ private:
 
 	// functions
 	void imuCallback(const sensor_msgs::Imu msg);
-	void baroCallback(const fcu_common::Barometer msg);
+	void baroCallback(const rosflight_msgs::Barometer msg);
 	void sonarCallback(const sensor_msgs::Range msg);
 	void magCallback(const sensor_msgs::MagneticField msg);
-	void gpsCallback(const fcu_common::GPS msg);
-	void attitudeCallback(const fcu_common::Attitude msg);
+	void gpsCallback(const rosflight_msgs::GPS msg);
+	void attitudeCallback(const rosflight_msgs::Attitude msg);
 	void predictStep();
 	void updateStep();
 	void updateIMU(const sensor_msgs::Imu msg);

@@ -75,7 +75,7 @@ void mocapFilter::mocapCallback(const geometry_msgs::TransformStamped msg)
   return;
 }
 
-void mocapFilter::gpsCallback(const fcu_common::GPS msg)
+void mocapFilter::gpsCallback(const rosflight_msgs::GPS msg)
 {
   if(!flying_){
     ROS_INFO_THROTTLE(1,"Not flying, but GPS signal received");
@@ -182,7 +182,7 @@ void mocapFilter::updateMocap(geometry_msgs::TransformStamped msg)
   x_hat_ = x_hat_ + L*(y - C*x_hat_);
 }
 
-void mocapFilter::updateGPS(fcu_common::GPS msg)
+void mocapFilter::updateGPS(rosflight_msgs::GPS msg)
 {
   ROS_INFO_STREAM("Update GPS");
 
