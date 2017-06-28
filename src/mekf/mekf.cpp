@@ -165,7 +165,7 @@ void kalmanFilter::stateUpdate(const Eigen::Matrix<double, NUM_ERROR_STATES, 1> 
 
 
 // update altitude with barometer measurements
-void kalmanFilter::baroCallback(const fcu_common::Barometer msg)
+void kalmanFilter::baroCallback(const rosflight_msgs::Barometer msg)
 {
 	// unpack message
 	double y_alt = msg.altitude;
@@ -296,7 +296,7 @@ void kalmanFilter::magCallback(const sensor_msgs::MagneticField msg)
 
 
 // update with GPS measurements
-void kalmanFilter::gpsCallback(const fcu_common::GPS msg)
+void kalmanFilter::gpsCallback(const rosflight_msgs::GPS msg)
 {
 	// unpack measurement and convert to radians
 	double y_lat = msg.latitude*PI/180;
@@ -354,7 +354,7 @@ void kalmanFilter::gpsCallback(const fcu_common::GPS msg)
 
 
 // update with ROSflight attitude estimate
-void kalmanFilter::attitudeCallback(const fcu_common::Attitude msg)
+void kalmanFilter::attitudeCallback(const rosflight_msgs::Attitude msg)
 {
 	// unpack measurement
 	Eigen::Matrix<double, 4, 1> q_meas;

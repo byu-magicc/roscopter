@@ -2,7 +2,7 @@
 # license removed for brevity
 import rospy
 import time
-from fcu_common.msg import Command
+from rosflight_msgs.msg import Command
 from nav_msgs.msg import Odometry
 from ros_copter.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
 import yaml

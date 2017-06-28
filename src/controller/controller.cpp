@@ -32,7 +32,7 @@ Controller::Controller() :
   is_flying_sub_ = nh_.subscribe("is_flying", 1, &Controller::isFlyingCallback, this);
   cmd_sub_ = nh_.subscribe("high_level_command", 1, &Controller::cmdCallback, this);
 
-  command_pub_ = nh_.advertise<fcu_common::Command>("command", 1);
+  command_pub_ = nh_.advertise<rosflight_msgs::Command>("command", 1);
 }
 
 
@@ -92,25 +92,25 @@ void Controller::isFlyingCallback(const std_msgs::BoolConstPtr &msg)
 }
 
 
-void Controller::cmdCallback(const fcu_common::CommandConstPtr &msg)
+void Controller::cmdCallback(const rosflight_msgs::CommandConstPtr &msg)
 {
   switch(msg->mode)
   {
-    case fcu_common::Command::MODE_XPOS_YPOS_YAW_ALTITUDE:
+    case rosflight_msgs::Command::MODE_XPOS_YPOS_YAW_ALTITUDE:
       xc_.pn = msg->x;
       xc_.pe = msg->y;
       xc_.pd = msg->F;
       xc_.psi = msg->z;
       control_mode_ = msg->mode;
       break;
-    case fcu_common::Command::MODE_XVEL_YVEL_YAWRATE_ALTITUDE:
+    case rosflight_msgs::Command::MODE_XVEL_YVEL_YAWRATE_ALTITUDE:
       xc_.u = msg->x;
       xc_.v = msg->y;
       xc_.pd = msg->F;
       xc_.r = msg->z;
       control_mode_ = msg->mode;
       break;
-    case fcu_common::Command::MODE_XACC_YACC_YAWRATE_AZ:
+    case rosflight_msgs::Command::MODE_XACC_YACC_YAWRATE_AZ:
       xc_.ax = msg->x;
       xc_.ay = msg->y;
       xc_.az = msg->F;
@@ -187,7 +187,7 @@ void Controller::computeControl(double dt)
 
   uint8_t mode_flag = control_mode_;
 
-  if(mode_flag == fcu_common::Command::MODE_XPOS_YPOS_YAW_ALTITUDE)
+  if(mode_flag == rosflight_msgs::Command::MODE_XPOS_YPOS_YAW_ALTITUDE)
   {
     // Figure out desired velocities (in inertial frame)
     // By running the position controllers
@@ -211,10 +211,10 @@ void Controller::computeControl(double dt)
     xc_.u = saturate(pndot_c*cos(xhat_.psi) + pedot_c*sin(xhat_.psi), max_.u, -1.0*max_.u);
     xc_.v = saturate(-pndot_c*sin(xhat_.psi) + pedot_c*cos(xhat_.psi), max_.v, -1.0*max_.v);
 
-    mode_flag = fcu_common::Command::MODE_XVEL_YVEL_YAWRATE_ALTITUDE;
+    mode_flag = rosflight_msgs::Command::MODE_XVEL_YVEL_YAWRATE_ALTITUDE;
   }
 
-  if(mode_flag == fcu_common::Command::MODE_XVEL_YVEL_YAWRATE_ALTITUDE)
+  if(mode_flag == rosflight_msgs::Command::MODE_XVEL_YVEL_YAWRATE_ALTITUDE)
   {
     double max_ax = sin(acos(thrust_eq_));
     double max_ay = sin(acos(thrust_eq_));
@@ -226,10 +226,10 @@ void Controller::computeControl(double dt)
     double pddot_c = saturate(PID_w_.computePID(xc_.pd, xhat_.pd, dt, pddot), max_.w, -max_.w);
     double max_az = (cos(xhat_.phi)*cos(xhat_.theta)) / thrust_eq_;
     xc_.az = saturate(PID_z_.computePID(pddot_c, pddot, dt), 1.0, -max_az);
-    mode_flag = fcu_common::Command::MODE_XACC_YACC_YAWRATE_AZ;
+    mode_flag = rosflight_msgs::Command::MODE_XACC_YACC_YAWRATE_AZ;
   }
 
-  if(mode_flag == fcu_common::Command::MODE_XACC_YACC_YAWRATE_AZ)
+  if(mode_flag == rosflight_msgs::Command::MODE_XACC_YACC_YAWRATE_AZ)
   {
     // Model inversion (m[ax;ay;az] = m[0;0;g] + R'[0;0;-T]
     // This model tends to pop the MAV up in the air when a large change
@@ -247,13 +247,13 @@ void Controller::computeControl(double dt)
       xc_.phi = 0;
       xc_.theta = 0;
     }
-    mode_flag = fcu_common::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE;
+    mode_flag = rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE;
   }
 
-  if(mode_flag == fcu_common::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE)
+  if(mode_flag == rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE)
   {
     // Pack up and send the command
-    command_.mode = fcu_common::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE;
+    command_.mode = rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE;
     command_.F = saturate(xc_.throttle, max_.throttle, 0.0);
     command_.x = saturate(xc_.phi, max_.roll, -max_.roll);
     command_.y = saturate(xc_.theta, max_.pitch, -max_.pitch);
