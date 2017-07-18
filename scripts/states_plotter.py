@@ -24,12 +24,13 @@ class Plotter:
         rospy.Subscriber('estimate', Odometry, self.estimateCallback)
         rospy.Subscriber('estimate/bias', Imu, self.biasCallback)
         rospy.Subscriber('estimate/drag', Float64, self.dragCallback)
+        rospy.Subscriber('estimate/accel', Imu, self.accelCallback)
         rospy.Subscriber('ground_truth/odometry', Odometry, self.truthCallback)
 
         # initialize Qt gui application and window
         self.app = pg.QtGui.QApplication([])
         self.w = pg.GraphicsWindow(title='States vs Time')
-        self.w.resize(1000,800)
+        self.w.resize(1200,1000)
 
         # initialize plots in one window
         self.p_pn = self.w.addPlot()
@@ -48,6 +49,10 @@ class Plotter:
         self.p_p = self.w.addPlot()
         self.p_q = self.w.addPlot()
         self.p_r = self.w.addPlot()
+        self.w.nextRow()
+        self.p_udot = self.w.addPlot()
+        self.p_vdot = self.w.addPlot()
+        self.p_wdot = self.w.addPlot()
         self.w.nextRow()
         self.p_gx = self.w.addPlot()
         self.p_gy = self.w.addPlot()
@@ -72,6 +77,9 @@ class Plotter:
         self.p_p.setLabel('left', 'p')
         self.p_q.setLabel('left', 'q')
         self.p_r.setLabel('left', 'r')
+        self.p_udot.setLabel('left', 'udot')
+        self.p_vdot.setLabel('left', 'vdot')
+        self.p_wdot.setLabel('left', 'wdot')
         self.p_gx.setLabel('left', 'gx')
         self.p_gy.setLabel('left', 'gy')
         self.p_gz.setLabel('left', 'gz')
@@ -93,6 +101,9 @@ class Plotter:
         self.c_p_t = self.p_p.plot()
         self.c_q_t = self.p_q.plot()
         self.c_r_t = self.p_r.plot()
+        self.c_udot_t = self.p_udot.plot()
+        self.c_vdot_t = self.p_vdot.plot()
+        self.c_wdot_t = self.p_wdot.plot()
         self.c_gx_t = self.p_gx.plot()
         self.c_gy_t = self.p_gy.plot()
         self.c_gz_t = self.p_gz.plot()
@@ -112,6 +123,9 @@ class Plotter:
         self.c_p_e = self.p_p.plot()
         self.c_q_e = self.p_q.plot()
         self.c_r_e = self.p_r.plot()
+        self.c_udot_e = self.p_udot.plot()
+        self.c_vdot_e = self.p_vdot.plot()
+        self.c_wdot_e = self.p_wdot.plot()
         self.c_gx_e = self.p_gx.plot()
         self.c_gy_e = self.p_gy.plot()
         self.c_gz_e = self.p_gz.plot()
@@ -134,6 +148,9 @@ class Plotter:
         self.p_t = 0
         self.q_t = 0
         self.r_t = 0
+        self.udot_t = 0
+        self.vdot_t = 0
+        self.wdot_t = 0
         self.gx_t = 0
         self.gy_t = 0
         self.gz_t = 0
@@ -154,6 +171,9 @@ class Plotter:
         self.p_e = 0
         self.q_e = 0
         self.r_e = 0
+        self.udot_e = 0
+        self.vdot_e = 0
+        self.wdot_e = 0
         self.gx_e = 0
         self.gy_e = 0
         self.gz_e = 0
@@ -167,17 +187,17 @@ class Plotter:
         self.truths = []
 
         # plot list
-        self.p_list = [self.p_pn, self.p_pe, self.p_pd, self.p_phi, self.p_theta, self.p_psi, self.p_u, self.p_v, self.p_w, self.p_p, self.p_q, self.p_r, self.p_gx, self.p_gy, self.p_gz, self.p_ax, self.p_ay, self.p_az, self.p_mu]
+        self.p_list = [self.p_pn, self.p_pe, self.p_pd, self.p_phi, self.p_theta, self.p_psi, self.p_u, self.p_v, self.p_w, self.p_p, self.p_q, self.p_r, self.p_udot, self.p_vdot, self.p_wdot, self.p_gx, self.p_gy, self.p_gz, self.p_ax, self.p_ay, self.p_az, self.p_mu]
 
         # curve lists
-        self.c_list_t = [self.c_pn_t, self.c_pe_t, self.c_pd_t, self.c_phi_t, self.c_theta_t, self.c_psi_t, self.c_u_t, self.c_v_t, self.c_w_t, self.c_p_t, self.c_q_t, self.c_r_t, self.c_gx_t, self.c_gy_t, self.c_gz_t, self.c_ax_t, self.c_ay_t, self.c_az_t]
-        self.c_list_e = [self.c_pn_e, self.c_pe_e, self.c_pd_e, self.c_phi_e, self.c_theta_e, self.c_psi_e, self.c_u_e, self.c_v_e, self.c_w_e, self.c_p_e, self.c_q_e, self.c_r_e, self.c_gx_e, self.c_gy_e, self.c_gz_e, self.c_ax_e, self.c_ay_e, self.c_az_e, self.c_mu_e]
+        self.c_list_t = [self.c_pn_t, self.c_pe_t, self.c_pd_t, self.c_phi_t, self.c_theta_t, self.c_psi_t, self.c_u_t, self.c_v_t, self.c_w_t, self.c_p_t, self.c_q_t, self.c_r_t, self.c_udot_t, self.c_vdot_t, self.c_wdot_t, self.c_gx_t, self.c_gy_t, self.c_gz_t, self.c_ax_t, self.c_ay_t, self.c_az_t]
+        self.c_list_e = [self.c_pn_e, self.c_pe_e, self.c_pd_e, self.c_phi_e, self.c_theta_e, self.c_psi_e, self.c_u_e, self.c_v_e, self.c_w_e, self.c_p_e, self.c_q_e, self.c_r_e, self.c_udot_e, self.c_vdot_e, self.c_wdot_e, self.c_gx_e, self.c_gy_e, self.c_gz_e, self.c_ax_e, self.c_ay_e, self.c_az_e, self.c_mu_e]
 
     # method for updating each states
     def update(self):
         # pack stored data into lists
-        self.truths.append([self.time_t, self.pn_t, self.pe_t, self.pd_t, self.phi_t, self.theta_t, self.psi_t, self.u_t, self.v_t, self.w_t, self.p_t, self.q_t, self.r_t, self.gx_t, self.gy_t, self.gz_t, self.ax_t, self.ay_t, self.az_t])
-        self.estimates.append([self.time_e, self.pn_e, self.pe_e, self.pd_e, self.phi_e, self.theta_e, self.psi_e, self.u_e, self.v_e, self.w_e, self.p_e, self.q_e, self.r_e, self.gx_e, self.gy_e, self.gz_e, self.ax_e, self.ay_e, self.az_e, self.mu_e])
+        self.truths.append([self.time_t, self.pn_t, self.pe_t, self.pd_t, self.phi_t, self.theta_t, self.psi_t, self.u_t, self.v_t, self.w_t, self.p_t, self.q_t, self.r_t, self.udot_t, self.vdot_t, self.wdot_t, self.gx_t, self.gy_t, self.gz_t, self.ax_t, self.ay_t, self.az_t])
+        self.estimates.append([self.time_e, self.pn_e, self.pe_e, self.pd_e, self.phi_e, self.theta_e, self.psi_e, self.u_e, self.v_e, self.w_e, self.p_e, self.q_e, self.r_e, self.udot_e, self.vdot_e, self.wdot_e, self.gx_e, self.gy_e, self.gz_e, self.ax_e, self.ay_e, self.az_e, self.mu_e])
 
         # discard data outside desired plot time window
         for i in range(0,1000):
@@ -287,6 +307,11 @@ class Plotter:
 
     def dragCallback(self, msg):
         self.mu_e = msg.data
+
+    def accelCallback(self, msg):
+        self.udot_e = msg.linear_acceleration.x
+        self.vdot_e = msg.linear_acceleration.y
+        self.wdot_e = msg.linear_acceleration.z
 
 
 ################################################################################

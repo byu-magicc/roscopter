@@ -83,6 +83,7 @@ private:
 	ros::Publisher estimate_pub_;
 	ros::Publisher bias_pub_;
 	ros::Publisher drag_pub_;
+	ros::Publisher accel_pub_;
 	ros::Publisher is_flying_pub_;
 
 	// covariance and noise matrices

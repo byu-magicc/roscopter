@@ -45,6 +45,7 @@ kalmanFilter::kalmanFilter() :
 	estimate_pub_  = nh_.advertise<nav_msgs::Odometry>("estimate", 1);
 	bias_pub_      = nh_.advertise<sensor_msgs::Imu>("estimate/bias", 1);
 	drag_pub_      = nh_.advertise<std_msgs::Float64>("estimate/drag", 1);
+	accel_pub_     = nh_.advertise<sensor_msgs::Imu>("estimate/accel", 1);
 	is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1);
 
 	// initialize variables
@@ -460,6 +461,7 @@ void kalmanFilter::attitudeCallback(const rosflight_msgs::Attitude msg)
 // build and publish estimate messages
 void kalmanFilter::publishEstimate()
 {
+	// publish state estimates
 	nav_msgs::Odometry estimate;
 
 	estimate.pose.pose.position.x = p_(0);
@@ -496,6 +498,7 @@ void kalmanFilter::publishEstimate()
 	estimate.header.stamp = current_time_;
 	estimate_pub_.publish(estimate);
 
+	// publish bias estimates
 	sensor_msgs::Imu bias;
 
 	bias.linear_acceleration.x = ba_(0);
@@ -514,11 +517,24 @@ void kalmanFilter::publishEstimate()
 
 	bias_pub_.publish(bias);
 
+	// publish drag estimate
 	std_msgs::Float64 drag;
 
 	drag.data = mu_;
 
 	drag_pub_.publish(drag);
+
+	// publish body acceleration estimate
+	Eigen::Vector3d ahat(acc_x_, acc_y_, acc_z_);
+	Eigen::Vector3d omega(gyro_x_, gyro_y_, gyro_z_);
+	ahat = ahat - ba_ + q_.rot() * g_ - omega.cross(v_);
+	sensor_msgs::Imu accel;
+
+	accel.linear_acceleration.x = ahat(0);
+	accel.linear_acceleration.y = ahat(1);
+	accel.linear_acceleration.z = ahat(2);
+
+	accel_pub_.publish(accel);
 }
 
 
