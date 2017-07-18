@@ -12,17 +12,27 @@ kalmanFilter::kalmanFilter() :
 	nh_private_(ros::NodeHandle("~/mekf"))
 {
 	// retrieve params
-	nh_private_.param<double>("Rsonar", R_sonar_, 0.05);
-	nh_private_.param<double>("Rbaro", R_baro_, 0.05);
-	nh_private_.param<double>("Rmag", R_mag_, 0.05);
 	nh_private_.param<double>("declination", delta_d_, 0);
 	nh_private_.param<int>("euler_integration_steps", N_, 20);
-	ros_copter::importMatrixFromParamServer(nh_private_, x_hat_, "x0");
-	ros_copter::importMatrixFromParamServer(nh_private_, P_, "P0");
+
+	ros_copter::importMatrixFromParamServer(nh_private_, p_, "p0");
+	ros_copter::importMatrixFromParamServer(nh_private_, v_, "v0");
+	ros_copter::importMatrixFromParamServer(nh_private_, bg_, "bg0");
+	ros_copter::importMatrixFromParamServer(nh_private_, ba_, "ba0");
+	nh_private_.param<double>("mu0", mu_, 0.05);
+
+	Eigen::Vector4d q_eigen;
+	ros_copter::importMatrixFromParamServer(nh_private_, q_eigen, "q0");
+  	q_.convertFromEigen(q_eigen);
+
+  	ros_copter::importMatrixFromParamServer(nh_private_, P_, "P0");
 	ros_copter::importMatrixFromParamServer(nh_private_, Qu_, "Qu");
 	ros_copter::importMatrixFromParamServer(nh_private_, Qx_, "Qx");
   	ros_copter::importMatrixFromParamServer(nh_private_, R_gps_, "Rgps");
   	ros_copter::importMatrixFromParamServer(nh_private_, R_att_, "Ratt");
+  	nh_private_.param<double>("Rsonar", R_sonar_, 0.05);
+	nh_private_.param<double>("Rbaro", R_baro_, 0.05);
+	nh_private_.param<double>("Rmag", R_mag_, 0.05);
 
 	// setup publishers and subscribers
 	imu_sub_ = nh_.subscribe("imu/data", 1, &kalmanFilter::imuCallback, this);
@@ -34,6 +44,7 @@ kalmanFilter::kalmanFilter() :
 
 	estimate_pub_  = nh_.advertise<nav_msgs::Odometry>("estimate", 1);
 	bias_pub_      = nh_.advertise<sensor_msgs::Imu>("estimate/bias", 1);
+	drag_pub_      = nh_.advertise<std_msgs::Float64>("estimate/drag", 1);
 	is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1);
 
 	// initialize variables
@@ -43,8 +54,10 @@ kalmanFilter::kalmanFilter() :
 	gps_lon0_ = 0;
 	gps_alt0_ = 0;
 	k_ << 0, 0, 1;
-	g_ << 0, 0, G;
+	g_ << 0, 0, GRAVITY;
 	I3_ << 1, 0, 0, 0, 1, 0, 0, 0, 1;
+	I23_ << 1, 0, 0, 0, 1, 0;
+	M_ << 1, 0, 0, 0, 1, 0, 0, 0, 0;
 }
 
 
@@ -52,17 +65,17 @@ kalmanFilter::kalmanFilter() :
 void kalmanFilter::imuCallback(const sensor_msgs::Imu msg)
 {
 	// collect IMU measurements
-	ygx_ = msg.angular_velocity.x;
-	ygy_ = msg.angular_velocity.y;
-	ygz_ = msg.angular_velocity.z;
-	yax_ = msg.linear_acceleration.x;
-	yay_ = msg.linear_acceleration.y;
-	yaz_ = msg.linear_acceleration.z;
+	gyro_x_ = msg.angular_velocity.x;
+	gyro_y_ = msg.angular_velocity.y;
+	gyro_z_ = msg.angular_velocity.z;
+	acc_x_ = msg.linear_acceleration.x;
+	acc_y_ = msg.linear_acceleration.y;
+	acc_z_ = msg.linear_acceleration.z;
 
 	// wait for sufficient acceleration to start the filter
 	if(!flying_)
 	{
-		if(fabs(msg.linear_acceleration.z) > 10.0)
+		if(fabs(acc_z_) > 10.0)
 		{
 			// filter initialization stuff
 			ROS_WARN("Now flying!");
@@ -78,6 +91,7 @@ void kalmanFilter::imuCallback(const sensor_msgs::Imu msg)
 		// run the filter
 		current_time_ = msg.header.stamp;
 		predictStep();
+		updateStep();
 		publishEstimate();
 	}
 	return;
@@ -89,14 +103,20 @@ void kalmanFilter::predictStep()
 {
 	// get the current time step and build error state propagation Jacobians
 	double dt = (current_time_-previous_time_).toSec();
-	Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> F = dfdx(x_hat_);
-	Eigen::Matrix<double, NUM_ERROR_STATES, 6> Gu = dfdu(x_hat_);
 
 	// propagate the state estimate and error state covariance via Euler integration
 	for (unsigned i = 0; i < N_; i++)
 	{
-		statePropagate((dt/N_)*f(x_hat_));
-		P_ += (dt/N_)*(F*P_ + P_*F.transpose() + Gu*Qu_*Gu.transpose() + Qx_);
+		// propagate states
+		Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x = f() * (dt / N_);
+		p_ += delta_x.segment(dPN,3);
+		q_ = q_ * mekf_math::exp_q(delta_x.segment(dPHI,3));
+		v_ += delta_x.segment(dU,3);
+
+		// propagate covariance
+		Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> F = dfdx();
+		Eigen::Matrix<double, NUM_ERROR_STATES, 6> G = dfdu();
+		P_ += (dt / N_) * (F * P_ + P_ * F.transpose() + G * Qu_ * G.transpose() + Qx_);
 	}
 
 	// store time for time step computation on the next iteration
@@ -106,61 +126,113 @@ void kalmanFilter::predictStep()
 }
 
 
-// update the state estimate, eq. 90 and 91
-void kalmanFilter::statePropagate(const Eigen::Matrix<double, NUM_STATES, 1> delta_x)
+// this function updates the drag coefficient
+void kalmanFilter::updateStep()
 {
-	// separate vector and quaternion parts of x_hat_ and associated parts of delta_x
-	Eigen::Matrix<double, NUM_STATES-4, 1> x_hat_v;
-	Eigen::Matrix<double,            4, 1> x_hat_q;
-	Eigen::Matrix<double, NUM_STATES-4, 1> delta_v;
+	// measurement model
+	Eigen::Vector3d h = -mu_ * M_ * v_ + ba_;
 
-	x_hat_v.block(0,0,3,1) = x_hat_.block(PN,0,3,1);
-	x_hat_v.block(3,0,9,1) = x_hat_.block(U,0,9,1);
+	// measurement Jacobian
+	Eigen::Matrix<double, 3, NUM_ERROR_STATES> H3;
+	H3.setZero();
+	H3.block(0,6,3,3) = -mu_ * M_;
+	H3.block(0,12,3,3) = I3_;
+	H3.block(0,15,3,1) = -M_ * v_;
 
-	x_hat_q = x_hat_.block(QX,0,4,1);
+	Eigen::Matrix<double, 2, NUM_ERROR_STATES> H = I23_ * H3;
 
-	delta_v.block(0,0,3,1) = delta_x.block(PN,0,3,1);
-	delta_v.block(3,0,9,1) = delta_x.block(U,0,9,1);
+	// compute the residual covariance
+	Eigen::Matrix<double, 2, 2> S = H * P_ * H.transpose() + Qu_.block(3,3,2,2);
 
-	// update body and keyframe states
-	x_hat_v += delta_v;
-	x_hat_q = quatMul(x_hat_q, qexp(delta_x.block(QX,0,3,1)));
+	// compute Kalman gain
+	Eigen::Matrix<double, NUM_ERROR_STATES, 2> K = P_ * H.transpose() * S.inverse();
 
-	// fill in new values of x_hat_
-	x_hat_.block(PN,0,3,1) = x_hat_v.block(0,0,3,1);
-	x_hat_.block(QX,0,4,1) = x_hat_q;
-	x_hat_.block(U,0,9,1)  = x_hat_v.block(3,0,9,1);
+	// compute measurement error
+	Eigen::Vector3d y(acc_x_, acc_y_, acc_z_);
+	Eigen::Matrix<double, 3, 1> residual = y - h;
+
+	// compute delta_x
+	Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x = K * (I23_ * residual);
+
+	// update state and covariance
+	stateUpdate(delta_x);
+	P_ = (Eigen::MatrixXd::Identity(NUM_ERROR_STATES,NUM_ERROR_STATES) - K * H) * P_;
+
+	return;
 }
 
 
 // update the state estimate, eq. 90 and 91
 void kalmanFilter::stateUpdate(const Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x)
 {
-	// separate vector and quaternion parts of x_hat_ and associated parts of delta_x
-	// described in paragraph below eq. 89
-	Eigen::Matrix<double, NUM_STATES-4, 1> x_hat_v;
-	Eigen::Matrix<double,            4, 1> x_hat_q;
-	Eigen::Matrix<double, NUM_STATES-4, 1> delta_v;
-	Eigen::Matrix<double,            3, 1> delta_theta;
+	p_ += delta_x.segment(dPN,3);
+	q_ = q_ * mekf_math::exp_q(delta_x.segment(dPHI,3));
+	v_ += delta_x.segment(dU,3);
+	bg_ += delta_x.segment(dGX,3);
+	ba_ += delta_x.segment(dAX,3);
+	mu_ += delta_x(dMU);
+	// mu_ = mekf_math::saturate(mu_, 0.999, 0.001);
+}
 
-	x_hat_v.block(0,0,3,1) = x_hat_.block(PN,0,3,1);
-	x_hat_v.block(3,0,9,1) = x_hat_.block(U,0,9,1);
 
-	x_hat_q = x_hat_.block(QX,0,4,1);
+// state estimate dynamics
+Eigen::Matrix<double, NUM_ERROR_STATES, 1> kalmanFilter::f()
+{
+	// unpack relevant data
+	Eigen::Vector3d omega_hat(gyro_x_ - bg_(0), gyro_y_ - bg_(1), gyro_z_ - bg_(2));
+	Eigen::Vector3d a_hat(acc_x_ - ba_(0), acc_y_ - ba_(1), acc_z_ - ba_(2));
+	Eigen::Matrix3d R = q_.rot();
 
-	delta_v.block(0,0,3,1) = delta_x.block(dPN,0,3,1);
-	delta_v.block(3,0,9,1) = delta_x.block(dU,0,9,1);
+	// eq. 105
+	Eigen::Matrix<double, NUM_ERROR_STATES, 1> xdot;
+	xdot.setZero();
+	xdot.segment(dPN,3) = R.transpose() * v_;
+	xdot.segment(dPHI,3) = omega_hat;
+	xdot.segment(dU,3) = mekf_math::skew(v_) * omega_hat + R * g_ + k_ * k_.transpose() * a_hat - mu_ * M_ * v_;
 
-	delta_theta = delta_x.block(dPHI,0,3,1);
+	// all other state derivatives are zero
+	return xdot;
+}
 
-	// update body and keyframe states
-	x_hat_v += delta_v;
-	x_hat_q = quatMul(x_hat_q, qexp(delta_theta/2));
 
-	// fill in new values of x_hat_
-	x_hat_.block(PN,0,3,1) = x_hat_v.block(0,0,3,1);
-	x_hat_.block(QX,0,4,1) = x_hat_q;
-	x_hat_.block(U,0,9,1)  = x_hat_v.block(3,0,9,1);
+// error state propagation Jacobian
+Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> kalmanFilter::dfdx()
+{
+	// unpack relevant data
+	Eigen::Vector3d omega_hat(gyro_x_ - bg_(0), gyro_y_ - bg_(1), gyro_z_ - bg_(2));
+	Eigen::Vector3d a_hat(acc_x_ - ba_(0), acc_y_ - ba_(1), acc_z_ - ba_(2));
+	Eigen::Matrix3d R = q_.rot();
+
+	// eq. 107
+	Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> F;
+	F.setZero();
+	F.block(0,3,3,3)  = -R.transpose() * mekf_math::skew(v_);
+	F.block(0,6,3,3)  = R.transpose();
+	F.block(3,3,3,3)  = -mekf_math::skew(omega_hat);
+	F.block(3,9,3,3)  = -I3_;
+	F.block(6,3,3,3)  = mekf_math::skew(R * g_);
+	F.block(6,6,3,3)  = -mekf_math::skew(omega_hat);
+	F.block(6,9,3,3)  = -mekf_math::skew(v_);
+	F.block(6,12,3,3) = -k_ * k_.transpose();
+	F.block(6,15,3,1) = -M_ * v_;
+
+	// all other states are zero
+	return F;
+}
+
+
+// error state propagation Jacobian
+Eigen::Matrix<double, NUM_ERROR_STATES, 6> kalmanFilter::dfdu()
+{
+	// eq. 108
+	Eigen::Matrix<double, NUM_ERROR_STATES, 6> G;
+	G.setZero();
+	G.block(3,0,3,3) = -I3_;
+	G.block(6,0,3,3) = -mekf_math::skew(v_);
+	G.block(6,3,3,3) = -k_ * k_.transpose();
+
+	// all other states are zero
+	return G;
 }
 
 
@@ -171,10 +243,10 @@ void kalmanFilter::baroCallback(const rosflight_msgs::Barometer msg)
 	double y_alt = msg.altitude;
 
 	// only update if valid sensor measurements
-	if (fabs(x_hat_(PD)) > 5)
+	if (fabs(p_(2)) > 5)
 	{
 		// measurement model
-		double h_alt = -x_hat_(PD);
+		double h_alt = -p_(2);
 
 		// measurement Jacobian
 		Eigen::Matrix<double, 1, NUM_ERROR_STATES> H;
@@ -182,20 +254,20 @@ void kalmanFilter::baroCallback(const rosflight_msgs::Barometer msg)
 		H(dPD) = -1;
 
 		// compute the residual covariance
-		double S = H*P_*H.transpose() + R_baro_;
+		double S = H * P_ * H.transpose() + R_baro_;
 
 		// compute Kalman gain
-		Eigen::Matrix<double, NUM_ERROR_STATES, 1> K = P_*H.transpose()/S;
+		Eigen::Matrix<double, NUM_ERROR_STATES, 1> K = P_ * H.transpose() / S;
 
 		// compute measurement error
 		double r = y_alt - h_alt;
 
 		// compute delta_x
-		Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x = K*r;
+		Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x = K * r;
 
 		// update state and covariance
 		stateUpdate(delta_x);
-		P_ = (Eigen::MatrixXd::Identity(NUM_ERROR_STATES,NUM_ERROR_STATES) - K*H)*P_;
+		P_ = (Eigen::MatrixXd::Identity(NUM_ERROR_STATES,NUM_ERROR_STATES) - K * H) * P_;
 	}
 
 	return;
@@ -212,7 +284,7 @@ void kalmanFilter::sonarCallback(const sensor_msgs::Range msg)
 	if (y_alt > msg.min_range && y_alt < msg.max_range)
 	{
 		// measurement model, eq. 120
-		double h_alt = -x_hat_(PD);
+		double h_alt = -p_(2);
 
 		// measurement Jacobian, eq. 121
 		Eigen::Matrix<double, 1, NUM_ERROR_STATES> H;
@@ -220,20 +292,20 @@ void kalmanFilter::sonarCallback(const sensor_msgs::Range msg)
 		H(dPD) = -1;
 
 		// compute the residual covariance
-		double S = H*P_*H.transpose() + R_sonar_;
+		double S = H * P_ * H.transpose() + R_sonar_;
 
 		// compute Kalman gain
-		Eigen::Matrix<double, NUM_ERROR_STATES, 1> K = P_*H.transpose()/S;
+		Eigen::Matrix<double, NUM_ERROR_STATES, 1> K = P_ * H.transpose() / S;
 
 		// compute measurement error
 		double r = y_alt - h_alt;
 
 		// compute delta_x, eq. 88
-		Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x = K*r;
+		Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x = K * r;
 
 		// update state and covariance
 		stateUpdate(delta_x);
-		P_ = (Eigen::MatrixXd::Identity(NUM_ERROR_STATES,NUM_ERROR_STATES) - K*H)*P_;
+		P_ = (Eigen::MatrixXd::Identity(NUM_ERROR_STATES,NUM_ERROR_STATES) - K * H) * P_;
 	}
 
 	return;
@@ -244,9 +316,8 @@ void kalmanFilter::sonarCallback(const sensor_msgs::Range msg)
 void kalmanFilter::magCallback(const sensor_msgs::MagneticField msg)
 {
 	// compute roll and pitch
-	Eigen::Matrix<double, 4, 1> q_hat = x_hat_.block(QX,0,4,1);
-	double phi_hat = phi(q_hat);
-	double theta_hat = theta(q_hat);
+	double phi_hat = q_.phi();
+	double theta_hat = q_.theta();
 
 	// the earth's magnetic field inclination is about 65 degrees here in Utah, so
 	// if the aircraft is rolled or pitched over around 25 degrees, we cannot observe
@@ -254,20 +325,19 @@ void kalmanFilter::magCallback(const sensor_msgs::MagneticField msg)
 	if (sqrt(phi_hat*phi_hat + theta_hat*theta_hat) <= 0.3)
 	{
 		// unpack measurement
-		Eigen::Matrix<double, 3, 1> m0;
-		m0 << msg.magnetic_field.x, msg.magnetic_field.y, msg.magnetic_field.z;
+		Eigen::Vector3d m0(msg.magnetic_field.x, msg.magnetic_field.y, msg.magnetic_field.z);
 
 		// remove aircraft roll and pitch
-		Eigen::Matrix<double, 3, 3> R_v22b = R_v2_to_b(phi_hat);
-		Eigen::Matrix<double, 3, 3> R_v12v2 = R_v1_to_v2(theta_hat);
-		Eigen::Matrix<double, 3, 1> m = R_v12v2.transpose()*R_v22b.transpose()*m0;
+		Eigen::Matrix3d R_v22b = mekf_math::R_v2_to_b(phi_hat);
+		Eigen::Matrix3d R_v12v2 = mekf_math::R_v1_to_v2(theta_hat);
+		Eigen::Vector3d m = R_v12v2.transpose() * R_v22b.transpose() * m0;
 
 		// compute heading measurement
 		double psi_m = -atan2(m(1), m(0));
 		double y_mag = delta_d_ + psi_m;
 
 		// measurement model
-		double h_mag = psi(q_hat);
+		double h_mag = q_.psi();
 
 		// measurement Jacobian
 		Eigen::Matrix<double, 1, NUM_ERROR_STATES> H;
@@ -275,20 +345,20 @@ void kalmanFilter::magCallback(const sensor_msgs::MagneticField msg)
 		H(dPSI) = 1;
 
 		// compute the residual covariance
-		double S = H*P_*H.transpose() + R_mag_;
+		double S = H * P_ * H.transpose() + R_mag_;
 
 		// compute Kalman gain
-		Eigen::Matrix<double, NUM_ERROR_STATES, 1> K = P_*H.transpose()/S;
+		Eigen::Matrix<double, NUM_ERROR_STATES, 1> K = P_ * H.transpose() / S;
 
 		// compute measurement error
 		double r = y_mag - h_mag;
 
 		// compute delta_x
-		Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x = K*r;
+		Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x = K * r;
 
 		// update state and covariance
 		stateUpdate(delta_x);
-		P_ = (Eigen::MatrixXd::Identity(NUM_ERROR_STATES,NUM_ERROR_STATES) - K*H)*P_;
+		P_ = (Eigen::MatrixXd::Identity(NUM_ERROR_STATES,NUM_ERROR_STATES) - K * H) * P_;
 	}
 
 	return;
@@ -299,8 +369,8 @@ void kalmanFilter::magCallback(const sensor_msgs::MagneticField msg)
 void kalmanFilter::gpsCallback(const rosflight_msgs::GPS msg)
 {
 	// unpack measurement and convert to radians
-	double y_lat = msg.latitude*PI/180;
-	double y_lon = msg.longitude*PI/180;
+	double y_lat = msg.latitude * PI / 180;
+	double y_lon = msg.longitude * PI / 180;
 	double y_alt = msg.altitude;
 
 	// set origin with first message
@@ -315,17 +385,15 @@ void kalmanFilter::gpsCallback(const rosflight_msgs::GPS msg)
 		return;
 	}
 
-	// convert to cartesian coordinates
-  	Eigen::Matrix<double, 2, 1> y_gps; 
-	double r = EARTH_RADIUS+y_alt;
-	double y_pn = r*sin(y_lat-gps_lat0_); // north from origin
-	double y_pe = r*cos(y_lat-gps_lat0_)*sin(y_lon-gps_lon0_); // east from origin
+	// convert to cartesian coordinates 
+	double r = EARTH_RADIUS + y_alt;
+	double y_pn = r * sin(y_lat - gps_lat0_); // north from origin
+	double y_pe = r * cos(y_lat - gps_lat0_) * sin(y_lon - gps_lon0_); // east from origin
 	double y_pd = -(y_alt - gps_alt0_); // altitude relative to origin
-	y_gps << y_pn, y_pe;
+	Eigen::Vector2d y_gps(y_pn, y_pe);
 
 	// measurement model
-	Eigen::Matrix<double, 2, 1> h_gps; 
-	h_gps << x_hat_(PN), x_hat_(PE);
+	Eigen::Vector2d h_gps(p_(0), p_(1));
 
 	// measurement Jacobian
 	Eigen::Matrix<double, 2, NUM_ERROR_STATES> H;
@@ -334,20 +402,20 @@ void kalmanFilter::gpsCallback(const rosflight_msgs::GPS msg)
 	H(1,dPE) = 1;
 
 	// compute the residual covariance
-	Eigen::Matrix<double, 2, 2> S = H*P_*H.transpose() + R_gps_;
+	Eigen::Matrix2d S = H * P_ * H.transpose() + R_gps_;
 
 	// compute Kalman gain
-	Eigen::Matrix<double, NUM_ERROR_STATES, 2> K = P_*H.transpose()*S.inverse();
+	Eigen::Matrix<double, NUM_ERROR_STATES, 2> K = P_ * H.transpose() * S.inverse();
 
 	// compute measurement error
-	Eigen::Matrix<double, 2, 1> residual = y_gps - h_gps;
+	Eigen::Vector2d residual = y_gps - h_gps;
 
 	// compute delta_x
-	Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x = K*residual;
+	Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x = K * residual;
 
 	// update state and covariance
 	stateUpdate(delta_x);
-	P_ = (Eigen::MatrixXd::Identity(NUM_ERROR_STATES,NUM_ERROR_STATES) - K*H)*P_;
+	P_ = (Eigen::MatrixXd::Identity(NUM_ERROR_STATES,NUM_ERROR_STATES) - K * H) * P_;
 
 	return;
 }
@@ -357,15 +425,11 @@ void kalmanFilter::gpsCallback(const rosflight_msgs::GPS msg)
 void kalmanFilter::attitudeCallback(const rosflight_msgs::Attitude msg)
 {
 	// unpack measurement
-	Eigen::Matrix<double, 4, 1> q_meas;
-	q_meas << msg.attitude.x, msg.attitude.y, msg.attitude.z, msg.attitude.w;
-	Eigen::Matrix<double, 2, 1> y_att;
-	y_att << phi(q_meas), theta(q_meas);
+	mekf_math::Quaternion q_meas(msg.attitude.w, msg.attitude.x, msg.attitude.y, msg.attitude.z);
+	Eigen::Vector2d y_att(q_meas.phi(), q_meas.theta());
 
 	// measurement model
-	Eigen::Matrix<double, 4, 1> q_hat = x_hat_.block(QX,0,4,1);
-	Eigen::Matrix<double, 2, 1> h_att;
-	h_att << phi(q_hat), theta(q_hat);
+	Eigen::Vector2d h_att(q_.phi(), q_.theta());
 
 	// measurement Jacobian
 	Eigen::Matrix<double, 2, NUM_ERROR_STATES> H;
@@ -374,99 +438,22 @@ void kalmanFilter::attitudeCallback(const rosflight_msgs::Attitude msg)
 	H(1,dTHETA) = 1;
 
 	// compute the residual covariance
-	Eigen::Matrix<double, 2, 2> S = H*P_*H.transpose() + R_att_;
+	Eigen::Matrix2d S = H * P_ * H.transpose() + R_att_;
 
 	// compute Kalman gain
-	Eigen::Matrix<double, NUM_ERROR_STATES, 2> K = P_*H.transpose()*S.inverse();
+	Eigen::Matrix<double, NUM_ERROR_STATES, 2> K = P_ * H.transpose() * S.inverse();
 
 	// compute measurement error
-	Eigen::Matrix<double, 2, 1> r = y_att - h_att;
+	Eigen::Vector2d r = y_att - h_att;
 
 	// compute delta_x
-	Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x = K*r;
+	Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x = K * r;
 
 	// update state and covariance
 	stateUpdate(delta_x);
-	P_ = (Eigen::MatrixXd::Identity(NUM_ERROR_STATES,NUM_ERROR_STATES) - K*H)*P_;
+	P_ = (Eigen::MatrixXd::Identity(NUM_ERROR_STATES,NUM_ERROR_STATES) - K * H) * P_;
 
 	return;
-}
-
-
-// state estimate dynamics
-Eigen::Matrix<double, NUM_STATES, 1> kalmanFilter::f(const Eigen::Matrix<double, NUM_STATES, 1> x)
-{
-	// unpack the input and create relevant matrices
-	Eigen::Matrix<double, 4, 1> q_hat;
-	Eigen::Matrix<double, 3, 1> v_hat;
-	Eigen::Matrix<double, 3, 1> omega_hat;
-	Eigen::Matrix<double, 4, 1> omega_hat_4x1;
-	Eigen::Matrix<double, 3, 1> a_hat;
-
-	q_hat         <<        x(QX),        x(QY),        x(QZ), x(QW);
-	v_hat         <<         x(U),         x(V),         x(W);
-	omega_hat     <<   ygx_-x(GX),   ygy_-x(GY),   ygz_-x(GZ);
-	a_hat         <<   yax_-x(AX),   yay_-x(AY),   yaz_-x(AZ);
-	omega_hat_4x1 << omega_hat(0), omega_hat(1), omega_hat(2), 0;
-
-	// eq. 105
-	Eigen::Matrix<double, NUM_STATES, 1> xdot;
-	xdot.setZero();
-	xdot.block(0,0,3,1) = Rq(q_hat).transpose()*v_hat;
-	xdot.block(3,0,4,1) = 0.5*quatMul(q_hat,omega_hat_4x1);
-	xdot.block(7,0,3,1) = skew(v_hat)*omega_hat + Rq(q_hat)*g_ + k_*k_.transpose()*a_hat;
-
-	// all other state derivatives are zero
-	return xdot;
-}
-
-
-// error state propagation Jacobian
-Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> kalmanFilter::dfdx(const Eigen::Matrix<double, NUM_STATES, 1> x)
-{
-	// unpack the input and create relevant matrices
-	Eigen::Matrix<double, 4, 1> q_hat;
-	Eigen::Matrix<double, 3, 1> v_hat;
-	Eigen::Matrix<double, 3, 1> omega_hat;
-
-	q_hat     <<      x(QX),      x(QY),      x(QZ), x(QW);
-	v_hat     <<       x(U),       x(V),       x(W);
-	omega_hat << ygx_-x(GX), ygy_-x(GY), ygz_-x(GZ);
-
-	// eq. 107
-	Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> A;
-	A.setZero();
-	A.block(0,3,3,3)  = -Rq(q_hat).transpose()*skew(v_hat);
-	A.block(0,6,3,3)  = Rq(q_hat).transpose();
-	A.block(3,3,3,3)  = -skew(omega_hat);
-	A.block(3,9,3,3)  = -I3_;
-	A.block(6,3,3,3)  = skew(Rq(q_hat)*g_);
-	A.block(6,6,3,3)  = -skew(omega_hat);
-	A.block(6,9,3,3)  = -skew(v_hat);
-	A.block(6,12,3,3) = -k_*k_.transpose();
-
-	// all other states are zero
-	return A;
-}
-
-
-// error state propagation Jacobian
-Eigen::Matrix<double, NUM_ERROR_STATES, 6> kalmanFilter::dfdu(const Eigen::Matrix<double, NUM_STATES, 1> x)
-{
-	// unpack the input and create relevant matrices
-	Eigen::Matrix<double, 3, 1> v_hat;
-
-	v_hat << x(U), x(V), x(W);
-
-	// eq. 108
-	Eigen::Matrix<double, NUM_ERROR_STATES, 6> A;
-	A.setZero();
-	A.block(3,0,3,3) = -I3_;
-	A.block(6,0,3,3) = -skew(v_hat);
-	A.block(6,3,3,3) = -k_*k_.transpose();
-
-	// all other states are zero
-	return A;
 }
 
 
@@ -474,20 +461,15 @@ Eigen::Matrix<double, NUM_ERROR_STATES, 6> kalmanFilter::dfdu(const Eigen::Matri
 void kalmanFilter::publishEstimate()
 {
 	nav_msgs::Odometry estimate;
-	double pn(x_hat_(PN)), pe(x_hat_(PE)), pd(x_hat_(PD));
-	double qx(x_hat_(QX)), qy(x_hat_(QY)), qz(x_hat_(QZ)), qw(x_hat_(QW));
-	double u(x_hat_(U)), v(x_hat_(V)), w(x_hat_(W));
-	double gx(x_hat_(GX)), gy(x_hat_(GY)), gz(x_hat_(GZ));
-	double ax(x_hat_(AX)), ay(x_hat_(AY)), az(x_hat_(AZ));
 
-	estimate.pose.pose.position.x = pn;
-	estimate.pose.pose.position.y = pe;
-	estimate.pose.pose.position.z = pd;
+	estimate.pose.pose.position.x = p_(0);
+	estimate.pose.pose.position.y = p_(1);
+	estimate.pose.pose.position.z = p_(2);
 
-	estimate.pose.pose.orientation.x = qx;
-	estimate.pose.pose.orientation.y = qy;
-	estimate.pose.pose.orientation.z = qz;
-	estimate.pose.pose.orientation.w = qw;
+	estimate.pose.pose.orientation.w = q_.w_;
+	estimate.pose.pose.orientation.x = q_.x_;
+	estimate.pose.pose.orientation.y = q_.y_;
+	estimate.pose.pose.orientation.z = q_.z_;
 
 	estimate.pose.covariance[0*6+0] = P_(dPN, dPN);
 	estimate.pose.covariance[1*6+1] = P_(dPE, dPE);
@@ -496,12 +478,12 @@ void kalmanFilter::publishEstimate()
 	estimate.pose.covariance[4*6+4] = P_(dTHETA, dTHETA);
 	estimate.pose.covariance[5*6+5] = P_(dPSI, dPSI);
 
-	estimate.twist.twist.linear.x = u;
-	estimate.twist.twist.linear.y = v;
-	estimate.twist.twist.linear.z = w;
-	estimate.twist.twist.angular.x = ygx_-gx;
-	estimate.twist.twist.angular.y = ygy_-gy;
-	estimate.twist.twist.angular.z = ygz_-gz;
+	estimate.twist.twist.linear.x = v_(0);
+	estimate.twist.twist.linear.y = v_(1);
+	estimate.twist.twist.linear.z = v_(2);
+	estimate.twist.twist.angular.x = gyro_x_ - bg_(0);
+	estimate.twist.twist.angular.y = gyro_y_ - bg_(1);
+	estimate.twist.twist.angular.z = gyro_z_ - bg_(2);
 
 	estimate.twist.covariance[0*6+0] = P_(dU, dU);
 	estimate.twist.covariance[1*6+1] = P_(dV, dV);
@@ -515,149 +497,28 @@ void kalmanFilter::publishEstimate()
 	estimate_pub_.publish(estimate);
 
 	sensor_msgs::Imu bias;
-	bias.linear_acceleration.x = x_hat_(AX);
-	bias.linear_acceleration.y = x_hat_(AY);
-	bias.linear_acceleration.z = x_hat_(AZ);
+
+	bias.linear_acceleration.x = ba_(0);
+	bias.linear_acceleration.y = ba_(1);
+	bias.linear_acceleration.z = ba_(2);
 	bias.linear_acceleration_covariance[0*3+0] = P_(dAX,dAX);
 	bias.linear_acceleration_covariance[1*3+1] = P_(dAY,dAY);
 	bias.linear_acceleration_covariance[2*3+2] = P_(dAZ,dAZ);
 
-	bias.angular_velocity.x = x_hat_(GX);
-	bias.angular_velocity.y = x_hat_(GY);
-	bias.angular_velocity.z = x_hat_(GZ);
+	bias.angular_velocity.x = bg_(0);
+	bias.angular_velocity.y = bg_(1);
+	bias.angular_velocity.z = bg_(2);
 	bias.angular_velocity_covariance[0*3+0] = P_(dGX,dGX);
 	bias.angular_velocity_covariance[1*3+1] = P_(dGY,dGY);
 	bias.angular_velocity_covariance[2*3+2] = P_(dGZ,dGZ);
 
 	bias_pub_.publish(bias);
-}
 
+	std_msgs::Float64 drag;
 
-// quaternion multiply, eq. 4
-Eigen::Matrix<double, 4, 1> kalmanFilter::quatMul(const Eigen::Matrix<double, 4, 1> p, const Eigen::Matrix<double, 4, 1> q)
-{
-	// create needed matrices/vectors
-	Eigen::Matrix<double, 3, 1> p_bar;
-	p_bar << p(0), p(1), p(2);
+	drag.data = mu_;
 
-	double pw(p(3));
-
-	// perform multiplication
-	Eigen::Matrix<double, 4, 4> P;
-	P.block(0,0,3,3) = pw*I3_+skew(p_bar);
-	P.block(0,3,3,1) = p_bar;
-	P.block(3,0,1,3) = -p_bar.transpose();
-	P(3,3) = pw;
-
-	return P*q;
-}
-
-
-// 3x3 rotation matrix from quaternion that rotates vehicle to body, eq. 15
-Eigen::Matrix<double, 3, 3> kalmanFilter::Rq(const Eigen::Matrix<double, 4, 1> q)
-{
-	// create needed matrices/vectors
-	Eigen::Matrix<double, 3, 1> q_bar;
-	q_bar << q(0), q(1), q(2);
-
-	double qw(q(3));
-
-	// compute rotation matrix
-	return (2*qw*qw-1)*I3_-2*qw*skew(q_bar)+2*q_bar*q_bar.transpose();
-}
-
-
-// skew symmetric matrix from vector, eq. 5
-Eigen::Matrix<double, 3, 3> kalmanFilter::skew(const Eigen::Matrix<double, 3, 1> vec)
-{
-	Eigen::Matrix<double, 3, 3> A;
-	A <<       0, -vec(2),  vec(1),
-		  vec(2),       0, -vec(0),
-		 -vec(1),  vec(0),       0;
-	return A;
-}
-
-
-Eigen::Matrix<double, 4, 1> kalmanFilter::qexp(const Eigen::Matrix<double, 3, 1> delta)
-{
-	// compute norm of delta
-	double norm = sqrt(delta(0)*delta(0) + delta(1)*delta(1) + delta(2)*delta(2));
-
-	// compute the exponential
-	Eigen::Matrix<double, 4, 1> result;
-	result.block(0,0,3,1) = norm == 0 ? 0*delta : (sin(norm)/norm)*delta;
-	result(3) = cos(norm);
-
-	return result;
-}
-
-
-// rotation from vehicle-2 to body frame
-Eigen::Matrix<double, 3, 3> kalmanFilter::R_v2_to_b(double phi)
-{
-	Eigen::Matrix<double, 3, 3> R_v22b;
-	R_v22b << 1, 0, 0, 0, cos(phi), sin(phi), 0, -sin(phi), cos(phi);
-	return R_v22b;
-}
-
-
-// rotation from vehicle-1 to vehicle-2 frame
-Eigen::Matrix<double, 3, 3> kalmanFilter::R_v1_to_v2(double theta)
-{
-	Eigen::Matrix<double, 3, 3> R_v12v2;
-	R_v12v2 << cos(theta), 0, -sin(theta), 0, 1, 0, sin(theta), 0, cos(theta);
-	return R_v12v2;
-}
-
-
-// rotation from vehicle to vehicle-1 frame
-Eigen::Matrix<double, 3, 3> kalmanFilter::R_v_to_v1(double psi)
-{
-	Eigen::Matrix<double, 3, 3> R_v2v1;
-	R_v2v1 << cos(psi), sin(psi), 0, -sin(psi), cos(psi), 0, 0, 0, 1;
-	return R_v2v1;
-}
-
-
-// conversion from quaternion to roll angle
-double kalmanFilter::phi(const Eigen::Matrix<double, 4, 1> q)
-{
-	// unpack quaternion
-	double qx = q(0);
-	double qy = q(1);
-	double qz = q(2);
-	double qw = q(3);
-
-	// computer angle
-	return atan2(2*qw*qx + 2*qy*qz, qw*qw + qz*qz - qx*qx - qy*qy);
-}
-
-
-// conversion from quaternion to pitch angle
-double kalmanFilter::theta(const Eigen::Matrix<double, 4, 1> q)
-{
-	// unpack quaternion
-	double qx = q(0);
-	double qy = q(1);
-	double qz = q(2);
-	double qw = q(3);
-
-	// computer angle
-	return asin(2*qw*qy - 2*qx*qz);
-}
-
-
-// conversion from quaternion to yaw angle
-double kalmanFilter::psi(const Eigen::Matrix<double, 4, 1> q)
-{
-	// unpack quaternion
-	double qx = q(0);
-	double qy = q(1);
-	double qz = q(2);
-	double qw = q(3);
-
-	// computer angle
-	return atan2(2*qw*qz + 2*qx*qy, qw*qw + qx*qx - qy*qy - qz*qz);
+	drag_pub_.publish(drag);
 }
 
 

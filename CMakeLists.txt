@@ -13,7 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   rosflight_utils
   dynamic_reconfigure
 )
-find_package(Eigen REQUIRED)
+find_package(Eigen 3 REQUIRED)
 # find_package(OpenCV REQUIRED)
 
 generate_dynamic_reconfigure_options(
@@ -77,7 +77,7 @@ target_link_libraries(controller ${catkin_LIBRARIES})
 add_executable(mekf
   src/mekf/mekf_node.cpp
   src/mekf/mekf.cpp
-  include/mekf/mekf.h
+  src/mekf/mekf_math.cpp
 )
 add_dependencies(mekf rosflight_msgs_generate_messages_cpp)
 target_link_libraries(mekf ${catkin_LIBRARIES})
