@@ -6,14 +6,14 @@
   *
 */
 
-#ifndef ROS_COPTER_EIGEN_H
-#define ROS_COPTER_EIGEN_H
+#ifndef ROSCOPTER_EIGEN_H
+#define ROSCOPTER_EIGEN_H
 
 #include <eigen3/Eigen/Core>
 #include <boost/array.hpp>
 #include <ros/ros.h>
 
-namespace ros_copter
+namespace roscopter
 {
 
 template <class Derived>

@@ -4,7 +4,7 @@ import rospy
 import time
 from rosflight_msgs.msg import Command
 from nav_msgs.msg import Odometry
-from ros_copter.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
+from roscopter.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
 import yaml
 import tf
 import numpy as np

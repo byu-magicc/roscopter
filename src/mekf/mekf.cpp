@@ -15,21 +15,21 @@ kalmanFilter::kalmanFilter() :
 	nh_private_.param<double>("declination", delta_d_, 0);
 	nh_private_.param<int>("euler_integration_steps", N_, 20);
 
-	ros_copter::importMatrixFromParamServer(nh_private_, p_, "p0");
-	ros_copter::importMatrixFromParamServer(nh_private_, v_, "v0");
-	ros_copter::importMatrixFromParamServer(nh_private_, bg_, "bg0");
-	ros_copter::importMatrixFromParamServer(nh_private_, ba_, "ba0");
+	roscopter::importMatrixFromParamServer(nh_private_, p_, "p0");
+	roscopter::importMatrixFromParamServer(nh_private_, v_, "v0");
+	roscopter::importMatrixFromParamServer(nh_private_, bg_, "bg0");
+	roscopter::importMatrixFromParamServer(nh_private_, ba_, "ba0");
 	nh_private_.param<double>("mu0", mu_, 0.05);
 
 	Eigen::Vector4d q_eigen;
-	ros_copter::importMatrixFromParamServer(nh_private_, q_eigen, "q0");
+	roscopter::importMatrixFromParamServer(nh_private_, q_eigen, "q0");
   	q_.convertFromEigen(q_eigen);
 
-  	ros_copter::importMatrixFromParamServer(nh_private_, P_, "P0");
-	ros_copter::importMatrixFromParamServer(nh_private_, Qu_, "Qu");
-	ros_copter::importMatrixFromParamServer(nh_private_, Qx_, "Qx");
-  	ros_copter::importMatrixFromParamServer(nh_private_, R_gps_, "Rgps");
-  	ros_copter::importMatrixFromParamServer(nh_private_, R_att_, "Ratt");
+  	roscopter::importMatrixFromParamServer(nh_private_, P_, "P0");
+	roscopter::importMatrixFromParamServer(nh_private_, Qu_, "Qu");
+	roscopter::importMatrixFromParamServer(nh_private_, Qx_, "Qx");
+  	roscopter::importMatrixFromParamServer(nh_private_, R_gps_, "Rgps");
+  	roscopter::importMatrixFromParamServer(nh_private_, R_att_, "Ratt");
   	nh_private_.param<double>("Rsonar", R_sonar_, 0.05);
 	nh_private_.param<double>("Rbaro", R_baro_, 0.05);
 	nh_private_.param<double>("Rmag", R_mag_, 0.05);

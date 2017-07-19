@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(ros_copter)
+project(roscopter)
 
 find_package(catkin REQUIRED COMPONENTS
   nav_msgs
@@ -14,7 +14,6 @@ find_package(catkin REQUIRED COMPONENTS
   dynamic_reconfigure
 )
 find_package(Eigen 3 REQUIRED)
-# find_package(OpenCV REQUIRED)
 
 generate_dynamic_reconfigure_options(
   cfg/Controller.cfg
@@ -38,7 +37,7 @@ generate_messages(
 
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES ros_copter
+  LIBRARIES roscopter
   CATKIN_DEPENDS roscpp rospy nav_msgs std_msgs
 )
 
@@ -47,31 +46,22 @@ catkin_package(
 ###########
 include_directories(include)
 include_directories(${catkin_INCLUDE_DIRS})
-include_directories(${OpenCV_INCLUDE_DIRS})
 
 ## Declare cpp libraries
-add_library(ros_copter
+add_library(roscopter
   include/lib/eigen.h
   src/lib/eigen.cpp
 )
-add_dependencies(ros_copter rosflight_msgs_generate_messages_cpp)
-target_link_libraries(ros_copter ${catkin_LIBRARIES})
+add_dependencies(roscopter rosflight_msgs_generate_messages_cpp)
+target_link_libraries(roscopter ${catkin_LIBRARIES})
 
 
 ## Declare cpp executables
-add_executable(ekf
-  src/ekf/ekf_node.cpp
-  src/ekf/ekf.cpp
-  include/ekf/ekf.h
-)
-add_dependencies(ekf rosflight_msgs_generate_messages_cpp)
-target_link_libraries(ekf ${catkin_LIBRARIES})
-
 add_executable(controller
   src/controller/controller_node.cpp
   src/controller/controller.cpp
   include/controller/controller.h)
-add_dependencies(controller rosflight_msgs_generate_messages_cpp ros_copter_gencfg)
+add_dependencies(controller rosflight_msgs_generate_messages_cpp roscopter_gencfg)
 target_link_libraries(controller ${catkin_LIBRARIES})
 
 add_executable(mekf

@@ -9,7 +9,7 @@
 #include <tf/tf.h>
 #include <stdint.h>
 #include <dynamic_reconfigure/server.h>
-#include <ros_copter/ControllerConfig.h>
+#include <roscopter/ControllerConfig.h>
 
 namespace controller
 {
@@ -87,9 +87,9 @@ private:
   rosflight_utils::SimplePID PID_psi_;
 
   // Dynamic Reconfigure Hooks
-  dynamic_reconfigure::Server<ros_copter::ControllerConfig> _server;
-  dynamic_reconfigure::Server<ros_copter::ControllerConfig>::CallbackType _func;
-  void reconfigure_callback(ros_copter::ControllerConfig &config, uint32_t level);
+  dynamic_reconfigure::Server<roscopter::ControllerConfig> _server;
+  dynamic_reconfigure::Server<roscopter::ControllerConfig>::CallbackType _func;
+  void reconfigure_callback(roscopter::ControllerConfig &config, uint32_t level);
 
   // Memory for sharing information between functions
   state_t xhat_ = {}; // estimate

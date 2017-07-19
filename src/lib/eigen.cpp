@@ -1,6 +1,6 @@
 #include "lib/eigen.h"
 
-namespace ros_copter
+namespace roscopter
 {
 
 Eigen::MatrixXd N(Eigen::MatrixXd input)
