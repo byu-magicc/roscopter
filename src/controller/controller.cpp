@@ -8,49 +8,21 @@ Controller::Controller() :
   nh_(ros::NodeHandle()),
   nh_private_("~")
 {
-  // retrieve params
-  thrust_eq_= nh_private_.param<double>("equilibrium_thrust", 0.34);
+  // retrieve global MAV params (mass and max thrust)
+  ros::NodeHandle nh_mav(ros::this_node::getNamespace());
+  mass_ = nh_mav.param<double>("mass", 3.81);
+  max_thrust_ = nh_mav.param<double>("max_F", 74.0);
+  drag_constant_ = nh_mav.param<double>("linear_mu", 0.1);
+  thrust_eq_= (9.80665 * mass_) / max_thrust_;
   is_flying_ = false;
 
-  // Set PID Gains
-  double P, I, D, tau;
-  tau = nh_private_.param<double>("tau", 0.05);
-  P = nh_private_.param<double>("u_P", 1.0);
-  I = nh_private_.param<double>("u_I", 1.0);
-  D = nh_private_.param<double>("u_D", 1.0);
-  PID_u_.setGains(P, I, D, tau);
-
-  P = nh_private_.param<double>("v_P", 1.0);
-  I = nh_private_.param<double>("v_I", 1.0);
-  D = nh_private_.param<double>("v_D", 1.0);
-  PID_v_.setGains(P, I, D, tau);
-
-  P = nh_private_.param<double>("x_P", 1.0);
-  I = nh_private_.param<double>("x_I", 1.0);
-  D = nh_private_.param<double>("x_D", 1.0);
-  PID_x_.setGains(P, I, D, tau);
-
-  P = nh_private_.param<double>("y_P", 1.0);
-  I = nh_private_.param<double>("y_I", 1.0);
-  D = nh_private_.param<double>("y_D", 1.0);
-  PID_y_.setGains(P, I, D, tau);
-
-  P = nh_private_.param<double>("z_P", 1.0);
-  I = nh_private_.param<double>("z_I", 1.0);
-  D = nh_private_.param<double>("z_D", 1.0);
-  PID_z_.setGains(P, I, D, tau);
-
-  P = nh_private_.param<double>("psi_P", 1.0);
-  I = nh_private_.param<double>("psi_I", 1.0);
-  D = nh_private_.param<double>("psi_D", 1.0);
-  PID_psi_.setGains(P, I, D, tau);
-
-  max_.roll = nh_private_.param<double>("max_roll", 0.785);
-  max_.pitch = nh_private_.param<double>("max_pitch", 0.785);
-  max_.yaw_rate = nh_private_.param<double>("max_yaw_rate", 3.14159);
+  max_.roll = nh_private_.param<double>("max_roll", 0.15);
+  max_.pitch = nh_private_.param<double>("max_pitch", 0.15);
+  max_.yaw_rate = nh_private_.param<double>("max_yaw_rate", 45.0*M_PI/180.0);
   max_.throttle = nh_private_.param<double>("max_throttle", 1.0);
   max_.u = nh_private_.param<double>("max_u", 1.0);
   max_.v = nh_private_.param<double>("max_v", 1.0);
+  max_.w = nh_private_.param<double>("max_w", 1.0);
 
   _func = boost::bind(&Controller::reconfigure_callback, this, _1, _2);
   _server.setCallback(_func);
@@ -109,7 +81,7 @@ void Controller::stateCallback(const nav_msgs::OdometryConstPtr &msg)
   else
   {
     resetIntegrators();
-    prev_time_ = ros::Time::now().toSec();
+    prev_time_ = msg->header.stamp.toSec();
   }
   }
 
@@ -166,6 +138,11 @@ void Controller::reconfigure_callback(ros_copter::ControllerConfig &config, uint
   D = config.v_D;
   PID_v_.setGains(P, I, D, tau);
 
+  P = config.w_P;
+  I = config.w_I;
+  D = config.w_D;
+  PID_w_.setGains(P, I, D, tau);
+
   P = config.x_P;
   I = config.x_I;
   D = config.x_D;
@@ -192,6 +169,8 @@ void Controller::reconfigure_callback(ros_copter::ControllerConfig &config, uint
   max_.throttle = config.max_throttle;
   max_.u = config.max_u;
   max_.v = config.max_v;
+  max_.w = config.max_w;
+
   ROS_INFO("new gains");
 
   resetIntegrators();
@@ -200,7 +179,7 @@ void Controller::reconfigure_callback(ros_copter::ControllerConfig &config, uint
 
 void Controller::computeControl(double dt)
 {
-  if(dt <= 0.0)
+  if(dt <= 0.0000001)
   {
     // This messes up the derivative calculation in the PID controllers
     return;
@@ -237,30 +216,37 @@ void Controller::computeControl(double dt)
 
   if(mode_flag == rosflight_msgs::Command::MODE_XVEL_YVEL_YAWRATE_ALTITUDE)
   {
-    /// TODO: Maxes are wrong
-    xc_.ax = saturate(PID_u_.computePID(xc_.u, xhat_.u, dt), max_.roll, -max_.roll);
-    xc_.ay = saturate(PID_v_.computePID(xc_.v, xhat_.v, dt), max_.pitch, -max_.pitch);
-    xc_.az = PID_z_.computePID(xc_.pd, xhat_.pd, dt);
+    double max_ax = sin(acos(thrust_eq_));
+    double max_ay = sin(acos(thrust_eq_));
+    xc_.ax = saturate(PID_u_.computePID(xc_.u, xhat_.u, dt) + drag_constant_*xhat_.u /(9.80665 * mass_), max_ax, -max_ax);
+    xc_.ay = saturate(PID_v_.computePID(xc_.v, xhat_.v, dt) + drag_constant_*xhat_.v /(9.80665 * mass_), max_ay, -max_ay);
 
-    // saturate az so that we don't shoot off into the sky if we are too high above our setpoint
-    if(xc_.az > 1.0)
-    {
-        xc_.az = 1.0;
-    }
+    // Nested Loop for Altitude
+    double pddot = -sin(xhat_.theta) * xhat_.u + sin(xhat_.phi)*cos(xhat_.theta)*xhat_.v + cos(xhat_.phi)*cos(xhat_.theta)*xhat_.w;
+    double pddot_c = saturate(PID_w_.computePID(xc_.pd, xhat_.pd, dt, pddot), max_.w, -max_.w);
+    double max_az = (cos(xhat_.phi)*cos(xhat_.theta)) / thrust_eq_;
+    xc_.az = saturate(PID_z_.computePID(pddot_c, pddot, dt), 1.0, -max_az);
     mode_flag = rosflight_msgs::Command::MODE_XACC_YACC_YAWRATE_AZ;
   }
 
   if(mode_flag == rosflight_msgs::Command::MODE_XACC_YACC_YAWRATE_AZ)
   {
     // Model inversion (m[ax;ay;az] = m[0;0;g] + R'[0;0;-T]
-    // This model does not take into account drag.  If drag were being estimated, then we could
-    // perform even better control.  It also tends to pop the MAV up in the air when a large change
+    // This model tends to pop the MAV up in the air when a large change
     // in control is commanded as the MAV rotates to it's commanded attitude while also ramping up throttle.
     // It works quite well, but it is a little oversimplified.
     double total_acc_c = sqrt((1.0-xc_.az)*(1.0-xc_.az) + xc_.ax*xc_.ax + xc_.ay*xc_.ay); // (in g's)
     xc_.throttle = total_acc_c*thrust_eq_; // calculate the total thrust in normalized units
-    xc_.phi = asin(xc_.ay / total_acc_c);
-    xc_.theta = -1.0*asin(xc_.ax / total_acc_c);
+    if (total_acc_c > 0.001)
+    {
+      xc_.phi = asin(xc_.ay / total_acc_c);
+      xc_.theta = -1.0*asin(xc_.ax / total_acc_c);
+    }
+    else
+    {
+      xc_.phi = 0;
+      xc_.theta = 0;
+    }
     mode_flag = rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE;
   }
 
@@ -269,9 +255,9 @@ void Controller::computeControl(double dt)
     // Pack up and send the command
     command_.mode = rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE;
     command_.F = saturate(xc_.throttle, max_.throttle, 0.0);
-    command_.x = xc_.phi;
-    command_.y = xc_.theta;
-    command_.z = xc_.r;
+    command_.x = saturate(xc_.phi, max_.roll, -max_.roll);
+    command_.y = saturate(xc_.theta, max_.pitch, -max_.pitch);
+    command_.z = saturate(xc_.r, max_.yaw_rate, -max_.yaw_rate);
   }
 }
 
@@ -303,3 +289,4 @@ double Controller::sgn(double x)
 }
 
 } // namespace controller
+
