@@ -212,7 +212,7 @@ void Controller::computeControl(double dt)
     xc_.r = saturate(PID_psi_.computePID(xc_.psi, xhat_.psi, dt), max_.yaw_rate, -max_.yaw_rate);
 
     // Rotate into body frame
-    /// TODO: Include pitch and roll in this mapping
+    /// TODO: Include pitch and roll in this mapping  -- This is done now?
     double ctheta = cos(xhat_.theta);
     double stheta = sin(xhat_.theta);
     double cphi = cos(xhat_.phi);
