@@ -59,7 +59,7 @@ protected:
 
 private:
   std::string command_topic_;
-  std::string wind_speed_topic_;
+  std::string wind_topic_;
   std::string attitude_topic_;
   std::string joint_name_;
   std::string link_name_;
@@ -126,19 +126,19 @@ private:
 
   ros::NodeHandle* nh_;
   ros::Subscriber command_sub_;
-  ros::Subscriber wind_speed_sub_;
+  ros::Subscriber wind_sub_;
   ros::Publisher attitude_pub_;
 
   boost::thread callback_queue_thread_;
   void QueueThread();
-  void WindSpeedCallback(const geometry_msgs::Vector3& wind);
+  void WindCallback(const geometry_msgs::Vector3& wind);
   void CommandCallback(const rosflight_msgs::Command msg);
   void ComputeControl(void);
   double sat(double x, double max, double min);
   double max(double x, double y);
 
   std::unique_ptr<FirstOrderFilter<double>>  rotor_velocity_filter_;
-  math::Vector3 W_wind_speed_;
+  math::Vector3 W_wind_;
 };
 }
 

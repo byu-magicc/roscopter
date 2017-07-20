@@ -8,6 +8,7 @@ Author: James Jackson
 -->
 
 <robot name="multirotor" xmlns:xacro="http://ros.org/wiki/xacro">
+
   <!-- Properties -->
   <xacro:property name="namespace" value="multirotor" />
   <xacro:property name="use_mesh_file" value="true" />
@@ -21,6 +22,7 @@ Author: James Jackson
   <xacro:property name="color" value="White" />
 
   <!-- *********************** GAZEBO ROBOT DEFINITION ******************* -->
+
   <link name="${namespace}/base_link">
     <inertial>
       <mass value="${mass}" />  <!-- [kg] -->
@@ -52,8 +54,45 @@ Author: James Jackson
     <material>Gazebo/${color}</material>
   </gazebo>
 
-  <!-- ROSflight SIL Plugin -->
-  <xacro:include filename="$(find rosflight_sim)/xacro/rosflight_sil.xacro"/>
-  <xacro:generic_multirotor namespace="${namespace}" parent_link="${namespace}/base_link"/>
+  <!-- ************************* FORCES AND MOMENTS ********************** -->
+
+  <xacro:include filename="$(find roscopter_sim)/xacro/multirotor_forces_and_moments.xacro"/>
+  <xacro:multirotor_forces_and_moments_macro 
+    namespace="${namespace}" 
+    parent_link="${namespace}/base_link"
+    command_topic="command"
+    wind_topic="wind"
+    />
+
+  <!-- ***************** SENSORS ******************* -->
+
+  <!-- Ground Truth -->
+  <xacro:include filename="$(find rosflight_plugins)/xacro/odometry_sensor.xacro"/>
+  <xacro:odometry_plugin_macro namespace="${namespace}" parent_link="${namespace}/base_link"/>
+
+  <!-- IMU -->
+  <xacro:include filename="$(find rosflight_plugins)/xacro/imu.xacro"/>
+  <xacro:imu_plugin_macro namespace="${namespace}" parent_link="${namespace}/base_link"/>
+
+  <!-- Sonar -->
+  <xacro:include filename="$(find rosflight_plugins)/xacro/sonar.xacro"/>
+  <xacro:Sonar_MB1030
+    namespace="${namespace}"
+    parent_link="${namespace}/base_link"
+    sonar_topic="sonar/data">
+    <origin xyz="0 0 0" rpy="0 1.57 0" />
+  </xacro:Sonar_MB1030>
+
+  <!-- Barometer -->
+  <xacro:include filename="$(find rosflight_plugins)/xacro/barometer.xacro"/>
+  <xacro:barometer_plugin_macro namespace="${namespace}" parent_link="${namespace}/base_link"/>
+
+  <!-- Magnetometer -->
+  <xacro:include filename="$(find rosflight_plugins)/xacro/magnetometer.xacro"/>
+  <xacro:magnetometer_plugin_macro namespace="${namespace}" parent_link="${namespace}/base_link"/>
+
+  <!-- GPS -->
+  <xacro:include filename="$(find rosflight_plugins)/xacro/GPS.xacro"/>
+  <xacro:gps_plugin_macro namespace="${namespace}" parent_link="${namespace}/base_link"/>
 
 </robot>

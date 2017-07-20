@@ -69,7 +69,7 @@ void MultiRotorForcesAndMoments::Load(physics::ModelPtr _model, sdf::ElementPtr 
     gzthrow("[multirotor_forces_and_moments] Couldn't find specified link \"" << link_name_ << "\".");
 
   /* Load Params from Gazebo Server */
-  getSdfParam<std::string>(_sdf, "windSpeedTopic", wind_speed_topic_, "wind");
+  getSdfParam<std::string>(_sdf, "windTopic", wind_topic_, "wind");
   getSdfParam<std::string>(_sdf, "commandTopic", command_topic_, "command");
   getSdfParam<std::string>(_sdf, "attitudeTopic", attitude_topic_, "attitude");
 
@@ -133,7 +133,7 @@ void MultiRotorForcesAndMoments::Load(physics::ModelPtr _model, sdf::ElementPtr 
 
   // Connect Subscribers
   command_sub_ = nh_->subscribe(command_topic_, 1, &MultiRotorForcesAndMoments::CommandCallback, this);
-  wind_speed_sub_ = nh_->subscribe(wind_speed_topic_, 1, &MultiRotorForcesAndMoments::WindSpeedCallback, this);
+  wind_sub_ = nh_->subscribe(wind_topic_, 1, &MultiRotorForcesAndMoments::WindCallback, this);
 
   // Connect Publishers
   attitude_pub_ = nh_->advertise<rosflight_msgs::Attitude>(attitude_topic_, 1);
@@ -151,10 +151,10 @@ void MultiRotorForcesAndMoments::OnUpdate(const common::UpdateInfo& _info) {
   SendForces();
 }
 
-void MultiRotorForcesAndMoments::WindSpeedCallback(const geometry_msgs::Vector3 &wind){
-  W_wind_speed_.x = wind.x;
-  W_wind_speed_.y = wind.y;
-  W_wind_speed_.z = wind.z;
+void MultiRotorForcesAndMoments::WindCallback(const geometry_msgs::Vector3 &wind){
+  W_wind_.x = wind.x;
+  W_wind_.y = wind.y;
+  W_wind_.z = wind.z;
 }
 
 void MultiRotorForcesAndMoments::CommandCallback(const rosflight_msgs::Command msg)
@@ -215,7 +215,7 @@ void MultiRotorForcesAndMoments::UpdateForcesAndMoments()
 
   // wind info is available in the wind_ struct
   // Rotate into body frame and relative velocity
-  math::Vector3 C_wind_speed = W_pose_W_C.rot.RotateVector(W_wind_speed_);
+  math::Vector3 C_wind_speed = W_pose_W_C.rot.RotateVector(W_wind_);
   double ur = u - C_wind_speed.x;
   double vr = v - C_wind_speed.y;
   double wr = w - C_wind_speed.z;

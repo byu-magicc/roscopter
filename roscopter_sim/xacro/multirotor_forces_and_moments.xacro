@@ -8,25 +8,27 @@
       <xacro:multirotor_forces_and_moments_macro
         namespace="${namespace}"
         parent_link="${namespace}/base_link"
-        wind_speed_topic="gazebo/wind_speed"
-        command_topic="${command_topic}"
-        parent_frame_id="${parent_link}"/>
+        wind_topic="gazebo/wind"
+        command_topic="${command_topic}"/>
     </xacro:macro>
 
 
   <!-- Macro to add a generic multirotor forces and moments plugin. -->
   <xacro:macro name="multirotor_forces_and_moments_macro"
     params="
-        namespace parent_link wind_speed_topic command_topic parent_frame_id">
+        namespace 
+        parent_link 
+        wind_topic 
+        command_topic 
+        ">
 
     <!-- plugin -->
     <gazebo>
       <plugin filename="libmultirotor_forces_and_moments_plugin.so" name="multirotor_forces_and_moments">
-        <linkName>${parent_link}</linkName>
         <namespace>${namespace}</namespace>
-        <windSpeedTopic>${wind_speed_topic}</windSpeedTopic>
+        <linkName>${parent_link}</linkName>
+        <windTopic>${wind_topic}</windTopic>
         <commandTopic>${command_topic}</commandTopic>
-        <parentFrameId>${parent_frame_id}</parentFrameId>
       </plugin>
     </gazebo>
   </xacro:macro>

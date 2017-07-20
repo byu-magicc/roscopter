@@ -34,26 +34,53 @@ alt_D: 32.0
 ground_altitude: 1387  #Default in Provo, UT (4551 ft)
 
 # Sensor Noise Parameters
-gyro_stdev: 0.13
-gyro_bias_range:  0.15
-gyro_bias_walk_stdev: 0.0002
 
-acc_stdev: 1.15
-acc_bias_range: 0.15
-acc_bias_walk_stdev: 0.0002
+# Odometry (Ground Truth)
+transform_topic: ground_truth/transform
+odometry_topic: ground_truth/odometry
 
-baro_stdev: 4.0
-baro_bias_range: 500
-baro_bias_walk_stdev: 0.1
+# IMU
+imu_noise_on: true
+imu_topic: imu/data
+imu_rate: 500
+gyro_bias_topic: imu/gyro_bias
+gyro_stdev: 0.005
+gyro_bias_range: 0.05
+gyro_bias_walk_stdev: 0.001
+acc_bias_topic: imu/acc_bias
+acc_stdev: 0.05
+acc_bias_range: 0.1
+acc_bias_walk_stdev: 0.001
 
-sonar_stdev: 0.03
-sonar_min_range: 0.25
-sonar_max_range: 8.0
+# Barometer
+baro_noise_on: true
+baro_topic: baro/data
+baro_rate: 50.0
+baro_stdev: 0.1
 
-airspeed_stdev: 1.15
-airspeed_bias_range: 0.15
-airspeed_bias_walk_stdev: 0.001
+# Sonar
+# this is still implemented the old way, we need to write a custom plugin to use the ROS parameter server like the others
 
-mag_stdev: 1.15
-mag_bias_range: 0.15
-mag_bias_walk_stdev: 0.001
+# Magnetometer
+mag_noise_on: true
+mag_rate: 100.0
+mag_topic: mag/data
+mag_stdev: 0.02
+mag_bias_range: 0.02
+mag_declination: 0.198584539676
+mag_inclination: 1.14316156541
+
+# GPS
+gps_noise_on: true
+gps_rate: 10.0
+gps_topic: gps/data
+gps_north_stdev: 0.21
+gps_east_stdev: 0.21
+gps_alt_stdev: 0.40
+gps_k_north: 0.0009090909 # 1/1100
+gps_k_east: 0.0009090909 # 1/1100
+gps_k_alt: 0.0009090909 # 1/1100
+gps_initial_latitude: 40.267320
+gps_initial_longitude: -111.635629
+gps_initial_altitude: 1387.0
+gps_num_sats: 7
