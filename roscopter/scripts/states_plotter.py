@@ -6,6 +6,7 @@ import pyqtgraph as pg
 from std_msgs.msg import Float64
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu
+from geometry_msgs.msg import Vector3Stamped
 
 # Enable antialiasing for prettier plots
 pg.setConfigOptions(antialias=True)
@@ -25,7 +26,9 @@ class Plotter:
         rospy.Subscriber('estimate/bias', Imu, self.biasCallback)
         rospy.Subscriber('estimate/drag', Float64, self.dragCallback)
         rospy.Subscriber('estimate/accel', Imu, self.accelCallback)
-        rospy.Subscriber('ground_truth/odometry', Odometry, self.truthCallback)
+        rospy.Subscriber('ground_truth/odometry/NED', Odometry, self.truthCallback)
+        rospy.Subscriber('imu/gyro_bias', Vector3Stamped, self.gyroBiasCallback)
+        rospy.Subscriber('imu/acc_bias', Vector3Stamped, self.accBiasCallback)
 
         # initialize Qt gui application and window
         self.app = pg.QtGui.QApplication([])
@@ -296,7 +299,6 @@ class Plotter:
             self.init_time = False
         self.time_e = msg.header.stamp.to_sec() - self.time0
 
-
     def biasCallback(self, msg):
         self.gx_e = msg.angular_velocity.x
         self.gy_e = msg.angular_velocity.y
@@ -304,6 +306,16 @@ class Plotter:
         self.ax_e = msg.linear_acceleration.x
         self.ay_e = msg.linear_acceleration.y
         self.az_e = msg.linear_acceleration.z
+
+    def gyroBiasCallback(self, msg):
+        self.gx_t = msg.vector.x
+        self.gy_t = msg.vector.y
+        self.gz_t = msg.vector.z
+
+    def accBiasCallback(self, msg):
+        self.ax_t = msg.vector.x
+        self.ay_t = msg.vector.y
+        self.az_t = msg.vector.z
 
     def dragCallback(self, msg):
         self.mu_e = msg.data

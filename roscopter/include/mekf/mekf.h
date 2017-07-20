@@ -69,8 +69,7 @@ public:
 private:
 
 	// node handles, publishers, subscribers
-	ros::NodeHandle nh_;
-	ros::NodeHandle nh_private_;
+	ros::NodeHandle nh_, nh_private_;
 
 	// publishers and subscribers
 	ros::Subscriber imu_sub_;
@@ -106,7 +105,6 @@ private:
 	Eigen::Matrix3d I3_, M_;
 	Eigen::Matrix<double, 2, 3> I23_;
 
-	int N_;
 	bool flying_, first_gps_msg_;
 	double delta_d_;
 	double gyro_x_, gyro_y_, gyro_z_, acc_x_, acc_y_, acc_z_;

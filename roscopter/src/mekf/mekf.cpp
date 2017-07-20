@@ -9,11 +9,10 @@ namespace mekf
 
 kalmanFilter::kalmanFilter() :
 	nh_(ros::NodeHandle()),
-	nh_private_(ros::NodeHandle("~/mekf"))
+	nh_private_(ros::NodeHandle("mekf"))
 {
 	// retrieve params
 	nh_private_.param<double>("declination", delta_d_, 0);
-	nh_private_.param<int>("euler_integration_steps", N_, 20);
 
 	roscopter::importMatrixFromParamServer(nh_private_, p_, "p0");
 	roscopter::importMatrixFromParamServer(nh_private_, v_, "v0");
@@ -35,12 +34,12 @@ kalmanFilter::kalmanFilter() :
 	nh_private_.param<double>("Rmag", R_mag_, 0.05);
 
 	// setup publishers and subscribers
-	imu_sub_ = nh_.subscribe("imu/data", 1, &kalmanFilter::imuCallback, this);
-	baro_sub_ = nh_.subscribe("baro", 1, &kalmanFilter::baroCallback, this);
+	imu_sub_   = nh_.subscribe("imu/data", 1, &kalmanFilter::imuCallback, this);
+	baro_sub_  = nh_.subscribe("baro/data", 1, &kalmanFilter::baroCallback, this);
 	sonar_sub_ = nh_.subscribe("sonar/data", 1, &kalmanFilter::sonarCallback, this);
-	mag_sub_ = nh_.subscribe("magnetometer", 1, &kalmanFilter::magCallback, this);
-	gps_sub_ = nh_.subscribe("gps/data", 1, &kalmanFilter::gpsCallback, this);
-	att_sub_ = nh_.subscribe("attitude", 1, &kalmanFilter::attitudeCallback, this);
+	mag_sub_   = nh_.subscribe("mag/data", 1, &kalmanFilter::magCallback, this);
+	gps_sub_   = nh_.subscribe("gps/data", 1, &kalmanFilter::gpsCallback, this);
+	// att_sub_   = nh_.subscribe("attitude", 1, &kalmanFilter::attitudeCallback, this);
 
 	estimate_pub_  = nh_.advertise<nav_msgs::Odometry>("estimate", 1);
 	bias_pub_      = nh_.advertise<sensor_msgs::Imu>("estimate/bias", 1);
@@ -106,10 +105,11 @@ void kalmanFilter::predictStep()
 	double dt = (current_time_-previous_time_).toSec();
 
 	// propagate the state estimate and error state covariance via Euler integration
-	for (unsigned i = 0; i < N_; i++)
+	int N = 10;
+	for (unsigned i = 0; i < N; i++)
 	{
 		// propagate states
-		Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x = f() * (dt / N_);
+		Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x = f() * (dt / N);
 		p_ += delta_x.segment(dPN,3);
 		q_ = q_ * mekf_math::exp_q(delta_x.segment(dPHI,3));
 		v_ += delta_x.segment(dU,3);
@@ -117,7 +117,7 @@ void kalmanFilter::predictStep()
 		// propagate covariance
 		Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> F = dfdx();
 		Eigen::Matrix<double, NUM_ERROR_STATES, 6> G = dfdu();
-		P_ += (dt / N_) * (F * P_ + P_ * F.transpose() + G * Qu_ * G.transpose() + Qx_);
+		P_ += (dt / N) * (F * P_ + P_ * F.transpose() + G * Qu_ * G.transpose() + Qx_);
 	}
 
 	// store time for time step computation on the next iteration

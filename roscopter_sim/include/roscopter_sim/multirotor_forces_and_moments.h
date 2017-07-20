@@ -125,6 +125,7 @@ private:
   double prev_sim_time_;
 
   ros::NodeHandle* nh_;
+  ros::NodeHandle nh_private_;
   ros::Subscriber command_sub_;
   ros::Subscriber wind_sub_;
   ros::Publisher attitude_pub_;
