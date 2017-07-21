@@ -8,21 +8,21 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release")
 endif()
 
+set(CMAKE_CXX_FLAGS "-fopenmp")
+
 # To enable assertions when compiled in release mode.
 add_definitions(-DROS_ASSERT_ENABLED)
 
 find_package(catkin REQUIRED COMPONENTS
-  cmake_modules
-  geometry_msgs
   roscpp
-  std_srvs
   tf
   rosflight_msgs
   rosflight_utils
-  sensor_msgs
   std_msgs
-  tf2_ros
   nav_msgs
+  geometry_msgs
+  sensor_msgs
+  std_srvs
   gazebo_ros
   gazebo_plugins
 )
@@ -32,21 +32,21 @@ find_package(gazebo REQUIRED)
 link_directories(${GAZEBO_LIBRARY_DIRS})
 
 catkin_package(
-  INCLUDE_DIRS include ${Eigen_INCLUDE_DIRS}
-  CATKIN_DEPENDS geometry_msgs roscpp std_srvs tf gazebo_plugins gazebo_ros tf2_ros std_msgs nav_msgs sensor_msgs
-  DEPENDS eigen gazebo opencv rosflight_msgs SDF roscpp gazebo_ros
+  INCLUDE_DIRS include ${EIGEN3_INCLUDE_DIRS}
+  CATKIN_DEPENDS roscpp tf rosflight_msgs rosflight_utils std_msgs nav_msgs geometry_msgs sensor_msgs std_srvs gazebo_ros gazebo_plugins
+  DEPENDS EIGEN3 GAZEBO
 )
 
 include_directories(
   include 
   ${catkin_INCLUDE_DIRS}
-  ${Eigen_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIRS}
   ${GAZEBO_INCLUDE_DIRS}
 )
 
 add_library(multirotor_forces_and_moments_plugin src/multirotor_forces_and_moments.cpp)
 target_link_libraries(multirotor_forces_and_moments_plugin ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES})
-add_dependencies(multirotor_forces_and_moments_plugin ${catkin_EXPORTED_TARGETS} rosflight_msgs_generate_messages_cpp)
+add_dependencies(multirotor_forces_and_moments_plugin ${catkin_EXPORTED_TARGETS})
 
 install(
   TARGETS
