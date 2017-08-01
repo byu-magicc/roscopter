@@ -29,7 +29,7 @@ class VelocityCommander:
         self.delay_time = 5
 
         # Init Publishers
-        self.high_lvl_commands_pub = rospy.Publisher('/mikey/high_level_command', Command, queue_size=10)
+        self.high_lvl_commands_pub = rospy.Publisher('/leo/velocity_command', Command, queue_size=10)
 
         # Init the command
         self.relative_cmd = Command()

@@ -22,6 +22,7 @@
 #include <rosflight_msgs/GPS.h>
 #include <rosflight_msgs/Barometer.h>
 #include <rosflight_msgs/Attitude.h>
+#include <rosflight_msgs/Status.h>
 
 #include <mekf/mekf_math.h>
 
@@ -78,6 +79,7 @@ private:
 	ros::Subscriber att_sub_;
 	ros::Subscriber baro_sub_;
 	ros::Subscriber sonar_sub_;
+        ros::Subscriber status_sub_;
 
 	ros::Publisher estimate_pub_;
 	ros::Publisher bias_pub_;
@@ -112,6 +114,8 @@ private:
 
 	ros::Time current_time_, previous_time_;
 
+        bool armed_;
+
 
 	// functions
 	void predictStep();
@@ -125,6 +129,7 @@ private:
 	void magCallback(const sensor_msgs::MagneticField msg);
 	void gpsCallback(const rosflight_msgs::GPS msg);
 	void attitudeCallback(const rosflight_msgs::Attitude msg);
+        void statusCallback(const rosflight_msgs::Status msg);
 
 	Eigen::Matrix<double, NUM_ERROR_STATES, 1> f();
 	Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> dfdx();

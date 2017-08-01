@@ -224,8 +224,8 @@ void Controller::computeControl(double dt)
     // Nested Loop for Altitude
     double pddot = -sin(xhat_.theta) * xhat_.u + sin(xhat_.phi)*cos(xhat_.theta)*xhat_.v + cos(xhat_.phi)*cos(xhat_.theta)*xhat_.w;
     double pddot_c = saturate(PID_w_.computePID(xc_.pd, xhat_.pd, dt, pddot), max_.w, -max_.w);
-    double max_az = (cos(xhat_.phi)*cos(xhat_.theta)) / thrust_eq_;
-    xc_.az = saturate(PID_z_.computePID(pddot_c, pddot, dt), 1.0, -max_az);
+    xc_.az = PID_z_.computePID(pddot_c, pddot, dt);
+    ROS_INFO("pddot = %f, pddot_c = %f, az_c = %f", pddot, pddot_c, xc_.az);
     mode_flag = rosflight_msgs::Command::MODE_XACC_YACC_YAWRATE_AZ;
   }
 
@@ -236,7 +236,7 @@ void Controller::computeControl(double dt)
     // in control is commanded as the MAV rotates to it's commanded attitude while also ramping up throttle.
     // It works quite well, but it is a little oversimplified.
     double total_acc_c = sqrt((1.0-xc_.az)*(1.0-xc_.az) + xc_.ax*xc_.ax + xc_.ay*xc_.ay); // (in g's)
-    xc_.throttle = total_acc_c*thrust_eq_; // calculate the total thrust in normalized units
+    ROS_INFO("total_acc = %f", total_acc_c);
     if (total_acc_c > 0.001)
     {
       xc_.phi = asin(xc_.ay / total_acc_c);
@@ -247,6 +247,15 @@ void Controller::computeControl(double dt)
       xc_.phi = 0;
       xc_.theta = 0;
     }
+
+    // Calculate actual throttle (saturate az to be falling at 1 g)
+    double max_az = 1.0 / thrust_eq_;
+    xc_.az = saturate(xc_.az, 1.0, -max_az);
+    total_acc_c = sqrt((1.0-xc_.az)*(1.0-xc_.az) + xc_.ax*xc_.ax + xc_.ay*xc_.ay); // (in g's)
+    xc_.throttle = total_acc_c*thrust_eq_; // calculate the total thrust in normalized units
+
+    ROS_INFO("xc_.az = %f, max_az = %f, total_acc_c = %f, throttle = %f", xc_.az, max_az, total_acc_c, xc_.throttle);
+
     mode_flag = rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE;
   }
 
