@@ -1,0 +1,217 @@
+### Waypoints ###
+
+waypoint_manager: {
+
+waypoints:
+ [[0, 0, -2, 0],
+ [5, 5, -2, 0],
+ [-1.4, 2.7, -2, 0],
+ [-2.6, -4.3, -2, 0],
+ [2.7, -2.7, -2, 0]],
+
+threshold: 1,
+cyle: True
+
+}
+
+### Controller Parameters
+
+controller: {
+
+u_P: 0.3,
+u_I: 0.0,
+u_D: 0.1,
+
+v_P: 0.3,
+v_I: 0.0,
+v_D: 0.1,
+
+w_P: 0.3,
+w_I: 0.0,
+w_D: 0.0,
+
+x_P: 0.45,
+x_I: 0.0,
+x_D: 0.1,
+
+y_P: 0.45,
+y_I: 0.0,
+y_D: 0.1,
+
+z_P: 0.75,
+z_I: 0.2,
+z_D: 0.1,
+
+psi_P: 1.0,
+psi_I: 0.0,
+psi_D: 0.0,
+
+tau: 0.05,
+
+equilibrium_thrust: 0.68,
+
+max_roll: 0.785,
+max_pitch: 0.785,
+max_yaw_rate: 1.507,
+max_throttle: 1.0,
+max_u: 2.0,
+max_v: 2.0,
+max_w: 2.0
+
+}
+
+### Estimator Parameters ###
+
+mekf: {
+
+p0: [0,  # PN
+     0,  # PE
+     0], # PD
+
+q0: [1,  # QW
+     0,  # QX
+     0,  # QY
+     0], # QZ
+
+v0: [0,  # U
+     0,  # V
+     0], # W
+
+bg0: [0,  # GX
+      0,  # GY
+      0], # GZ
+
+ba0: [0,  # AX
+      0,  # AY
+      0], # AZ
+
+mu0: 0.06, # MU
+
+P0: [0.0000000001,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dPN
+     0.0000000001,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dPE
+     0.0000000001,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dPD
+     0.0000000001,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dPHI
+     0.0000000001,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dTHETA
+     0.0000000001,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dPSI
+     0.0000000001,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dU
+     0.0000000001,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dV
+     0.0000000001,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dW
+     0.0010000000,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dGX
+     0.0010000000,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dGY
+     0.0010000000,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dGZ
+     0.0010000000,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dAX
+     0.0010000000,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dAY
+     0.0010000000,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dAZ
+     0.0000000000],                                   # dMU
+
+Qx: [0.0000000001,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dPN
+     0.0000000001,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dPE
+     0.0000000001,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dPD
+     0.0000000001,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dPHI
+     0.0000000001,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dTHETA
+     0.0000000001,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dPSI
+     0.0000000001,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dU
+     0.0000000001,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dV
+     0.0000000001,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dW
+     0.0000010000,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dGX
+     0.0000010000,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dGY
+     0.0000010000,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dGZ
+     0.0000010000,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dAX
+     0.0000010000,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dAY
+     0.0000010000,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  # dAZ
+     0.0000000000],                                   # dMU
+
+Qu: [0.000025,  0,0,0,0,0,0,  # GYRO_X
+     0.000025,  0,0,0,0,0,0,  # GYRO_Y
+     0.000025,  0,0,0,0,0,0,  # GYRO_Z
+     0.002500,  0,0,0,0,0,0,  # ACCEL_X
+     0.002500,  0,0,0,0,0,0,  # ACCEL_Y
+     0.002500],               # ACCEL_Z
+
+Rsonar: 0.01, # SONAR VARIANCE
+
+Rbaro: 0.01, # BAROMETER VARIANCE
+
+Rmag: 0.0004, # MAGNETOMETER VARIANCE
+
+Rgps: [0.000441, 0,0,  # PN
+       0.000441],      # PE
+
+Ratt: [0.0001, 0,0,   # PHI
+       0.0001],       # THETA
+
+declination: 0.198584539676  # MAGNETIC DECLINATION (PROVO, UT)
+
+}
+
+### Sensor Parameters ###
+
+# Odometry (Ground Truth)
+odometry: {
+
+transform_topic: ground_truth/transform,
+odometry_topic: ground_truth/odometry
+
+}
+
+# IMU
+imu: {
+
+noise_on: true,
+topic: imu/data,
+rate: 500,
+gyro_bias_topic: imu/gyro_bias,
+gyro_stdev: 0.005,
+gyro_bias_range: 0.005,
+gyro_bias_walk_stdev: 0.0001,
+acc_bias_topic: imu/acc_bias,
+acc_stdev: 0.05,
+acc_bias_range: 0.01,
+acc_bias_walk_stdev: 0.0001
+
+}
+
+# Barometer
+barometer: {
+
+noise_on: true,
+topic: baro/data,
+rate: 50.0,
+stdev: 0.1
+
+}
+
+# Sonar
+# this is still implemented the old way, we need to write a custom plugin to use the ROS parameter server like the others
+
+# Magnetometer
+magnetometer: {
+
+noise_on: true,
+rate: 100.0,
+topic: mag/data,
+stdev: 0.02,
+bias_range: 0.0,
+declination: 0.198584539676,
+inclination: 1.14316156541
+
+}
+
+# GPS
+gps: {
+
+noise_on: true,
+rate: 10.0,
+topic: gps/data,
+north_stdev: 0.021,
+east_stdev: 0.021,
+alt_stdev: 0.040,
+k_north: 0.0009090909, # 1/1100
+k_east: 0.0009090909, # 1/1100
+k_alt: 0.0009090909, # 1/1100
+initial_latitude: 40.267320,
+initial_longitude: -111.635629,
+initial_altitude: 1387.0,
+num_sats: 7
+
+}

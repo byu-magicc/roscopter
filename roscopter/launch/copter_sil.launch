@@ -1,0 +1,43 @@
+<launch>
+
+  <!-- Simulation -->
+  <include file="$(find rosflight_sim)/launch/base.launch">
+    <arg name="mav_name" value="multirotor"/>
+    <arg name="world_file" value="$(find leo_sim)/worlds/light_sim.world"/>
+  </include>
+
+  <!-- FCU communication -->
+  <node name="rosflight_io" pkg="rosflight" type="rosflight_io" output="screen">
+    <param name="udp" value="true"/>
+  </node>
+
+  <!-- Load roscopter Parameters -->
+  <rosparam command="load" file="$(find roscopter)/params/multirotor.yaml"/>
+
+  <!-- Estimator -->
+  <node name="mekf" pkg="roscopter" type="mekf" output="screen"/>
+
+
+  <!-- RC -->
+  <node name="rc_joy" pkg="rosflight_joy" type="rc_joy">
+    <remap from="RC" to="multirotor/RC"/>
+  </node>
+
+  <!-- Control -->
+  <node name="controller" pkg="roscopter" type="controller" output="screen">
+    <remap from="estimate" to="multirotor/truth/NED"/>
+  </node>
+
+  <!-- Waypoint Management -->
+  <node name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py">
+    <!-- <remap from="state" to="estimate"/> -->
+    <remap from="state" to="multirotor/truth/NED"/>
+  </node>
+
+  <!-- plot states -->
+  <!-- <node pkg="roscopter" type="states_plotter.py" name="states_plotter" output="screen">
+    <param name="time_window" value="10.0"/>
+    <remap from="ground_truth/odometry/NED" to="multirotor/truth/NED"/>
+  </node> -->
+
+</launch>
