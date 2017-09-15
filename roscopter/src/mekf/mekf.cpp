@@ -364,6 +364,12 @@ void kalmanFilter::magCallback(const sensor_msgs::MagneticField msg)
     // compute measurement error
     double r = y_mag - h_mag;
 
+    // wrap heading measurement
+    while (r > PI)
+      r = r - 2 * PI;
+    while (r < -PI)
+      r = r + 2 * PI;
+
     // compute delta_x
     Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x = K * r;
 
