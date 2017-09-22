@@ -56,15 +56,15 @@ controller: {
 
 u_P: 0.3,
 u_I: 0.0,
-u_D: 0.01,
+u_D: 0.05,
 
 v_P: 0.3,
 v_I: 0.0,
-v_D: 0.0,
+v_D: 0.05,
 
-w_P: 0.3,
+w_P: 4.0,
 w_I: 0.1,
-w_D: 0.45,
+w_D: 1.0,
 
 x_P: 0.4,
 x_I: 0.0,
@@ -84,15 +84,15 @@ psi_D: 0.0,
 
 tau: 0.05,
 
-equilibrium_thrust: 0.68,
+equilibrium_thrust: 0.5,
 
-max_roll: 0.785,
-max_pitch: 0.785,
-max_yaw_rate: 1.507,
-max_throttle: 1.0,
-max_u: 2.0,
-max_v: 2.0,
-max_w: 2.0
+max_roll: 0.196,
+max_pitch: 0.196,
+max_yaw_rate: 0.785,
+max_throttle: 0.85,
+max_u: 1.5,
+max_v: 1.5,
+max_w: 1.25
 
 }
 
