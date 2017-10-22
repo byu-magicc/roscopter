@@ -1,27 +1,30 @@
-# ROScopter
+ROScopter
+=========
 
-This is intended to eventually be a fully-featured multirotor autopilot for ROS.  It will be built according to the method published in [Quadrotor Dynamics and Control](http://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=2324&context=facpub), so as to allow anyone to easily understand, modify and use the code.  The framework developed in the afore mentioned reference closely resembles the fixed wing framework developed in Small Unmanned Aircraft by Beard and McLain.  This framework is inherently modular and extensively documented so as to aid the user in understanding and extending for personal use.
+This repository contains the ROS packages associated with flying a multirotor on the [ROSflight](rosflight.org) autopilot stack. The `roscopter` ROS package contains a high-level multirotor autopilot while the `roscopter_sim` package is used for simulation. 
 
-The package is intended to be used with rosflight\_io or roscopter\_sim, for hardware with a naze32 or spracingf3 (or derivatives) or simulation, respectively.
+The `roscopter` autopilot has been built with reference to Dr. Randy Beard's [Quadrotor Dynamics and Control](http://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=2324&context=facpub) notes, so as to allow anyone to easily understand, modify and use the code. The framework developed in the aforementioned reference closely resembles the fixed-wing framework developed in *Small Unmanned Aircraft* by Beard and McLain. This framework is inherently modular and extensively documented so as to aid the user in understanding and extending for personal use.
 
-It is a single ROS package, with several nodes.
+## Getting Started ##
 
-# - EKF
+Once you have cloned this repo and the [ROSflight_plugins](github.com/byu-magicc/rosflight_plugins) repo into `catkin_ws/src`, you can run the Gazebo simulator with
 
-The ekf package contains a standard mekf, as defined mostly in the way in the reference above.  We are probably going to release a new version of the Quadrotor Dynamics and Control to resemble more closely the modeling in this node.  We are estimating position, velocity, and attitude as well as accelerometer biases, velocities are body fixed, and the accelerometer biases allow for better estimation and control long term.   The model and jacobians are defined explicitly in the doc/ekf_jacobians.pdf document
+```bash
+$ catkin_make
+$ source devel/setup.bash
+$ roslaunch roscopter_sim multirotor.launch
+```
 
-# - PID Controller
+## Core Autopilot Components ##
 
-To be implemented (will be general PID control as defined in the reference above)
+### MEKF ###
 
-# - Path Planner
+A Multiplicative Extended Kalman Filter (MEKF) is used for state estimation using ROSflight attitude estimates as measurements. See *Derivation of the Relative Multiplicative Kalman Filter* by David Wheeler and Daniel Koch for more information.
 
-To be implemented (will probably use an RRT-based planner, with knowledge of the environment)
+### Controller ###
 
-# - Path Follower
+A PID controller is used.
 
-To be implemented (will use a waypoint-following technique as described in the UAS book)
+### Waypoint Manager ###
 
-# - Monocular Visual Odometry
-
-May or may not implement.  This likely is better done by SVO, and if so, we will just make sure it integrates well with our stuff.
+Velocity manager and commander.

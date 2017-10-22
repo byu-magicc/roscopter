@@ -1,8 +1,4 @@
-<!-- multirotor.launch - Author: James Jackson - BYU - 2016 -->
-<!-- This is a launch file that runs the bare minimum requirements to get -->
-<!-- gazebo running with a multirotor. This launch file is meant for when -->
-<!-- rosflight_sil is not active -->
-
+<?xml version="1.0"?>
 <launch>
   <arg name="mav_name"            default="multirotor"/>
   <arg name="color"               default="White"/>

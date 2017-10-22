@@ -34,13 +34,13 @@ kalmanFilter::kalmanFilter() :
   nh_private_.param<double>("Rmag", R_mag_, 0.05);
 
   // setup publishers and subscribers
-  imu_sub_   = nh_.subscribe("imu/data", 1, &kalmanFilter::imuCallback, this);
-  baro_sub_  = nh_.subscribe("baro", 1, &kalmanFilter::baroCallback, this);
-  sonar_sub_ = nh_.subscribe("sonar", 1, &kalmanFilter::sonarCallback, this);
-  mag_sub_   = nh_.subscribe("magnetometer", 1, &kalmanFilter::magCallback, this);
-  gps_sub_   = nh_.subscribe("gps/data", 1, &kalmanFilter::gpsCallback, this);
-  status_sub_   = nh_.subscribe("status", 1, &kalmanFilter::statusCallback, this);
-  // att_sub_   = nh_.subscribe("attitude", 1, &kalmanFilter::attitudeCallback, this);
+  imu_sub_    = nh_.subscribe("imu/data", 1, &kalmanFilter::imuCallback, this);
+  baro_sub_   = nh_.subscribe("baro", 1, &kalmanFilter::baroCallback, this);
+  sonar_sub_  = nh_.subscribe("sonar", 1, &kalmanFilter::sonarCallback, this);
+  mag_sub_    = nh_.subscribe("magnetometer", 1, &kalmanFilter::magCallback, this);
+  gps_sub_    = nh_.subscribe("gps/data", 1, &kalmanFilter::gpsCallback, this);
+  status_sub_ = nh_.subscribe("status", 1, &kalmanFilter::statusCallback, this);
+  // att_sub_    = nh_.subscribe("attitude", 1, &kalmanFilter::attitudeCallback, this);
 
   estimate_pub_  = nh_.advertise<nav_msgs::Odometry>("estimate", 1);
   bias_pub_      = nh_.advertise<sensor_msgs::Imu>("estimate/bias", 1);
