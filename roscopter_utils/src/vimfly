@@ -1,0 +1,169 @@
+#!/usr/bin/env python
+"""
+vimfly - vim keybindings for your multirotor!
+
+Teleoperated flying from your keyboard. Command u, v, psidot, and altitude.
+
+The following keybindings are used:
+    - a: lower altitude
+    - s: higher altitude
+    - d: CCW (-psidot)
+    - f: CW (+psidot)
+    - h: Left (-v)
+    - j: Backward (-u)
+    - k: Forward (+u)
+    - l: Right (+v)
+
+Connect to rosflight_io command topic (SIL/HW) or roscopter_sim Gazebo command
+topic.
+
+
+https://xkcd.com/1823/
+"""
+import pygame
+import rospy
+from rosflight_msgs.msg import Command
+
+
+class VimFly:
+    def __init__(self):
+
+        # initialize pygame display
+        pygame.init()
+        pygame.display.set_caption('vimfly')
+        self.screen = pygame.display.set_mode((550, 200))
+        self.font = pygame.font.SysFont("monospace", 18)
+
+        # Autopilot commands for HW, SIL, or roscopter_sim
+        self.autopilot_cmd_pub = rospy.Publisher('autopilot_command', Command, queue_size=10)
+
+        # retrieve vimfly parameters from the rosparam server
+        self.params = {
+            'u_cmd': rospy.get_param('~u_cmd', 2.0),
+            'v_cmd': rospy.get_param('~v_cmd', 2.0),
+            'psidot_cmd': rospy.get_param('~psidot_cmd', 3.14159),
+            'altitude_cmd': rospy.get_param('~alt_start', -1.0), # start at this altitude
+            'altitude_step': rospy.get_param('~alt_step', 0.1), # each step inc/dec by this amount
+        }
+
+        # Allow continuous holding of altitude keys without growing too big
+        self.alt_debouncing = False
+        self.ALT_DEBOUNCE_THRESHOLD = 0.100
+
+        # Send commands 'til I die
+        self.run()
+
+
+    def run(self):
+        rate = rospy.Rate(30)
+        while not rospy.is_shutdown():
+
+            # initialize command message
+            msg = Command()
+            msg.mode = Command.MODE_XVEL_YVEL_YAWRATE_ALTITUDE
+
+            keys = pygame.key.get_pressed()
+
+            # LEFT -- h
+            if keys[pygame.K_h]:
+                msg.y = -self.params['v_cmd']
+
+            # RIGHT -- l
+            elif keys[pygame.K_l]:
+                msg.y = self.params['v_cmd']
+
+            else:
+                msg.y = 0
+
+
+            # FORWARD -- k
+            if keys[pygame.K_k]:
+                msg.x = self.params['u_cmd']
+
+            # BACKWARD -- j
+            elif keys[pygame.K_j]:
+                msg.x = -self.params['u_cmd']
+
+            else:
+                msg.x = 0
+
+
+            # CCW -- d
+            if keys[pygame.K_d]:
+                msg.z = -self.params['psidot_cmd']
+
+            # CW -- f
+            elif keys[pygame.K_f]:
+                msg.z = self.params['psidot_cmd']
+
+            else:
+                msg.z = 0
+
+
+            # LOWER -- a  //  HIGHER -- s
+            if keys[pygame.K_a] or keys[pygame.K_s]:
+                if not self.alt_debouncing:
+                    self.alt_debouncing = True
+                    self.alt_start_time = rospy.get_time()
+
+                if (rospy.get_time() - self.alt_start_time) > self.ALT_DEBOUNCE_THRESHOLD:
+                    
+                    # The key has been debounced once, start the process over!
+                    self.alt_debouncing = False
+
+                    # Increment the commanded altitude
+                    if keys[pygame.K_a]:
+                        self.params['altitude_cmd'] += self.params['altitude_step']
+
+                    elif keys[pygame.K_s]:
+                        self.params['altitude_cmd'] -= self.params['altitude_step']
+
+            else:
+                self.alt_debouncing = False
+
+
+            # Always send an altitude command -- we don't want to drop like a brick!
+            msg.F = self.params['altitude_cmd']
+            self.autopilot_cmd_pub.publish(msg)
+
+            # Update the display with the current commands
+            self.update_display(msg)
+
+            # process event queue and throttle the while loop
+            pygame.event.pump()
+            rate.sleep()
+
+
+    def update_display(self, msg):
+        self.display_help()
+
+        msgText = "u: {}, v: {}, psidot: {}, alt: {}".format(msg.x, msg.y, msg.z, msg.F)
+        self.render(msgText, (0,140))
+        
+        pygame.display.flip()
+
+
+    def display_help(self):
+        self.screen.fill((0,0,0))
+
+        LINE=20
+
+        self.render("vimfly keybindings:", (0,0))
+        self.render("- a: lower altitude", (0,1*LINE)); self.render("- h: Left (-v)", (250,1*LINE))
+        self.render("- s: higher altitude", (0,2*LINE)); self.render("- j: Backward (-u)", (250,2*LINE))
+        self.render("- d: CCW (-psidot)", (0,3*LINE)); self.render("- k: Forward (+u)", (250,3*LINE))
+        self.render("- f: CW (+psidot)", (0,4*LINE)); self.render("- l: Right (+v)", (250,4*LINE))
+
+
+    def render(self, text, loc):
+        txt = self.font.render(text, 1, (255,255,255))
+        self.screen.blit(txt, loc)
+
+
+
+if __name__ == '__main__':
+    rospy.init_node('vimfly', anonymous=False)
+    try:
+        teleop = VimFly()
+    except rospy.ROSInterruptException:
+        pass
