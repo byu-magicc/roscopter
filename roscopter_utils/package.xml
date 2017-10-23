@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>roscopter_utils</name>
+  <version>0.0.0</version>
+  <description>Utilities to expand core functionality of ROScopter</description>
+
+  <maintainer email="parkerclusk@gmail.com">Parker Lusk</maintainer>
+
+  <license>TODO</license>
+
+  <url type="repository">https://github.com/byu-magicc/roscopter</url>
+  <url type="bugtracker">https://github.com/byu-magicc/roscopter/issues</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <export>
+  </export>
+</package>
