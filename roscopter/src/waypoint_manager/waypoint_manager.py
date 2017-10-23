@@ -1,16 +1,13 @@
 #!/usr/bin/env python
-# license removed for brevity
-import rospy
-import time
-from rosflight_msgs.msg import Command
-from nav_msgs.msg import Odometry
-from roscopter.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
-import yaml
-import tf
+
 import numpy as np
-import os
-import math
-import sys
+
+import rospy, tf
+
+from nav_msgs.msg import Odometry
+from rosflight_msgs.msg import Command
+from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
+
 
 class WaypointManager():
 
@@ -52,7 +49,7 @@ class WaypointManager():
         else:
             next_point = self.waypoint_list[(self.current_waypoint_index + 1) % len(self.waypoint_list)]
             delta = next_point - current_waypoint
-            command_msg.z = math.atan2(delta[1], delta[0])
+            command_msg.z = np.atan2(delta[1], delta[0])
         command_msg.mode = Command.MODE_XPOS_YPOS_YAW_ALTITUDE
         self.waypoint_pub_.publish(command_msg)
 
@@ -98,7 +95,7 @@ class WaypointManager():
             else:
                 next_point = self.waypoint_list[(self.current_waypoint_index + 1) % len(self.waypoint_list)]
                 delta = next_point - current_waypoint
-                command_msg.z = math.atan2(delta[1], delta[0])
+                command_msg.z = np.atan2(delta[1], delta[0])
             command_msg.mode = Command.MODE_XPOS_YPOS_YAW_ALTITUDE
             self.waypoint_pub_.publish(command_msg)
 

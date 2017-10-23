@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>roscopter_msgs</name>
+  <version>0.0.0</version>
+  <description>Message, service, and action definitions for the ROScopter package</description>
+
+  <maintainer email="parkerclusk@gmail.com">Parker Lusk</maintainer>
+
+  <license>TODO</license>
+
+  <url type="repository">https://github.com/byu-magicc/roscopter</url>
+  <url type="bugtracker">https://github.com/byu-magicc/roscopter/issues</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+
+  <export>
+  </export>
+</package>
