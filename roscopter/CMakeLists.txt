@@ -28,19 +28,6 @@ generate_dynamic_reconfigure_options(
   cfg/Controller.cfg
 )
 
-add_service_files(
-  FILES
-  AddWaypoint.srv
-  RemoveWaypoint.srv
-  SetWaypointsFromFile.srv
-)
-
-generate_messages(
-  DEPENDENCIES
-  std_msgs
-  geometry_msgs
-)
-
 catkin_package(
   INCLUDE_DIRS include ${EIGEN3_INCLUDE_DIRS}
   LIBRARIES roscopter_eigen
