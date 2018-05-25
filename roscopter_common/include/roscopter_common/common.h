@@ -6,15 +6,56 @@
   *
 */
 
-#ifndef ROSCOPTER_EIGEN_H
-#define ROSCOPTER_EIGEN_H
+#ifndef COMMON_H
+#define COMMON_H
 
-#include <eigen3/Eigen/Core>
+#include <iostream>
+#include <eigen3/Eigen/Eigen>
 #include <boost/array.hpp>
 #include <ros/ros.h>
 
-namespace roscopter
+namespace roscopter_common
 {
+
+class Quaternion
+{
+
+public:
+
+  Quaternion();
+  ~Quaternion();
+  Quaternion(double w, double x, double y, double z);
+  Quaternion(double roll, double pitch, double yaw);
+
+  double x_;
+  double y_;
+  double z_;
+  double w_;
+
+  Quaternion operator*(const Quaternion &q2);
+  friend std::ostream& operator<<(std::ostream &os, const Quaternion &q);
+  Quaternion inv();
+  double mag();
+  void normalize();
+  double phi();
+  double theta();
+  double psi();
+  void convertFromEigen(Eigen::Vector4d q);
+  Eigen::Vector4d convertToEigen();
+  Eigen::Matrix3d rot();
+  Eigen::Vector3d rotateVector(Eigen::Vector3d v);
+
+};
+
+Quaternion exp_q(const Eigen::Vector3d delta);
+Eigen::Vector3d log_q(const Quaternion q);
+Eigen::Matrix3d skew(const Eigen::Vector3d vec);
+Eigen::Matrix3d R_v2_to_b(double phi);
+Eigen::Matrix3d R_v1_to_v2(double theta);
+Eigen::Matrix3d R_v_to_v1(double psi);
+Eigen::Matrix3d R_v_to_b(double phi, double theta, double psi);
+Eigen::Matrix3d R_cb2c();
+double saturate(double value, double max, double min);
 
 template <class Derived>
 bool vectorToMatrix(Eigen::MatrixBase<Derived>& mat, std::vector<double> vec)
@@ -103,6 +144,6 @@ void verifyDimensions(const Eigen::MatrixBase<Derived> &mat, std::string name, i
                   "%s is %dx%d. Expecting %dx%d",name.c_str(),(int) mat.rows(), (int) mat.cols(),rows,cols);
 }
 
-} //end namespace
+} //end namespace roscopter_common
 
-#endif
+#endif // COMMON_H

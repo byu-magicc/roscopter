@@ -14,21 +14,21 @@ kalmanFilter::kalmanFilter() :
   // retrieve params
   nh_private_.param<double>("declination", delta_d_, 0);
 
-  roscopter::importMatrixFromParamServer(nh_private_, p_, "p0");
-  roscopter::importMatrixFromParamServer(nh_private_, v_, "v0");
-  roscopter::importMatrixFromParamServer(nh_private_, bg_, "bg0");
-  roscopter::importMatrixFromParamServer(nh_private_, ba_, "ba0");
+  roscopter_common::importMatrixFromParamServer(nh_private_, p_, "p0");
+  roscopter_common::importMatrixFromParamServer(nh_private_, v_, "v0");
+  roscopter_common::importMatrixFromParamServer(nh_private_, bg_, "bg0");
+  roscopter_common::importMatrixFromParamServer(nh_private_, ba_, "ba0");
   nh_private_.param<double>("mu0", mu_, 0.05);
 
   Eigen::Vector4d q_eigen;
-  roscopter::importMatrixFromParamServer(nh_private_, q_eigen, "q0");
+  roscopter_common::importMatrixFromParamServer(nh_private_, q_eigen, "q0");
   q_.convertFromEigen(q_eigen);
 
-  roscopter::importMatrixFromParamServer(nh_private_, P_, "P0");
-  roscopter::importMatrixFromParamServer(nh_private_, Qu_, "Qu");
-  roscopter::importMatrixFromParamServer(nh_private_, Qx_, "Qx");
-  roscopter::importMatrixFromParamServer(nh_private_, R_gps_, "Rgps");
-  roscopter::importMatrixFromParamServer(nh_private_, R_att_, "Ratt");
+  roscopter_common::importMatrixFromParamServer(nh_private_, P_, "P0");
+  roscopter_common::importMatrixFromParamServer(nh_private_, Qu_, "Qu");
+  roscopter_common::importMatrixFromParamServer(nh_private_, Qx_, "Qx");
+  roscopter_common::importMatrixFromParamServer(nh_private_, R_gps_, "Rgps");
+  roscopter_common::importMatrixFromParamServer(nh_private_, R_att_, "Ratt");
   nh_private_.param<double>("Rsonar", R_sonar_, 0.05);
   nh_private_.param<double>("Rbaro", R_baro_, 0.05);
   nh_private_.param<double>("Rmag", R_mag_, 0.05);
@@ -121,7 +121,7 @@ void kalmanFilter::predictStep()
     // propagate states
     Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x = f() * (dt / N);
     p_ += delta_x.segment(dPN,3);
-    q_ = q_ * mekf_math::exp_q(delta_x.segment(dPHI,3));
+    q_ = q_ * roscopter_common::exp_q(delta_x.segment(dPHI,3));
     v_ += delta_x.segment(dU,3);
 
     // propagate covariance
@@ -177,12 +177,12 @@ void kalmanFilter::updateStep()
 void kalmanFilter::stateUpdate(const Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x)
 {
   p_ += delta_x.segment(dPN,3);
-  q_ = q_ * mekf_math::exp_q(delta_x.segment(dPHI,3));
+  q_ = q_ * roscopter_common::exp_q(delta_x.segment(dPHI,3));
   v_ += delta_x.segment(dU,3);
   bg_ += delta_x.segment(dGX,3);
   ba_ += delta_x.segment(dAX,3);
   mu_ += delta_x(dMU);
-  // mu_ = mekf_math::saturate(mu_, 0.999, 0.001);
+  // mu_ = roscopter_common::saturate(mu_, 0.999, 0.001);
 }
 
 
@@ -199,7 +199,7 @@ Eigen::Matrix<double, NUM_ERROR_STATES, 1> kalmanFilter::f()
   xdot.setZero();
   xdot.segment(dPN,3) = R.transpose() * v_;
   xdot.segment(dPHI,3) = omega_hat;
-  xdot.segment(dU,3) = mekf_math::skew(v_) * omega_hat + R * g_ + k_ * k_.transpose() * a_hat - mu_ * M_ * v_;
+  xdot.segment(dU,3) = roscopter_common::skew(v_) * omega_hat + R * g_ + k_ * k_.transpose() * a_hat - mu_ * M_ * v_;
 
   // all other state derivatives are zero
   return xdot;
@@ -217,13 +217,13 @@ Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> kalmanFilter::dfdx()
   // eq. 107
   Eigen::Matrix<double, NUM_ERROR_STATES, NUM_ERROR_STATES> F;
   F.setZero();
-  F.block(0,3,3,3)  = -R.transpose() * mekf_math::skew(v_);
+  F.block(0,3,3,3)  = -R.transpose() * roscopter_common::skew(v_);
   F.block(0,6,3,3)  = R.transpose();
-  F.block(3,3,3,3)  = -mekf_math::skew(omega_hat);
+  F.block(3,3,3,3)  = -roscopter_common::skew(omega_hat);
   F.block(3,9,3,3)  = -I3_;
-  F.block(6,3,3,3)  = mekf_math::skew(R * g_);
-  F.block(6,6,3,3)  = -mekf_math::skew(omega_hat);
-  F.block(6,9,3,3)  = -mekf_math::skew(v_);
+  F.block(6,3,3,3)  = roscopter_common::skew(R * g_);
+  F.block(6,6,3,3)  = -roscopter_common::skew(omega_hat);
+  F.block(6,9,3,3)  = -roscopter_common::skew(v_);
   F.block(6,12,3,3) = -k_ * k_.transpose();
   F.block(6,15,3,1) = -M_ * v_;
 
@@ -239,7 +239,7 @@ Eigen::Matrix<double, NUM_ERROR_STATES, 6> kalmanFilter::dfdu()
   Eigen::Matrix<double, NUM_ERROR_STATES, 6> G;
   G.setZero();
   G.block(3,0,3,3) = -I3_;
-  G.block(6,0,3,3) = -mekf_math::skew(v_);
+  G.block(6,0,3,3) = -roscopter_common::skew(v_);
   G.block(6,3,3,3) = -k_ * k_.transpose();
 
   // all other states are zero
@@ -339,8 +339,8 @@ void kalmanFilter::magCallback(const sensor_msgs::MagneticField msg)
     Eigen::Vector3d m0(msg.magnetic_field.x, msg.magnetic_field.y, msg.magnetic_field.z);
 
     // remove aircraft roll and pitch
-    Eigen::Matrix3d R_v22b = mekf_math::R_v2_to_b(phi_hat);
-    Eigen::Matrix3d R_v12v2 = mekf_math::R_v1_to_v2(theta_hat);
+    Eigen::Matrix3d R_v22b = roscopter_common::R_v2_to_b(phi_hat);
+    Eigen::Matrix3d R_v12v2 = roscopter_common::R_v1_to_v2(theta_hat);
     Eigen::Vector3d m = R_v12v2.transpose() * R_v22b.transpose() * m0;
 
     // compute heading measurement
@@ -442,7 +442,7 @@ void kalmanFilter::gpsCallback(const rosflight_msgs::GPS msg)
 void kalmanFilter::attitudeCallback(const rosflight_msgs::Attitude msg)
 {
   // unpack measurement
-  mekf_math::Quaternion q_meas(msg.attitude.w, msg.attitude.x, msg.attitude.y, msg.attitude.z);
+  roscopter_common::Quaternion q_meas(msg.attitude.w, msg.attitude.x, msg.attitude.y, msg.attitude.z);
   Eigen::Vector2d y_att(q_meas.phi(), q_meas.theta());
 
   // measurement model

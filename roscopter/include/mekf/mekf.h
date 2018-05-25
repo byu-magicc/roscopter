@@ -8,7 +8,6 @@
 #include <eigen3/Eigen/LU>
 #include <eigen3/Eigen/Dense>
 #include <eigen_conversions/eigen_msg.h>
-#include <lib/eigen.h>
 
 #include <ros/ros.h>
 #include <tf/tf.h>
@@ -24,7 +23,7 @@
 #include <rosflight_msgs/Attitude.h>
 #include <rosflight_msgs/Status.h>
 
-#include <mekf/mekf_math.h>
+#include <roscopter_common/common.h>
 
 
 
@@ -96,7 +95,7 @@ private:
 
   // states
   Eigen::Vector3d p_;
-  mekf_math::Quaternion q_;
+  roscopter_common::Quaternion q_;
   Eigen::Vector3d v_;
   Eigen::Vector3d bg_;
   Eigen::Vector3d ba_;

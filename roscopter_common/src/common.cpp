@@ -2,9 +2,9 @@
 // Date: 15 June 2017
 // Desc: Container for common functions.
 
-#include "mekf/mekf_math.h"
+#include "roscopter_common/common.h"
 
-namespace mekf_math
+namespace roscopter_common
 {
 
 /*=============================================================*/
@@ -271,6 +271,6 @@ double saturate(double value, double max, double min)
 }
 
 
-} // namespace mekf_math
+} // namespace roscopter_common
 
 
