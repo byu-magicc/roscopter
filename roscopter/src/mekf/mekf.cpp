@@ -12,26 +12,25 @@ kalmanFilter::kalmanFilter() :
   nh_private_(ros::NodeHandle("mekf"))
 {
   // retrieve params
-  nh_private_.param<double>("declination", delta_d_, 0);
-
-  roscopter_common::importMatrixFromParamServer(nh_private_, p_, "p0");
-  roscopter_common::importMatrixFromParamServer(nh_private_, v_, "v0");
-  roscopter_common::importMatrixFromParamServer(nh_private_, bg_, "bg0");
-  roscopter_common::importMatrixFromParamServer(nh_private_, ba_, "ba0");
-  nh_private_.param<double>("mu0", mu_, 0.05);
+  roscopter_common::rosImportScalar<int>(nh_private_, "declination", delta_d_, 0);
+  roscopter_common::rosImportScalar<double>(nh_private_, "mu0", mu_, 0.05);
+  roscopter_common::rosImportMatrix<double>(nh_private_, "p0", p_);
+  roscopter_common::rosImportMatrix<double>(nh_private_, "v0", v_);
+  roscopter_common::rosImportMatrix<double>(nh_private_, "bg0", bg_);
+  roscopter_common::rosImportMatrix<double>(nh_private_, "ba0", ba_);
 
   Eigen::Vector4d q_eigen;
-  roscopter_common::importMatrixFromParamServer(nh_private_, q_eigen, "q0");
+  roscopter_common::rosImportMatrix<double>(nh_private_, "q0", q_eigen);
   q_.convertFromEigen(q_eigen);
 
-  roscopter_common::importMatrixFromParamServer(nh_private_, P_, "P0");
-  roscopter_common::importMatrixFromParamServer(nh_private_, Qu_, "Qu");
-  roscopter_common::importMatrixFromParamServer(nh_private_, Qx_, "Qx");
-  roscopter_common::importMatrixFromParamServer(nh_private_, R_gps_, "Rgps");
-  roscopter_common::importMatrixFromParamServer(nh_private_, R_att_, "Ratt");
-  nh_private_.param<double>("Rsonar", R_sonar_, 0.05);
-  nh_private_.param<double>("Rbaro", R_baro_, 0.05);
-  nh_private_.param<double>("Rmag", R_mag_, 0.05);
+  roscopter_common::rosImportMatrix<double>(nh_private_, "P0", P_);
+  roscopter_common::rosImportMatrix<double>(nh_private_, "Qu", Qu_);
+  roscopter_common::rosImportMatrix<double>(nh_private_, "Qx", Qx_);
+  roscopter_common::rosImportMatrix<double>(nh_private_, "Rgps", R_gps_);
+  roscopter_common::rosImportMatrix<double>(nh_private_, "Ratt", R_att_);
+  roscopter_common::rosImportScalar<double>(nh_private_, "Rsonar", R_sonar_, 0.05);
+  roscopter_common::rosImportScalar<double>(nh_private_, "Rbaro", R_baro_, 0.05);
+  roscopter_common::rosImportScalar<double>(nh_private_, "Rmag", R_mag_, 0.05);
 
   // setup publishers and subscribers
   imu_sub_    = nh_.subscribe("imu/data", 1, &kalmanFilter::imuCallback, this);
@@ -327,8 +326,8 @@ void kalmanFilter::sonarCallback(const sensor_msgs::Range msg)
 void kalmanFilter::magCallback(const sensor_msgs::MagneticField msg)
 {
   // compute roll and pitch
-  double phi_hat = q_.phi();
-  double theta_hat = q_.theta();
+  double phi_hat = q_.roll();
+  double theta_hat = q_.pitch();
 
   // the earth's magnetic field inclination is about 65 degrees here in Utah, so
   // if the aircraft is rolled or pitched over around 25 degrees, we cannot observe
@@ -348,7 +347,7 @@ void kalmanFilter::magCallback(const sensor_msgs::MagneticField msg)
     double y_mag = delta_d_ + psi_m;
 
     // measurement model
-    double h_mag = q_.psi();
+    double h_mag = q_.yaw();
 
     // measurement Jacobian
     Eigen::Matrix<double, 1, NUM_ERROR_STATES> H;
@@ -438,42 +437,6 @@ void kalmanFilter::gpsCallback(const rosflight_msgs::GPS msg)
 }
 
 
-// update with ROSflight attitude estimate
-void kalmanFilter::attitudeCallback(const rosflight_msgs::Attitude msg)
-{
-  // unpack measurement
-  roscopter_common::Quaternion q_meas(msg.attitude.w, msg.attitude.x, msg.attitude.y, msg.attitude.z);
-  Eigen::Vector2d y_att(q_meas.phi(), q_meas.theta());
-
-  // measurement model
-  Eigen::Vector2d h_att(q_.phi(), q_.theta());
-
-  // measurement Jacobian
-  Eigen::Matrix<double, 2, NUM_ERROR_STATES> H;
-  H.setZero();
-  H(0,dPHI) = 1;
-  H(1,dTHETA) = 1;
-
-  // compute the residual covariance
-  Eigen::Matrix2d S = H * P_ * H.transpose() + R_att_;
-
-  // compute Kalman gain
-  Eigen::Matrix<double, NUM_ERROR_STATES, 2> K = P_ * H.transpose() * S.inverse();
-
-  // compute measurement error
-  Eigen::Vector2d r = y_att - h_att;
-
-  // compute delta_x
-  Eigen::Matrix<double, NUM_ERROR_STATES, 1> delta_x = K * r;
-
-  // update state and covariance
-  stateUpdate(delta_x);
-  P_ = (Eigen::MatrixXd::Identity(NUM_ERROR_STATES,NUM_ERROR_STATES) - K * H) * P_;
-
-  return;
-}
-
-
 // build and publish estimate messages
 void kalmanFilter::publishEstimate()
 {
@@ -484,10 +447,10 @@ void kalmanFilter::publishEstimate()
   estimate.pose.pose.position.y = p_(1);
   estimate.pose.pose.position.z = p_(2);
 
-  estimate.pose.pose.orientation.w = q_.w_;
-  estimate.pose.pose.orientation.x = q_.x_;
-  estimate.pose.pose.orientation.y = q_.y_;
-  estimate.pose.pose.orientation.z = q_.z_;
+  estimate.pose.pose.orientation.w = q_.w;
+  estimate.pose.pose.orientation.x = q_.x;
+  estimate.pose.pose.orientation.y = q_.y;
+  estimate.pose.pose.orientation.z = q_.z;
 
   estimate.pose.covariance[0*6+0] = P_(dPN, dPN);
   estimate.pose.covariance[1*6+1] = P_(dPE, dPE);

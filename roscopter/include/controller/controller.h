@@ -1,15 +1,18 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
+#include <stdio.h>
+#include <stdint.h>
 #include <ros/ros.h>
 #include <rosflight_msgs/Command.h>
 #include <rosflight_utils/simple_pid.h>
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Bool.h>
 #include <tf/tf.h>
-#include <stdint.h>
 #include <dynamic_reconfigure/server.h>
 #include <roscopter/ControllerConfig.h>
+
+#include <roscopter_common/common.h>
 
 namespace controller
 {
@@ -70,8 +73,8 @@ private:
 
   ros::Publisher command_pub_;
 
-  // Paramters
-  double thrust_eq_;
+  // Parameters
+  double throttle_eq_;
   double mass_;
   double max_thrust_;
   double drag_constant_;

@@ -75,54 +75,50 @@ void MultiRotorForcesAndMoments::Load(physics::ModelPtr _model, sdf::ElementPtr 
   getSdfParam<std::string>(_sdf, "attitudeTopic", attitude_topic_, "attitude");
 
   /* Load Params from ROS Server */
-  mass_ = nh_private_.param<double>("mass", 3.856);
-  linear_mu_ = nh_private_.param<double>("linear_mu", 0.1);
-  angular_mu_ = nh_private_.param<double>("angular_mu", 0.5);
-
-  // Drag Constant
-  linear_mu_ = nh_private_.param<double>( "linear_mu", 0.8);
-  angular_mu_ = nh_private_.param<double>( "angular_mu", 0.5);
+  roscopter_common::rosImportScalar<double>(nh_private_, "mass", mass_, 1);
+  roscopter_common::rosImportScalar<double>(nh_private_, "linear_mu", linear_mu_, 0.1);
+  roscopter_common::rosImportScalar<double>(nh_private_, "angular_mu", angular_mu_, 0.1);
 
   /* Ground Effect Coefficients */
-  std::vector<double> ground_effect_list = {-55.3516, 181.8265, -203.9874, 85.3735, -7.6619};
-  nh_private_.getParam("ground_effect", ground_effect_list);
-  ground_effect_.a = ground_effect_list[0];
-  ground_effect_.b = ground_effect_list[1];
-  ground_effect_.c = ground_effect_list[2];
-  ground_effect_.d = ground_effect_list[3];
-  ground_effect_.e = ground_effect_list[4];
+  Eigen::Matrix<double,5,1> ground_effect_list;
+  roscopter_common::rosImportMatrix<double>(nh_private_, "ground_effect", ground_effect_list);
+  ground_effect_.a = ground_effect_list(0);
+  ground_effect_.b = ground_effect_list(1);
+  ground_effect_.c = ground_effect_list(2);
+  ground_effect_.d = ground_effect_list(3);
+  ground_effect_.e = ground_effect_list(4);
 
   // Build Actuators Container
-  actuators_.l.max = nh_private_.param<double>("max_l", .2); // N-m
-  actuators_.m.max = nh_private_.param<double>("max_m", .2); // N-m
-  actuators_.n.max = nh_private_.param<double>("max_n", .2); // N-m
-  actuators_.F.max = nh_private_.param<double>("max_F", 1.0); // N
-  actuators_.l.tau_up = nh_private_.param<double>("tau_up_l", .25);
-  actuators_.m.tau_up = nh_private_.param<double>("tau_up_m", .25);
-  actuators_.n.tau_up = nh_private_.param<double>("tau_up_n", .25);
-  actuators_.F.tau_up = nh_private_.param<double>("tau_up_F", 0.25);
-  actuators_.l.tau_down = nh_private_.param<double>("tau_down_l", .25);
-  actuators_.m.tau_down = nh_private_.param<double>("tau_down_m", .25);
-  actuators_.n.tau_down = nh_private_.param<double>("tau_down_n", .25);
-  actuators_.F.tau_down = nh_private_.param<double>("tau_down_F", 0.35);
+  roscopter_common::rosImportScalar<double>(nh_private_, "max_l", actuators_.l.max, 0.2); // N-m
+  roscopter_common::rosImportScalar<double>(nh_private_, "max_m", actuators_.m.max, 0.2); // N-m
+  roscopter_common::rosImportScalar<double>(nh_private_, "max_n", actuators_.n.max, 0.2); // N-m
+  roscopter_common::rosImportScalar<double>(nh_private_, "max_F", actuators_.F.max, 1); // N
+  roscopter_common::rosImportScalar<double>(nh_private_, "tau_up_l", actuators_.l.tau_up, 0.25);
+  roscopter_common::rosImportScalar<double>(nh_private_, "tau_up_m", actuators_.m.tau_up, 0.25);
+  roscopter_common::rosImportScalar<double>(nh_private_, "tau_up_n", actuators_.n.tau_up, 0.25);
+  roscopter_common::rosImportScalar<double>(nh_private_, "tau_up_F", actuators_.F.tau_up, 0.25);
+  roscopter_common::rosImportScalar<double>(nh_private_, "tau_down_l", actuators_.l.tau_down, 0.25);
+  roscopter_common::rosImportScalar<double>(nh_private_, "tau_down_m", actuators_.m.tau_down, 0.25);
+  roscopter_common::rosImportScalar<double>(nh_private_, "tau_down_n", actuators_.n.tau_down, 0.25);
+  roscopter_common::rosImportScalar<double>(nh_private_, "tau_down_F", actuators_.F.tau_down, 0.35);
 
   // Get PID Gains
   double rollP, rollI, rollD;
   double pitchP, pitchI, pitchD;
   double yawP, yawI, yawD;
   double altP, altI, altD;
-  rollP = nh_private_.param<double>("roll_P", 0.1);
-  rollI = nh_private_.param<double>("roll_I", 0.0);
-  rollD = nh_private_.param<double>("roll_D", 0.0);
-  pitchP = nh_private_.param<double>("pitch_P", 0.1);
-  pitchI = nh_private_.param<double>("pitch_I", 0.0);
-  pitchD = nh_private_.param<double>("pitch_D", 0.0);
-  yawP = nh_private_.param<double>("yaw_P", 0.1);
-  yawI = nh_private_.param<double>("yaw_I", 0.0);
-  yawD = nh_private_.param<double>("yaw_D", 0.0);
-  altP = nh_private_.param<double>("alt_P", 0.1);
-  altI = nh_private_.param<double>("alt_I", 0.0);
-  altD = nh_private_.param<double>("alt_D", 0.0);
+  roscopter_common::rosImportScalar<double>(nh_private_, "roll_P", rollP, 0.1);
+  roscopter_common::rosImportScalar<double>(nh_private_, "roll_I", rollI, 0);
+  roscopter_common::rosImportScalar<double>(nh_private_, "roll_D", rollD, 0);
+  roscopter_common::rosImportScalar<double>(nh_private_, "pitch_P", pitchP, 0.1);
+  roscopter_common::rosImportScalar<double>(nh_private_, "pitch_I", pitchI, 0);
+  roscopter_common::rosImportScalar<double>(nh_private_, "pitch_D", pitchD, 0);
+  roscopter_common::rosImportScalar<double>(nh_private_, "yaw_P", yawP, 0.1);
+  roscopter_common::rosImportScalar<double>(nh_private_, "yaw_I", yawI, 0);
+  roscopter_common::rosImportScalar<double>(nh_private_, "yaw_D", yawD, 0);
+  roscopter_common::rosImportScalar<double>(nh_private_, "alt_P", altP, 0.1);
+  roscopter_common::rosImportScalar<double>(nh_private_, "alt_I", altI, 0);
+  roscopter_common::rosImportScalar<double>(nh_private_, "alt_D", altD, 0);
 
   roll_controller_.setGains(rollP, rollI, rollD);
   pitch_controller_.setGains(pitchP, pitchI, pitchD);

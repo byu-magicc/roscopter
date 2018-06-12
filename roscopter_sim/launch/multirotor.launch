@@ -40,14 +40,14 @@
     <node pkg="rostopic" type="rostopic" name="status_pub" args="pub -r 1 status rosflight_msgs/Status '{armed: true, failsafe: false, rc_override: false, offboard: true, error_code: 0, num_errors: 0, loop_time_us: 1}'"/>
 
     <!-- State Estimator -->
-    <node pkg="roscopter" type="mekf" name="mekf" output="screen">
+    <node name="mekf" pkg="roscopter" type="mekf_node" output="screen">
       <remap from="baro" to="baro/data"/>
       <remap from="sonar" to="sonar/data"/>
       <remap from="magnetometer" to="mag/data"/>
     </node>
 
     <!-- PID Position Controller -->
-    <node name="controller" pkg="roscopter" type="controller">
+    <node name="controller" pkg="roscopter" type="controller_node" output="screen">
       <!-- <remap from="estimate" to="ground_truth/odometry/NED"/> -->
       <remap from="estimate" to="estimate"/>
     </node>

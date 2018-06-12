@@ -25,6 +25,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_srvs
   gazebo_ros
   gazebo_plugins
+  roscopter_common
 )
 
 find_package(Eigen3 REQUIRED)

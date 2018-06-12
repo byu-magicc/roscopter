@@ -45,8 +45,8 @@ include_directories(
 
 
 ## Declare cpp executables
-add_executable(controller src/controller/controller_node.cpp src/controller/controller.cpp)
-target_link_libraries(controller ${catkin_LIBRARIES})
+add_executable(controller_node src/controller/controller_node.cpp src/controller/controller.cpp)
+target_link_libraries(controller_node ${catkin_LIBRARIES})
 
-add_executable(mekf src/mekf/mekf_node.cpp src/mekf/mekf.cpp)
-target_link_libraries(mekf ${catkin_LIBRARIES})
+add_executable(mekf_node src/mekf/mekf_node.cpp src/mekf/mekf.cpp)
+target_link_libraries(mekf_node ${catkin_LIBRARIES})

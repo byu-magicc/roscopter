@@ -38,6 +38,7 @@
 #include <geometry_msgs/Vector3.h>
 
 #include "roscopter_sim/common.h"
+#include <roscopter_common/common.h>
 
 namespace gazebo {
 

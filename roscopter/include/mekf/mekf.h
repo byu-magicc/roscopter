@@ -124,7 +124,6 @@ private:
   void sonarCallback(const sensor_msgs::Range msg);
   void magCallback(const sensor_msgs::MagneticField msg);
   void gpsCallback(const rosflight_msgs::GPS msg);
-  void attitudeCallback(const rosflight_msgs::Attitude msg);
   void statusCallback(const rosflight_msgs::Status msg);
 
   Eigen::Matrix<double, NUM_ERROR_STATES, 1> f();

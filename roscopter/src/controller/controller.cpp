@@ -1,28 +1,24 @@
 #include <controller/controller.h>
-#include <stdio.h>
 
 namespace controller
 {
 
 Controller::Controller() :
   nh_(ros::NodeHandle()),
-  nh_private_("~")
+  nh_private_("controller")
 {
-  // retrieve global MAV params (mass and max thrust)
-  ros::NodeHandle nh_mav(ros::this_node::getNamespace());
-  mass_ = nh_mav.param<double>("mass", 3.81);
-  max_thrust_ = nh_mav.param<double>("max_F", 74.0);
-  drag_constant_ = nh_mav.param<double>("linear_mu", 0.1);
-  thrust_eq_= (9.80665 * mass_) / max_thrust_;
+  // retrieve parameters from ROS parameter server
+  roscopter_common::rosImportScalar<double>(nh_private_, "mass", mass_, 1);
+  roscopter_common::rosImportScalar<double>(nh_private_, "equilibrium_throttle", throttle_eq_, 1);
+  roscopter_common::rosImportScalar<double>(nh_private_, "linear_mu", drag_constant_, 0);
+  roscopter_common::rosImportScalar<double>(nh_private_, "max_roll", max_.roll, 0.1);
+  roscopter_common::rosImportScalar<double>(nh_private_, "max_pitch", max_.pitch, 0.1);
+  roscopter_common::rosImportScalar<double>(nh_private_, "max_yaw_rate", max_.yaw_rate, 0.78);
+  roscopter_common::rosImportScalar<double>(nh_private_, "max_throttle", max_.throttle, 1);
+  roscopter_common::rosImportScalar<double>(nh_private_, "max_u", max_.u, 1);
+  roscopter_common::rosImportScalar<double>(nh_private_, "max_v", max_.v, 1);
+  roscopter_common::rosImportScalar<double>(nh_private_, "max_w", max_.w, 1);
   is_flying_ = false;
-
-  max_.roll = nh_private_.param<double>("max_roll", 0.15);
-  max_.pitch = nh_private_.param<double>("max_pitch", 0.15);
-  max_.yaw_rate = nh_private_.param<double>("max_yaw_rate", 45.0*M_PI/180.0);
-  max_.throttle = nh_private_.param<double>("max_throttle", 1.0);
-  max_.u = nh_private_.param<double>("max_u", 1.0);
-  max_.v = nh_private_.param<double>("max_v", 1.0);
-  max_.w = nh_private_.param<double>("max_w", 1.0);
 
   _func = boost::bind(&Controller::reconfigure_callback, this, _1, _2);
   _server.setCallback(_func);
@@ -66,8 +62,6 @@ void Controller::stateCallback(const nav_msgs::OdometryConstPtr &msg)
   tf::Quaternion tf_quat;
   tf::quaternionMsgToTF(msg->pose.pose.orientation, tf_quat);
   tf::Matrix3x3(tf_quat).getRPY(xhat_.phi, xhat_.theta, xhat_.psi);
-  xhat_.theta = xhat_.theta;
-  xhat_.psi = xhat_.psi;
 
   xhat_.p = msg->twist.twist.angular.x;
   xhat_.q = msg->twist.twist.angular.y;
@@ -216,8 +210,8 @@ void Controller::computeControl(double dt)
 
   if(mode_flag == rosflight_msgs::Command::MODE_XVEL_YVEL_YAWRATE_ALTITUDE)
   {
-    double max_ax = sin(acos(thrust_eq_));
-    double max_ay = sin(acos(thrust_eq_));
+    double max_ax = sin(acos(throttle_eq_));
+    double max_ay = sin(acos(throttle_eq_));
     xc_.ax = saturate(PID_u_.computePID(xc_.u, xhat_.u, dt) + drag_constant_*xhat_.u /(9.80665 * mass_), max_ax, -max_ax);
     xc_.ay = saturate(PID_v_.computePID(xc_.v, xhat_.v, dt) + drag_constant_*xhat_.v /(9.80665 * mass_), max_ay, -max_ay);
 
@@ -249,10 +243,10 @@ void Controller::computeControl(double dt)
     }
 
     // Calculate actual throttle (saturate az to be falling at 1 g)
-    double max_az = 1.0 / thrust_eq_;
+    double max_az = 1.0 / throttle_eq_;
     xc_.az = saturate(xc_.az, 1.0, -max_az);
     total_acc_c = sqrt((1.0-xc_.az)*(1.0-xc_.az) + xc_.ax*xc_.ax + xc_.ay*xc_.ay); // (in g's)
-    xc_.throttle = total_acc_c*thrust_eq_; // calculate the total thrust in normalized units
+    xc_.throttle = total_acc_c*throttle_eq_; // calculate the total thrust in normalized units
 
     ROS_INFO("xc_.az = %f, max_az = %f, total_acc_c = %f, throttle = %f", xc_.az, max_az, total_acc_c, xc_.throttle);
 

@@ -84,7 +84,9 @@ psi_D: 0.0,
 
 tau: 0.05,
 
-equilibrium_thrust: 0.5,
+equilibrium_throttle: 0.468, # m*g/F_max
+mass: 2.856,
+linear_mu: 0.2,
 
 max_roll: 0.196,
 max_pitch: 0.196,
