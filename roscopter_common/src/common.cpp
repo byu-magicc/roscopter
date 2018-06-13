@@ -219,7 +219,7 @@ Quaternion exp_q(const Eigen::Vector3d delta)
   double delta_norm = delta.norm();
 
   Quaternion q;
-  if (delta_norm < 1e-8) // avoid numerical error with approximation
+  if (delta_norm < 1e-6) // avoid numerical error with approximation
   {
     q.w = 1;
     q.x = delta(0)/2;

@@ -39,11 +39,10 @@ alt_D: 32.0
 waypoint_manager: {
 
 waypoints:
- [[0, 0, -2, 0],
- [5, 5, -2, 2.3],
- [-1.4, 2.7, -2, 3.9],
- [-2.6, -4.3, -2, 5.5],
- [2.7, -2.7, -2, 0.78]],
+ [[5, 5, -5, 0],
+ [5, -5, -3, 0.78],
+ [-5, -5, -5, 0],
+ [-5, 5, -3, -0.78]],
 
 threshold: 1,
 cyle: True
@@ -54,48 +53,23 @@ cyle: True
 
 controller: {
 
-u_P: 0.3,
-u_I: 0.0,
-u_D: 0.05,
-
-v_P: 0.3,
-v_I: 0.0,
-v_D: 0.05,
-
-w_P: 4.0,
-w_I: 0.1,
-w_D: 1.0,
-
-x_P: 0.4,
-x_I: 0.0,
-x_D: 0.2,
-
-y_P: 0.4,
-y_I: 0.0,
-y_D: 0.2,
-
-z_P: 0.9,
-z_I: 0.2,
-z_D: 0.35,
-
-psi_P: 1.0,
-psi_I: 0.0,
-psi_D: 0.0,
-
-tau: 0.05,
+kp_x: 0.5,
+kp_y: 0.5,
+kp_z: 0.5,
+kv_x: 5,
+kv_y: 5,
+kv_z: 5,
+kd_x: 0.01,
+kd_y: 0.01,
+kd_z: 0.01,
 
 equilibrium_throttle: 0.468, # m*g/F_max
-mass: 2.856,
-linear_mu: 0.2,
 
 max_roll: 0.196,
 max_pitch: 0.196,
 max_yaw_rate: 0.785,
 max_throttle: 0.85,
-max_u: 1.5,
-max_v: 1.5,
-max_w: 1.25
-
+max_vel: 1.5,
 }
 
 ### Estimator Parameters ###

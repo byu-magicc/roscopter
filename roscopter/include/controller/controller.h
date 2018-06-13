@@ -2,16 +2,13 @@
 #define CONTROLLER_H
 
 #include <stdio.h>
-#include <stdint.h>
 #include <ros/ros.h>
 #include <rosflight_msgs/Command.h>
-#include <rosflight_utils/simple_pid.h>
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Bool.h>
-#include <tf/tf.h>
 #include <dynamic_reconfigure/server.h>
 #include <roscopter/ControllerConfig.h>
-
+#include <eigen3/Eigen/Eigen>
 #include <roscopter_common/common.h>
 
 namespace controller
@@ -35,12 +32,8 @@ typedef struct
   double q;
   double r;
 
-  double ax;
-  double ay;
-  double az;
-
   double throttle;
-}state_t;
+} state_t;
 
 typedef struct
 {
@@ -48,9 +41,7 @@ typedef struct
   double pitch;
   double yaw_rate;
   double throttle;
-  double u;
-  double v;
-  double w;
+  double vel;
 } max_t;
 
 class Controller
@@ -70,7 +61,6 @@ private:
   ros::Subscriber state_sub_;
   ros::Subscriber is_flying_sub_;
   ros::Subscriber cmd_sub_;
-
   ros::Publisher command_pub_;
 
   // Parameters
@@ -80,14 +70,10 @@ private:
   double drag_constant_;
   bool is_flying_;
 
-  // PID Controllers
-  rosflight_utils::SimplePID PID_u_;
-  rosflight_utils::SimplePID PID_v_;
-  rosflight_utils::SimplePID PID_w_;
-  rosflight_utils::SimplePID PID_x_;
-  rosflight_utils::SimplePID PID_y_;
-  rosflight_utils::SimplePID PID_z_;
-  rosflight_utils::SimplePID PID_psi_;
+  // Controller Gains
+  Eigen::Matrix3d K_p_; // position
+  Eigen::Matrix3d K_v_; // velocity
+  Eigen::Matrix3d K_d_; // disturbance acceleration
 
   // Dynamic Reconfigure Hooks
   dynamic_reconfigure::Server<roscopter::ControllerConfig> _server;
@@ -96,22 +82,18 @@ private:
 
   // Memory for sharing information between functions
   state_t xhat_ = {}; // estimate
+  state_t xc_ = {}; // command
   max_t max_ = {};
   rosflight_msgs::Command command_;
-  state_t xc_ = {}; // command
   double prev_time_;
   uint8_t control_mode_;
+  Eigen::Vector3d dhat_; // disturbance acceleration
 
   // Functions
   void stateCallback(const nav_msgs::OdometryConstPtr &msg);
   void isFlyingCallback(const std_msgs::BoolConstPtr &msg);
   void cmdCallback(const rosflight_msgs::CommandConstPtr &msg);
-
   void computeControl(double dt);
-  void resetIntegrators();
-  void publishCommand();
-  double saturate(double x, double max, double min);
-  double sgn(double x);
 };
 }
 

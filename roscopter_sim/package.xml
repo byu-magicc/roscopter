@@ -25,10 +25,8 @@
   <build_depend>geometry_msgs</build_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>std_srvs</build_depend>
-  <build_depend>tf</build_depend>
   <build_depend>rosflight_msgs</build_depend>
   <build_depend>rosflight_utils</build_depend>
-  <build_depend>tf2_ros</build_depend>
   <build_depend>nav_msgs</build_depend>
   <build_depend>std_msgs</build_depend>
   <build_depend>sensor_msgs</build_depend>
@@ -40,10 +38,8 @@
   <run_depend>geometry_msgs</run_depend>
   <run_depend>roscpp</run_depend>
   <run_depend>std_srvs</run_depend>
-  <run_depend>tf</run_depend>
   <run_depend>rosflight_msgs</run_depend>
   <run_depend>rosflight_utils</run_depend>
-  <run_depend>tf2_ros</run_depend>
   <run_depend>nav_msgs</run_depend>
   <run_depend>std_msgs</run_depend>
   <run_depend>sensor_msgs</run_depend>
