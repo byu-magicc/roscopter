@@ -152,8 +152,11 @@ void Controller::computeControl(double dt)
 
   if(mode_flag == rosflight_msgs::Command::MODE_XVEL_YVEL_YAWRATE_ALTITUDE)
   {
-    // get velocity command
+    // get velocity command and enforce max velocity
     Eigen::Vector3d vc(xc_.u,xc_.v,K_p_(2,2)*(xc_.pd-xhat_.pd));
+    double vmag = vc.norm();
+    if (vmag > max_.vel)
+      vc = vc*max_.vel/vmag;
 
     static Eigen::Vector3d k(0,0,1); // unit vector in z-direction
     Eigen::Matrix3d R_v1_to_b = roscopter_common::R_v_to_b(xhat_.phi,xhat_.theta,0); // rotation from vehicle-1 to body frame
