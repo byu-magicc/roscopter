@@ -3,7 +3,7 @@
   <!-- Simulation -->
   <include file="$(find rosflight_sim)/launch/base.launch">
     <arg name="mav_name" value="multirotor"/>
-    <arg name="world_file" value="$(find leo_sim)/worlds/light_sim.world"/>
+    <!-- <arg name="world_file" value="$(find leo_sim)/worlds/light_sim.world"/> -->
   </include>
 
   <!-- FCU communication -->
@@ -12,7 +12,7 @@
   </node>
 
   <!-- Load roscopter Parameters -->
-  <rosparam command="load" file="$(find roscopter)/params/multirotor.yaml"/>
+  <rosparam command="load" file="$(find roscopter_sim)/params/multirotor.yaml"/>
 
   <!-- Estimator -->
   <node name="mekf" pkg="roscopter" type="mekf" output="screen"/>
