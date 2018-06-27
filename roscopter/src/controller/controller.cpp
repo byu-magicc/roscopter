@@ -166,7 +166,7 @@ void Controller::computeControl(double dt)
     Eigen::Vector3d vhat_b(xhat_.u,xhat_.v,xhat_.w); // body velocity estimate
     Eigen::Vector3d vhat = R_v1_to_b.transpose()*vhat_b; // vehicle-1 velocity estimate
     dhat_ = dhat_ - K_d_*(vc-vhat)*dt; // update disturbance estimate
-    Eigen::Vector3d k_tilde = throttle_eq_/gravity*(k-(K_v_*(vc-vhat)-dhat_));
+    Eigen::Vector3d k_tilde = throttle_eq_*(k-(1.0/gravity)*(K_v_*(vc-vhat)-dhat_));
 
     // pack up throttle command 
     xc_.throttle = k.transpose()*R_v1_to_b*k_tilde;
