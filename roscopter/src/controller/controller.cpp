@@ -132,9 +132,14 @@ void Controller::computeControl(double dt)
   // copy so it can be modified
   uint8_t mode_flag = control_mode_;
 
+  // get data that applies to both position and velocity control
+  Eigen::Matrix3d R_v_to_v1 = roscopter_common::R_v_to_v1(xhat_.psi); // rotation from vehicle to vehicle-1 frame
+  Eigen::Matrix3d R_v1_to_b = roscopter_common::R_v_to_b(xhat_.phi,xhat_.theta,0); // rotation from vehicle-1 to body frame
+  static Eigen::Vector3d k(0,0,1); // general unit vector in z-direction
+  static double gravity = 9.80665; // m/s^2
+
   if(mode_flag == rosflight_msgs::Command::MODE_XPOS_YPOS_YAW_ALTITUDE)
   {
-    Eigen::Matrix3d R_v_to_v1 = roscopter_common::R_v_to_v1(xhat_.psi); // rotation from vehicle to vehicle-1 frame
     Eigen::Vector3d phat(xhat_.pn,xhat_.pe,xhat_.pd); // position estimate
     Eigen::Vector3d pc(xc_.pn,xc_.pe,xc_.pd); // position command
     Eigen::Vector3d vc = R_v_to_v1*K_p_*(pc-phat); // velocity command
@@ -158,20 +163,17 @@ void Controller::computeControl(double dt)
     if (vmag > max_.vel)
       vc = vc*max_.vel/vmag;
 
-    static Eigen::Vector3d k(0,0,1); // unit vector in z-direction
-    Eigen::Matrix3d R_v1_to_b = roscopter_common::R_v_to_b(xhat_.phi,xhat_.theta,0); // rotation from vehicle-1 to body frame
     Eigen::Vector3d vhat_b(xhat_.u,xhat_.v,xhat_.w); // body velocity estimate
     Eigen::Vector3d vhat = R_v1_to_b.transpose()*vhat_b; // vehicle-1 velocity estimate
     dhat_ = dhat_ - K_d_*(vc-vhat)*dt; // update disturbance estimate
-    Eigen::Vector3d kb = R_v1_to_b*k; // body z direction
-    Eigen::Vector3d k_tilde = throttle_eq_*(k-(K_v_*(vc-vhat)-dhat_)/9.80665);
+    Eigen::Vector3d k_tilde = throttle_eq_/gravity*(k-(K_v_*(vc-vhat)-dhat_));
 
     // pack up throttle command 
-    xc_.throttle = kb.transpose()*R_v1_to_b*k_tilde;
+    xc_.throttle = k.transpose()*R_v1_to_b*k_tilde;
 
-    Eigen::Vector3d kb_d_v1 = k_tilde/xc_.throttle; // desired body z direction
-    kb_d_v1 = kb_d_v1/kb_d_v1.norm(); // need direction only
-    double tilt_angle = acos(k.transpose()*kb_d_v1); // desired tilt
+    Eigen::Vector3d kd = (1.0/xc_.throttle)*k_tilde; // desired body z direction
+    kd = kd/kd.norm(); // need direction only
+    double tilt_angle = acos(k.transpose()*kd); // desired tilt
 
     // get shortest rotation to desired tilt
     roscopter_common::Quaternion q_c;
@@ -181,8 +183,8 @@ void Controller::computeControl(double dt)
     }
     else
     {
-      Eigen::Vector3d k_cross_kbdv1 = roscopter_common::skew(k)*kb_d_v1;
-      q_c = roscopter_common::exp_q(tilt_angle*k_cross_kbdv1/k_cross_kbdv1.norm());
+      Eigen::Vector3d k_cross_kd = roscopter_common::skew(k)*kd;
+      q_c = roscopter_common::exp_q(tilt_angle*k_cross_kd/k_cross_kd.norm());
     }
 
     // pack up attitude commands
