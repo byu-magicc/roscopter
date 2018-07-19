@@ -139,7 +139,7 @@ private:
   double max(double x, double y);
 
   std::unique_ptr<FirstOrderFilter<double>>  rotor_velocity_filter_;
-  ignition::mat::Vector3d W_wind_;
+  ignition::math::Vector3d W_wind_;
 };
 }
 
