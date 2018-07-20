@@ -27,7 +27,11 @@ MultiRotorForcesAndMoments::MultiRotorForcesAndMoments()
 
 MultiRotorForcesAndMoments::~MultiRotorForcesAndMoments()
 {
+#if GAZEBO_MAJOR_VERSION >=8
+  updateConnection_.reset();
+#else
   event::Events::DisconnectWorldUpdateBegin(updateConnection_);
+#endif
   if (nh_) {
     nh_->shutdown();
     delete nh_;
@@ -39,8 +43,13 @@ void MultiRotorForcesAndMoments::SendForces()
 {
   // apply the forces and torques to the joint
   // Gazebo is in NWU, while we calculate forces in NED, hence the negatives
+#if GAZEBO_MAJOR_VERSION >= 8
+  link_->AddRelativeForce(ignition::math::Vector3d(actual_forces_.Fx, -actual_forces_.Fy, -actual_forces_.Fz));
+  link_->AddRelativeTorque(ignition::math::Vector3d(actual_forces_.l, -actual_forces_.m, -actual_forces_.n));
+#else
   link_->AddRelativeForce(math::Vector3(actual_forces_.Fx, -actual_forces_.Fy, -actual_forces_.Fz));
   link_->AddRelativeTorque(math::Vector3(actual_forces_.l, -actual_forces_.m, -actual_forces_.n));
+#endif
 }
 
 
@@ -153,9 +162,15 @@ void MultiRotorForcesAndMoments::OnUpdate(const common::UpdateInfo& _info) {
 }
 
 void MultiRotorForcesAndMoments::WindCallback(const geometry_msgs::Vector3 &wind){
+#if GAZEBO_MAJOR_VERSION >= 8
+  W_wind_.X(wind.x);
+  W_wind_.Y(wind.y);
+  W_wind_.Z(wind.z);
+#else
   W_wind_.x = wind.x;
   W_wind_.y = wind.y;
   W_wind_.z = wind.z;
+#endif
 }
 
 void MultiRotorForcesAndMoments::CommandCallback(const rosflight_msgs::Command msg)
@@ -193,6 +208,28 @@ void MultiRotorForcesAndMoments::Reset()
 
 void MultiRotorForcesAndMoments::UpdateForcesAndMoments()
 {
+#if GAZEBO_MAJOR_VERSION >= 8
+  /* Get state information from Gazebo                          *
+   * C denotes child frame, P parent frame, and W world frame.  *
+   * Further C_pose_W_P denotes pose of P wrt. W expressed in C.*/
+  // all coordinates are in standard aeronatical frame NED
+  ignition::math::Pose3d W_pose_W_C = link_->WorldCoGPose();
+  double pn = W_pose_W_C.Pos().X();
+  double pe = -W_pose_W_C.Pos().Y();
+  double pd = -W_pose_W_C.Pos().Z();
+  ignition::math::Vector3d euler_angles = W_pose_W_C.Rot().Euler();
+  double phi = euler_angles.X();
+  double theta = -euler_angles.Y();
+  double psi = -euler_angles.Z();
+  ignition::math::Vector3d C_linear_velocity_W_C = link_->RelativeLinearVel();
+  double u = C_linear_velocity_W_C.X();
+  double v = -C_linear_velocity_W_C.Y();
+  double w = -C_linear_velocity_W_C.Z();
+  ignition::math::Vector3d C_angular_velocity_W_C = link_->RelativeAngularVel();
+  double p = C_angular_velocity_W_C.X();
+  double q = -C_angular_velocity_W_C.Y();
+  double r = -C_angular_velocity_W_C.Z();
+#else
   /* Get state information from Gazebo                          *
    * C denotes child frame, P parent frame, and W world frame.  *
    * Further C_pose_W_P denotes pose of P wrt. W expressed in C.*/
@@ -213,13 +250,21 @@ void MultiRotorForcesAndMoments::UpdateForcesAndMoments()
   double p = C_angular_velocity_W_C.x;
   double q = -C_angular_velocity_W_C.y;
   double r = -C_angular_velocity_W_C.z;
+#endif
 
   // wind info is available in the wind_ struct
   // Rotate into body frame and relative velocity
+#if GAZEBO_MAJOR_VERSION >= 8
+  ignition::math::Vector3d C_wind_speed = W_pose_W_C.Rot().RotateVector(W_wind_);
+  double ur = u - C_wind_speed.X();
+  double vr = v - C_wind_speed.Y();
+  double wr = w - C_wind_speed.Z();
+#else
   math::Vector3 C_wind_speed = W_pose_W_C.rot.RotateVector(W_wind_);
   double ur = u - C_wind_speed.x;
   double vr = v - C_wind_speed.y;
   double wr = w - C_wind_speed.z;
+#endif
 
   // calculate the appropriate control <- Depends on Control type (which block is being controlled)
   if (command_.mode < 0)
@@ -287,6 +332,15 @@ void MultiRotorForcesAndMoments::UpdateForcesAndMoments()
 
   // publish attitude like ROSflight
   rosflight_msgs::Attitude attitude_msg;
+#if GAZEBO_MAJOR_VERSION >=8
+  common::Time current_time  = world_->SimTime();
+  attitude_msg.header.stamp.sec = current_time.sec;
+  attitude_msg.header.stamp.nsec = current_time.nsec;
+  attitude_msg.attitude.w =  W_pose_W_C.Rot().W();
+  attitude_msg.attitude.x =  W_pose_W_C.Rot().X();
+  attitude_msg.attitude.y = -W_pose_W_C.Rot().Y();
+  attitude_msg.attitude.z = -W_pose_W_C.Rot().Z();
+#else
   common::Time current_time  = world_->GetSimTime();
   attitude_msg.header.stamp.sec = current_time.sec;
   attitude_msg.header.stamp.nsec = current_time.nsec;
@@ -294,6 +348,7 @@ void MultiRotorForcesAndMoments::UpdateForcesAndMoments()
   attitude_msg.attitude.x =  W_pose_W_C.rot.x;
   attitude_msg.attitude.y = -W_pose_W_C.rot.y;
   attitude_msg.attitude.z = -W_pose_W_C.rot.z;
+#endif
 
   attitude_msg.angular_velocity.x = p;
   attitude_msg.angular_velocity.y = q;
