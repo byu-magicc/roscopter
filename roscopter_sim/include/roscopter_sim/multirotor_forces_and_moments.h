@@ -142,7 +142,7 @@ private:
 #if GAZEBO_MAJOR_VERSION >=8
   ignition::math::Vector3d W_wind_;
 #else
-  gazebo::math::Vector W_wind_;
+  gazebo::math::Vector3 W_wind_;
 #endif
 };
 }
