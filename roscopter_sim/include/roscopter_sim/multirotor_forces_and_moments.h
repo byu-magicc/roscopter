@@ -139,7 +139,11 @@ private:
   double max(double x, double y);
 
   std::unique_ptr<FirstOrderFilter<double>>  rotor_velocity_filter_;
+#if GAZEBO_MAJOR_VERSION >=8
   ignition::math::Vector3d W_wind_;
+#else
+  gazebo::math::Vector W_wind_;
+#endif
 };
 }
 
