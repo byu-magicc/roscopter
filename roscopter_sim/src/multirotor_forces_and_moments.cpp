@@ -209,7 +209,7 @@ void MultiRotorForcesAndMoments::UpdateForcesAndMoments()
   double u = GET_X(C_linear_velocity_W_C);
   double v = -GET_Y(C_linear_velocity_W_C);
   double w = -GET_Z(C_linear_velocity_W_C);
-  GazeboVector C_angular_velocity_W_C = GET_RELATIVE_ANGULAR_VELOCITY(link_);
+  GazeboVector C_angular_velocity_W_C = GET_RELATIVE_ANGULAR_VEL(link_);
   double p = GET_X(C_angular_velocity_W_C);
   double q = -GET_Y(C_angular_velocity_W_C);
   double r = -GET_Z(C_angular_velocity_W_C);
