@@ -153,9 +153,9 @@ void MultiRotorForcesAndMoments::OnUpdate(const common::UpdateInfo& _info) {
 }
 
 void MultiRotorForcesAndMoments::WindCallback(const geometry_msgs::Vector3 &wind){
-  GZ_COMPAT_SET_X(W_wind_ , (wind.x));
-  GZ_COMPAT_SET_Y(W_wind_ , (wind.y));
-  GZ_COMPAT_SET_Z(W_wind_ , (wind.z));
+  GZ_COMPAT_SET_X(W_wind_ , wind.x);
+  GZ_COMPAT_SET_Y(W_wind_ , wind.y);
+  GZ_COMPAT_SET_Z(W_wind_ , wind.z);
 }
 
 void MultiRotorForcesAndMoments::CommandCallback(const rosflight_msgs::Command msg)
