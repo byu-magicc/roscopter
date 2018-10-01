@@ -27,7 +27,7 @@ MultiRotorForcesAndMoments::MultiRotorForcesAndMoments()
 
 MultiRotorForcesAndMoments::~MultiRotorForcesAndMoments()
 {
-  event::Events::DisconnectWorldUpdateBegin(updateConnection_);
+  GZ_COMPAT_DISCONNECT_WORLD_UPDATE_BEGIN(updateConnection_);
   if (nh_) {
     nh_->shutdown();
     delete nh_;
@@ -39,8 +39,8 @@ void MultiRotorForcesAndMoments::SendForces()
 {
   // apply the forces and torques to the joint
   // Gazebo is in NWU, while we calculate forces in NED, hence the negatives
-  link_->AddRelativeForce(math::Vector3(actual_forces_.Fx, -actual_forces_.Fy, -actual_forces_.Fz));
-  link_->AddRelativeTorque(math::Vector3(actual_forces_.l, -actual_forces_.m, -actual_forces_.n));
+  link_->AddRelativeForce(GazeboVector(actual_forces_.Fx, -actual_forces_.Fy, -actual_forces_.Fz));
+  link_->AddRelativeTorque(GazeboVector(actual_forces_.l, -actual_forces_.m, -actual_forces_.n));
 }
 
 
@@ -153,9 +153,9 @@ void MultiRotorForcesAndMoments::OnUpdate(const common::UpdateInfo& _info) {
 }
 
 void MultiRotorForcesAndMoments::WindCallback(const geometry_msgs::Vector3 &wind){
-  W_wind_.x = wind.x;
-  W_wind_.y = wind.y;
-  W_wind_.z = wind.z;
+  GZ_COMPAT_SET_X(W_wind_ , wind.x);
+  GZ_COMPAT_SET_Y(W_wind_ , wind.y);
+  GZ_COMPAT_SET_Z(W_wind_ , wind.z);
 }
 
 void MultiRotorForcesAndMoments::CommandCallback(const rosflight_msgs::Command msg)
@@ -197,29 +197,29 @@ void MultiRotorForcesAndMoments::UpdateForcesAndMoments()
    * C denotes child frame, P parent frame, and W world frame.  *
    * Further C_pose_W_P denotes pose of P wrt. W expressed in C.*/
   // all coordinates are in standard aeronatical frame NED
-  math::Pose W_pose_W_C = link_->GetWorldCoGPose();
-  double pn = W_pose_W_C.pos.x;
-  double pe = -W_pose_W_C.pos.y;
-  double pd = -W_pose_W_C.pos.z;
-  math::Vector3 euler_angles = W_pose_W_C.rot.GetAsEuler();
-  double phi = euler_angles.x;
-  double theta = -euler_angles.y;
-  double psi = -euler_angles.z;
-  math::Vector3 C_linear_velocity_W_C = link_->GetRelativeLinearVel();
-  double u = C_linear_velocity_W_C.x;
-  double v = -C_linear_velocity_W_C.y;
-  double w = -C_linear_velocity_W_C.z;
-  math::Vector3 C_angular_velocity_W_C = link_->GetRelativeAngularVel();
-  double p = C_angular_velocity_W_C.x;
-  double q = -C_angular_velocity_W_C.y;
-  double r = -C_angular_velocity_W_C.z;
+  GazeboPose W_pose_W_C = GZ_COMPAT_GZ_COMPAT_GET_WORLD_COG_POSE(link_);
+  double pn = GZ_COMPAT_GET_X(GZ_COMPAT_GET_POS(W_pose_W_C));
+  double pe = -GZ_COMPAT_GET_Y(GZ_COMPAT_GET_POS(W_pose_W_C));
+  double pd = -GZ_COMPAT_GET_Z(GZ_COMPAT_GET_POS(W_pose_W_C));
+  GazeboVector euler_angles = GZ_COMPAT_GET_EULER(GZ_COMPAT_GET_ROT(W_pose_W_C));
+  double phi = GZ_COMPAT_GET_X(euler_angles);
+  double theta = -GZ_COMPAT_GET_Y(euler_angles);
+  double psi = -GZ_COMPAT_GET_Z(euler_angles);
+  GazeboVector C_linear_velocity_W_C = GZ_COMPAT_GET_RELATIVE_LINEAR_VEL(link_);
+  double u = GZ_COMPAT_GET_X(C_linear_velocity_W_C);
+  double v = -GZ_COMPAT_GET_Y(C_linear_velocity_W_C);
+  double w = -GZ_COMPAT_GET_Z(C_linear_velocity_W_C);
+  GazeboVector C_angular_velocity_W_C = GZ_COMPAT_GET_RELATIVE_ANGULAR_VEL(link_);
+  double p = GZ_COMPAT_GET_X(C_angular_velocity_W_C);
+  double q = -GZ_COMPAT_GET_Y(C_angular_velocity_W_C);
+  double r = -GZ_COMPAT_GET_Z(C_angular_velocity_W_C);
 
   // wind info is available in the wind_ struct
   // Rotate into body frame and relative velocity
-  math::Vector3 C_wind_speed = W_pose_W_C.rot.RotateVector(W_wind_);
-  double ur = u - C_wind_speed.x;
-  double vr = v - C_wind_speed.y;
-  double wr = w - C_wind_speed.z;
+  GazeboVector C_wind_speed = GZ_COMPAT_GET_ROT(W_pose_W_C).RotateVector(W_wind_);
+  double ur = u - GZ_COMPAT_GET_X(C_wind_speed);
+  double vr = v - GZ_COMPAT_GET_Y(C_wind_speed);
+  double wr = w - GZ_COMPAT_GET_Z(C_wind_speed);
 
   // calculate the appropriate control <- Depends on Control type (which block is being controlled)
   if (command_.mode < 0)
@@ -287,13 +287,13 @@ void MultiRotorForcesAndMoments::UpdateForcesAndMoments()
 
   // publish attitude like ROSflight
   rosflight_msgs::Attitude attitude_msg;
-  common::Time current_time  = world_->GetSimTime();
+  common::Time current_time  = GZ_COMPAT_GET_SIM_TIME(world_);
   attitude_msg.header.stamp.sec = current_time.sec;
   attitude_msg.header.stamp.nsec = current_time.nsec;
-  attitude_msg.attitude.w =  W_pose_W_C.rot.w;
-  attitude_msg.attitude.x =  W_pose_W_C.rot.x;
-  attitude_msg.attitude.y = -W_pose_W_C.rot.y;
-  attitude_msg.attitude.z = -W_pose_W_C.rot.z;
+  attitude_msg.attitude.w =  GZ_COMPAT_GET_W(GZ_COMPAT_GET_ROT(W_pose_W_C));
+  attitude_msg.attitude.x =  GZ_COMPAT_GET_X(GZ_COMPAT_GET_ROT(W_pose_W_C));
+  attitude_msg.attitude.y = -GZ_COMPAT_GET_Y(GZ_COMPAT_GET_ROT(W_pose_W_C));
+  attitude_msg.attitude.z = -GZ_COMPAT_GET_Z(GZ_COMPAT_GET_ROT(W_pose_W_C));
 
   attitude_msg.angular_velocity.x = p;
   attitude_msg.angular_velocity.y = q;

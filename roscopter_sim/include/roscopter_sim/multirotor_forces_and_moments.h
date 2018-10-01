@@ -38,6 +38,7 @@
 #include <geometry_msgs/Vector3.h>
 
 #include "roscopter_sim/common.h"
+#include "roscopter_sim/gz_compat.h"
 
 namespace gazebo {
 
@@ -139,7 +140,7 @@ private:
   double max(double x, double y);
 
   std::unique_ptr<FirstOrderFilter<double>>  rotor_velocity_filter_;
-  math::Vector3 W_wind_;
+  GazeboVector W_wind_;
 };
 }
 
