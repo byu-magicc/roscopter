@@ -197,7 +197,7 @@ void MultiRotorForcesAndMoments::UpdateForcesAndMoments()
    * C denotes child frame, P parent frame, and W world frame.  *
    * Further C_pose_W_P denotes pose of P wrt. W expressed in C.*/
   // all coordinates are in standard aeronatical frame NED
-  GazeboPose W_pose_W_C = GZ_COMPAT_GZ_COMPAT_GET_WORLD_COG_POSE(link_);
+  GazeboPose W_pose_W_C = GZ_COMPAT_GET_WORLD_COG_POSE(link_);
   double pn = GZ_COMPAT_GET_X(GZ_COMPAT_GET_POS(W_pose_W_C));
   double pe = -GZ_COMPAT_GET_Y(GZ_COMPAT_GET_POS(W_pose_W_C));
   double pd = -GZ_COMPAT_GET_Z(GZ_COMPAT_GET_POS(W_pose_W_C));
