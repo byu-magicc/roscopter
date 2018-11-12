@@ -3,6 +3,7 @@
 
 #include <ros/ros.h>
 #include <rosflight_msgs/Command.h>
+#include <rosflight_msgs/Status.h>
 #include <rosflight_utils/simple_pid.h>
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Bool.h>
@@ -67,6 +68,7 @@ private:
   ros::Subscriber state_sub_;
   ros::Subscriber is_flying_sub_;
   ros::Subscriber cmd_sub_;
+  ros::Subscriber status_sub_;
 
   ros::Publisher command_pub_;
 
@@ -76,6 +78,7 @@ private:
   double max_thrust_;
   double drag_constant_;
   bool is_flying_;
+  bool armed_;
 
   // PID Controllers
   rosflight_utils::SimplePID PID_u_;
@@ -103,6 +106,7 @@ private:
   void stateCallback(const nav_msgs::OdometryConstPtr &msg);
   void isFlyingCallback(const std_msgs::BoolConstPtr &msg);
   void cmdCallback(const rosflight_msgs::CommandConstPtr &msg);
+  void statusCallback(const rosflight_msgs::StatusConstPtr &msg);
 
   void computeControl(double dt);
   void resetIntegrators();

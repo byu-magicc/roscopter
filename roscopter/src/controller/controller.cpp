@@ -31,6 +31,7 @@ Controller::Controller() :
   state_sub_ = nh_.subscribe("estimate", 1, &Controller::stateCallback, this);
   is_flying_sub_ = nh_.subscribe("is_flying", 1, &Controller::isFlyingCallback, this);
   cmd_sub_ = nh_.subscribe("high_level_command", 1, &Controller::cmdCallback, this);
+  status_sub_ = nh_.subscribe("status", 1, &Controller::statusCallback, this);
 
   command_pub_ = nh_.advertise<rosflight_msgs::Command>("command", 1);
 }
@@ -73,8 +74,9 @@ void Controller::stateCallback(const nav_msgs::OdometryConstPtr &msg)
   xhat_.q = msg->twist.twist.angular.y;
   xhat_.r = msg->twist.twist.angular.z;
 
-  if(is_flying_)
+  if(is_flying_ && armed_)
   {
+    ROS_WARN_ONCE("CONTROLLER ACTIVE");
     computeControl(dt);
     publishCommand();
   }
@@ -83,12 +85,17 @@ void Controller::stateCallback(const nav_msgs::OdometryConstPtr &msg)
     resetIntegrators();
     prev_time_ = msg->header.stamp.toSec();
   }
-  }
+}
 
 
 void Controller::isFlyingCallback(const std_msgs::BoolConstPtr &msg)
 {
   is_flying_ = msg->data;
+}
+
+void Controller::statusCallback(const rosflight_msgs::StatusConstPtr &msg)
+{
+  armed_ = msg->armed;
 }
 
 
