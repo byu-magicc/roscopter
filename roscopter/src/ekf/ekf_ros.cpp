@@ -9,6 +9,7 @@ EKF_ROS::EKF_ROS() :
   imu_sub_ = nh_.subscribe("imu", 500, &EKF_ROS::imu_callback, this);
   pose_sub_ = nh_.subscribe("truth/pose", 10, &EKF_ROS::pose_truth_callback, this);
   transform_sub_ = nh_.subscribe("truth/transform", 10, &EKF_ROS::transform_truth_callback, this);
+  status_sub_ = nh_.subscribe("status", 1, &EKF_ROS::status_callback, this);
   odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odom", 1);
   bias_pub_ = nh_.advertise<sensor_msgs::Imu>("imu/bias", 1);
   is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1, true);
@@ -109,7 +110,7 @@ void EKF_ROS::imu_callback(const sensor_msgs::ImuConstPtr &msg)
   imu_ = (1. - IMU_LPF_) * u_ + IMU_LPF_ * imu_;
   imu_time_ = msg->header.stamp;
 
-  if (!truth_init_)
+  if (use_truth_ && !truth_init_)
     return;
   else if (!imu_init_)
   {
@@ -118,7 +119,7 @@ void EKF_ROS::imu_callback(const sensor_msgs::ImuConstPtr &msg)
     start_time_ = msg->header.stamp;
     return;
   }
-  if (!time_sync_complete_)
+  if (use_truth_ && !time_sync_complete_)
     return;
 
   double t = (msg->header.stamp - start_time_).toSec();
@@ -130,21 +131,21 @@ void EKF_ROS::imu_callback(const sensor_msgs::ImuConstPtr &msg)
   ekf_mtx_.unlock();
 
   
-//  // update accelerometer measurement
-//  ekf_mtx_.lock();
-//  if (ekf_.get_drag_term() == true)
-//  {
-//    z_acc_drag_ = imu_.block<2,1>(0, 0);
-//    ekf_.add_measurement(t, z_acc_drag_, vi_ekf::EKF::ACC, acc_R_drag_, use_acc_ && is_flying_);
-//  }
-//  else
-//  {
-//    z_acc_grav_ = imu_.block<3,1>(0, 0);
-//    double norm = z_acc_grav_.norm();
-//    if (norm < 9.80665 * 1.15 && norm > 9.80665 * 0.85)
-//      ekf_.add_measurement(t, z_acc_grav_, vi_ekf::EKF::ACC, acc_R_grav_, use_acc_);
-//  }
-//    ekf_mtx_.unlock();
+  // update accelerometer measurement
+  ekf_mtx_.lock();
+  if (ekf_.get_drag_term() == true)
+  {
+    z_acc_drag_ = imu_.block<2,1>(0, 0);
+    ekf_.add_measurement(t, z_acc_drag_, roscopter::EKF::ACC, acc_R_drag_, use_acc_ && is_flying_);
+  }
+  else
+  {
+    z_acc_grav_ = imu_.block<3,1>(0, 0);
+    double norm = z_acc_grav_.norm();
+    if (norm < 9.80665 * 1.15 && norm > 9.80665 * 0.85)
+      ekf_.add_measurement(t, z_acc_grav_, roscopter::EKF::ACC, acc_R_grav_, use_acc_);
+  }
+  ekf_mtx_.unlock();
   
   // update attitude measurement
   z_att_ << msg->orientation.w, msg->orientation.x, msg->orientation.y, msg->orientation.z;
@@ -228,7 +229,7 @@ void EKF_ROS::truth_callback(Vector3d& z_pos, Vector4d& z_att, ros::Time time)
 
     truth_att_ = Quatd(z_att);
     
-    // Initialize the EKF to the origin in the Vicon frame, but then immediately keyframe reset to start at origin
+    // Initialize the EKF to the origin in the Motion Capture Frame
     ekf_mtx_.lock();
     Matrix<double, roscopter::EKF::xZ, 1> x0 = ekf_.get_state().topRows(roscopter::EKF::xZ);
     x0.block<3,1>((int)roscopter::EKF::xPOS,0) = z_pos;
@@ -266,16 +267,22 @@ void EKF_ROS::truth_callback(Vector3d& z_pos, Vector4d& z_att, ros::Time time)
   if (!is_flying_)
   {
     Vector3d error = truth_pos_ - init_pos_;
-    // If we have moved 3 centimeter, then assume we are flying
-    if (error.norm() > 3e-2)
+    // If we have moved 3 centimeters, then assume we are flying
+    if (error.norm() >= 3e-2)
     {
-      is_flying_ = true;
-      std_msgs::Bool is_flying_msg;
-      is_flying_msg.data = true;
-      is_flying_pub_.publish(is_flying_msg);
-      time_took_off_ = time;
-      cout << "took off!" << endl;
-      // The drag term is now valid, activate it if we are supposed to use it.
+      if (armed_)
+      {
+        is_flying_ = true;
+        std_msgs::Bool is_flying_msg;
+        is_flying_msg.data = true;
+        is_flying_pub_.publish(is_flying_msg);
+        time_took_off_ = time;
+      }
+      else
+      {
+        // reset the initial position - in case we lift up and move the MAV around by hand
+        init_pos_ = truth_pos_;
+      }
     }
   }
   
@@ -312,8 +319,16 @@ void EKF_ROS::truth_callback(Vector3d& z_pos, Vector4d& z_att, ros::Time time)
   
   // Perform Altitude Measurement
   ekf_mtx_.lock();
-  ekf_.add_measurement(t, z_alt_, roscopter::EKF::ALT, alt_R_, !truth_active);
+  ekf_.add_measurement(t, z_alt_, roscopter::EKF::ALT, alt_R_, use_alt_ && !truth_active);
   ekf_mtx_.unlock();
+}
+
+void EKF_ROS::status_callback(const rosflight_msgs::StatusConstPtr &msg)
+{
+  if (armed_ && !msg->armed)
+    is_flying_ = false;
+
+  armed_ = msg->armed;
 }
 
 }

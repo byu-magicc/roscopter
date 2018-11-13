@@ -9,6 +9,7 @@
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/Range.h>
 #include <nav_msgs/Odometry.h>
+#include <rosflight_msgs/Status.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <std_msgs/Bool.h>
@@ -32,6 +33,7 @@ public:
   void transform_truth_callback(const geometry_msgs::TransformStampedConstPtr &msg);
   void truth_callback(Vector3d &z_pos_, Vector4d &z_att_, ros::Time time);
   void imu_callback(const sensor_msgs::ImuConstPtr& msg);
+  void status_callback(const rosflight_msgs::StatusConstPtr& msg);
   EKF ekf_;
   
 private:
@@ -43,6 +45,7 @@ private:
   ros::Subscriber imu_sub_;
   ros::Subscriber pose_sub_;
   ros::Subscriber transform_sub_;
+  ros::Subscriber status_sub_;
   ros::Publisher odometry_pub_;
   ros::Publisher bias_pub_;
   ros::Publisher is_flying_pub_;
@@ -55,6 +58,7 @@ private:
   
   bool use_drag_term_ = false;
   bool is_flying_ = false;
+  bool armed_ = false;
   bool use_truth_;
   bool use_acc_;
   bool use_imu_att_;
