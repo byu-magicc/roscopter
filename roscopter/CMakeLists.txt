@@ -52,7 +52,8 @@ target_link_libraries(roscopter_eigen ${catkin_LIBRARIES})
 add_executable(controller
   src/controller/controller_node.cpp
   src/controller/controller.cpp
-  include/controller/controller.h)
+  include/controller/controller.h
+  src/controller/simple_pid.cpp)
 add_dependencies(controller ${catkin_EXPORTED_TARGETS})
 target_link_libraries(controller ${catkin_LIBRARIES})
 

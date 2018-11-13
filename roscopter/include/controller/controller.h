@@ -4,7 +4,7 @@
 #include <ros/ros.h>
 #include <rosflight_msgs/Command.h>
 #include <rosflight_msgs/Status.h>
-#include <rosflight_utils/simple_pid.h>
+#include <controller/simple_pid.h>
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Bool.h>
 #include <tf/tf.h>
@@ -32,13 +32,30 @@ typedef struct
   double p;
   double q;
   double r;
+}state_t;
+
+typedef struct
+{
+  double pn;
+  double pe;
+  double pd;
+
+  double phi;
+  double theta;
+  double psi;
+
+  double x_dot;
+  double y_dot;
+  double z_dot;
+
+  double r;
 
   double ax;
   double ay;
   double az;
 
   double throttle;
-}state_t;
+}command_t;
 
 typedef struct
 {
@@ -46,9 +63,9 @@ typedef struct
   double pitch;
   double yaw_rate;
   double throttle;
-  double u;
-  double v;
-  double w;
+  double x_dot;
+  double y_dot;
+  double z_dot;
 } max_t;
 
 class Controller
@@ -76,18 +93,20 @@ private:
   double thrust_eq_;
   double mass_;
   double max_thrust_;
+  double max_a_;
+  double max_az_;
   double drag_constant_;
   bool is_flying_;
   bool armed_;
 
   // PID Controllers
-  rosflight_utils::SimplePID PID_u_;
-  rosflight_utils::SimplePID PID_v_;
-  rosflight_utils::SimplePID PID_w_;
-  rosflight_utils::SimplePID PID_x_;
-  rosflight_utils::SimplePID PID_y_;
-  rosflight_utils::SimplePID PID_z_;
-  rosflight_utils::SimplePID PID_psi_;
+  controller::SimplePID PID_x_dot_;
+  controller::SimplePID PID_y_dot_;
+  controller::SimplePID PID_z_dot_;
+  controller::SimplePID PID_x_;
+  controller::SimplePID PID_y_;
+  controller::SimplePID PID_z_;
+  controller::SimplePID PID_psi_;
 
   // Dynamic Reconfigure Hooks
   dynamic_reconfigure::Server<roscopter::ControllerConfig> _server;
@@ -98,7 +117,7 @@ private:
   state_t xhat_ = {}; // estimate
   max_t max_ = {};
   rosflight_msgs::Command command_;
-  state_t xc_ = {}; // command
+  command_t xc_ = {}; // command
   double prev_time_;
   uint8_t control_mode_;
 
