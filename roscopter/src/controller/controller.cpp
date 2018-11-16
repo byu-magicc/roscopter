@@ -18,7 +18,7 @@ Controller::Controller() :
   // 1 g of acceleration and a linear thrust model, these max acceleration
   // values are computed in g's as well.
   max_accel_z_ = 1.0 / throttle_eq_;
-  max_accel_xy_ = sin(acos(throttle_eq_)) / throttle_eq_;
+  max_accel_xy_ = sin(acos(throttle_eq_)) / throttle_eq_ / sqrt(2.);
 
   is_flying_ = false;
 
@@ -35,8 +35,10 @@ Controller::Controller() :
 
   // Set up Publishers and Subscriber
   state_sub_ = nh_.subscribe("estimate", 1, &Controller::stateCallback, this);
-  is_flying_sub_ = nh_.subscribe("is_flying", 1, &Controller::isFlyingCallback, this);
-  cmd_sub_ = nh_.subscribe("high_level_command", 1, &Controller::cmdCallback, this);
+  is_flying_sub_ =
+      nh_.subscribe("is_flying", 1, &Controller::isFlyingCallback, this);
+  cmd_sub_ =
+      nh_.subscribe("high_level_command", 1, &Controller::cmdCallback, this);
   status_sub_ = nh_.subscribe("status", 1, &Controller::statusCallback, this);
 
   command_pub_ = nh_.advertise<rosflight_msgs::Command>("command", 1);
@@ -131,13 +133,14 @@ void Controller::cmdCallback(const rosflight_msgs::CommandConstPtr &msg)
       control_mode_ = msg->mode;
       break;
     default:
-      ROS_ERROR("roscopter/controller: Unhandled command message of type %d", msg->mode);
+      ROS_ERROR("roscopter/controller: Unhandled command message of type %d",
+                msg->mode);
       break;
   }
 }
 
-
-void Controller::reconfigure_callback(roscopter::ControllerConfig &config, uint32_t level)
+void Controller::reconfigure_callback(roscopter::ControllerConfig& config,
+                                      uint32_t level)
 {
   double P, I, D, tau;
   tau = config.tau;
@@ -185,6 +188,12 @@ void Controller::reconfigure_callback(roscopter::ControllerConfig &config, uint3
   max_.yaw_rate = config.max_yaw_rate;
   max_.throttle = config.max_throttle;
 
+  max_.n_dot = config.max_n_dot;
+  max_.e_dot = config.max_e_dot;
+  max_.d_dot = config.max_d_dot;
+
+  throttle_eq_ = config.equilibrium_throttle;
+
   ROS_INFO("new gains");
 
   resetIntegrators();
@@ -228,16 +237,22 @@ void Controller::computeControl(double dt)
 
   if(mode_flag == rosflight_msgs::Command::MODE_XVEL_YVEL_YAWRATE_ALTITUDE)
   {
-    // xc_.ax = saturate(PID_u_.computePID(xc_.u, xhat_.u, dt) + drag_constant_*xhat_.u /(9.80665 * mass_), max_a_, -max_a_);
-    // xc_.ay = saturate(PID_v_.computePID(xc_.v, xhat_.v, dt) + drag_constant_*xhat_.v /(9.80665 * mass_), max_a_, -max_a_);
-    //TODO: rotate xhat into vehicle 1 frame
-    xc_.ax = PID_x_dot_.computePID(xc_.x_dot, xhat_.u, dt);
-    xc_.ay = PID_y_dot_.computePID(xc_.y_dot, xhat_.v, dt);
+    // Compute desired accelerations (in terms of g's) in the vehicle 1 frame
+    // Rotate body frame velocities to vehicle 1 frame velocities
+    double sinp = sin(xhat_.phi);
+    double cosp = cos(xhat_.phi);
+    double sint = sin(xhat_.theta);
+    double cost = cos(xhat_.theta);
+    double pxdot =
+        cost * xhat_.u + sinp * sint * xhat_.v + cosp * sint * xhat_.w;
+    double pydot = cosp * xhat_.v - sinp * xhat_.w;
+    double pddot =
+        -sint * xhat_.u + sinp * cost * xhat_.v + cosp * cost * xhat_.w;
+
+    xc_.ax = PID_x_dot_.computePID(xc_.x_dot, pxdot, dt);
+    xc_.ay = PID_y_dot_.computePID(xc_.y_dot, pydot, dt);
 
     // Nested Loop for Altitude
-    double pddot = -sin(xhat_.theta) * xhat_.u +
-                   sin(xhat_.phi) * cos(xhat_.theta) * xhat_.v +
-                   cos(xhat_.phi) * cos(xhat_.theta) * xhat_.w;
     double pddot_c = PID_d_.computePID(xc_.pd, xhat_.pd, dt, pddot);
     xc_.az = PID_z_dot_.computePID(pddot_c, pddot, dt);
     mode_flag = rosflight_msgs::Command::MODE_XACC_YACC_YAWRATE_AZ;
@@ -246,11 +261,8 @@ void Controller::computeControl(double dt)
   if(mode_flag == rosflight_msgs::Command::MODE_XACC_YACC_YAWRATE_AZ)
   {
     // Model inversion (m[ax;ay;az] = m[0;0;g] + R'[0;0;-T]
-    // This model tends to pop the MAV up in the air when a large change
-    // in control is commanded as the MAV rotates to it's commanded attitude while also ramping up throttle.
-    // It works quite well, but it is a little oversimplified.
-    double total_acc_c = sqrt((1.0-xc_.az)*(1.0-xc_.az) + xc_.ax*xc_.ax + xc_.ay*xc_.ay); // (in g's)
-    // ROS_INFO("total_acc = %f", total_acc_c);
+    double total_acc_c = sqrt((1.0 - xc_.az) * (1.0 - xc_.az) +
+                              xc_.ax * xc_.ax + xc_.ay * xc_.ay);  // (in g's)
     if (total_acc_c > 0.001)
     {
       xc_.phi = asin(xc_.ay / total_acc_c);
@@ -262,13 +274,10 @@ void Controller::computeControl(double dt)
       xc_.theta = 0;
     }
 
-    // Calculate actual throttle (saturate az to be falling at 1 g)
-
-    xc_.az = xc_.az;
-    total_acc_c = sqrt((1.0-xc_.az)*(1.0-xc_.az) + xc_.ax*xc_.ax + xc_.ay*xc_.ay); // (in g's)
-    xc_.throttle = total_acc_c*throttle_eq_; // calculate the total thrust in normalized units
-
-    // ROS_INFO("xc_.az = %f, max_az = %f, total_acc_c = %f, throttle = %f", xc_.az, max_az_, total_acc_c, xc_.throttle);
+    // Compute desired thrust based on current pose
+    double cosp = cos(xhat_.phi);
+    double cost = cos(xhat_.theta);
+    xc_.throttle = (1.0 - xc_.az) * throttle_eq_ / cosp / cost;
 
     mode_flag = rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE;
   }
@@ -286,6 +295,7 @@ void Controller::computeControl(double dt)
 
 void Controller::publishCommand()
 {
+  command_.header.stamp = ros::Time::now();
   command_pub_.publish(command_);
 }
 
@@ -307,9 +317,4 @@ double Controller::saturate(double x, double max, double min)
   return x;
 }
 
-double Controller::sgn(double x)
-{
-  return (x >= 0.0) ? 1.0 : -1.0;
-}
-
-} // namespace controller
+}  // namespace controller

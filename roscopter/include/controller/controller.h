@@ -32,7 +32,7 @@ typedef struct
   double p;
   double q;
   double r;
-}state_t;
+} state_t;
 
 typedef struct
 {
@@ -55,7 +55,7 @@ typedef struct
   double az;
 
   double throttle;
-}command_t;
+} command_t;
 
 typedef struct
 {
@@ -111,7 +111,8 @@ private:
   // Dynamic Reconfigure Hooks
   dynamic_reconfigure::Server<roscopter::ControllerConfig> _server;
   dynamic_reconfigure::Server<roscopter::ControllerConfig>::CallbackType _func;
-  void reconfigure_callback(roscopter::ControllerConfig &config, uint32_t level);
+  void reconfigure_callback(roscopter::ControllerConfig& config,
+                            uint32_t level);
 
   // Memory for sharing information between functions
   state_t xhat_ = {}; // estimate
@@ -131,7 +132,6 @@ private:
   void resetIntegrators();
   void publishCommand();
   double saturate(double x, double max, double min);
-  double sgn(double x);
 };
 }
 
