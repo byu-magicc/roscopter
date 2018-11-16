@@ -8,23 +8,26 @@ Controller::Controller() :
   nh_(ros::NodeHandle()),
   nh_private_("~")
 {
-  // retrieve global MAV params (mass and max thrust)
+  // Retrieve global MAV equilibrium throttle. This is the only MAV specific
+  // parameter that is required
   ros::NodeHandle nh_mav(ros::this_node::getNamespace());
-  // mass_ = nh_mav.param<double>("mass", 3.81);
-  // max_thrust_ = nh_mav.param<double>("max_F", 74.0);
-  // drag_constant_ = nh_mav.param<double>("linear_mu", 0.1);
-  // thrust_eq_= (9.80665 * mass_) / max_thrust_;
-  nh_private_.getParam("equilibrium_thrust", thrust_eq_);
-  max_a_ = sin(acos(thrust_eq_));
-  max_az_ = 1.0 / thrust_eq_;
+  if (!nh_private_.getParam("equilibrium_throttle", throttle_eq_))
+    ROS_ERROR("[Controller] MAV equilibrium_throttle not found!");
+
+  // Calculate max accelerations. Assuming that equilibrium throttle produces
+  // 1 g of acceleration and a linear thrust model, these max acceleration
+  // values are computed in g's as well.
+  max_accel_z_ = 1.0 / throttle_eq_;
+  max_accel_xy_ = sin(acos(throttle_eq_)) / throttle_eq_;
+
   is_flying_ = false;
 
   nh_private_.getParam("max_roll", max_.roll);
   nh_private_.getParam("max_pitch", max_.pitch);
   nh_private_.getParam("max_yaw_rate", max_.yaw_rate);
   nh_private_.getParam("max_throttle", max_.throttle);
-  nh_private_.getParam("max_x_dot", max_.x_dot);
-  nh_private_.getParam("max_y_dot", max_.y_dot);
+  nh_private_.getParam("max_n_dot", max_.n_dot);
+  nh_private_.getParam("max_e_dot", max_.e_dot);
   nh_private_.getParam("max_z_dot", max_.z_dot);
 
   _func = boost::bind(&Controller::reconfigure_callback, this, _1, _2);
@@ -141,41 +144,35 @@ void Controller::reconfigure_callback(roscopter::ControllerConfig &config, uint3
   P = config.x_dot_P;
   I = config.x_dot_I;
   D = config.x_dot_D;
-  PID_x_dot_.setGains(P, I, D, tau, max_a_, -max_a_);
-  // PID_x_dot_.setGains(P, I, D, tau);
+  PID_x_dot_.setGains(P, I, D, tau, max_accel_xy_, -max_accel_xy_);
 
   P = config.y_dot_P;
   I = config.y_dot_I;
   D = config.y_dot_D;
-  PID_y_dot_.setGains(P, I, D, tau, max_a_, -max_a_);
-  // PID_y_dot_.setGains(P, I, D, tau);
+  PID_y_dot_.setGains(P, I, D, tau, max_accel_xy_, -max_accel_xy_);
 
   P = config.z_dot_P;
   I = config.z_dot_I;
   D = config.z_dot_D;
-  // PID_z_dot_.setGains(P, I, D, tau);
-  PID_z_dot_.setGains(P, I, D, tau, 1.0, -max_az_);
+  PID_z_dot_.setGains(P, I, D, tau, 1.0, -max_accel_z_);
 
-  P = config.x_P;
-  I = config.x_I;
-  D = config.x_D;
-  max_.x_dot = config.max_x_dot;
-  PID_x_.setGains(P, I, D, tau, max_.x_dot, -max_.x_dot);
-  // PID_x_.setGains(P, I, D, tau);
+  P = config.north_P;
+  I = config.north_I;
+  D = config.north_D;
+  max_.n_dot = config.max_n_dot;
+  PID_n_.setGains(P, I, D, tau, max_.n_dot, -max_.n_dot);
 
-  P = config.y_P;
-  I = config.y_I;
-  D = config.y_D;
-  max_.y_dot = config.max_y_dot;
-  PID_y_.setGains(P, I, D, tau, max_.y_dot, -max_.y_dot);
-  // PID_y_.setGains(P, I, D, tau);
+  P = config.east_P;
+  I = config.east_I;
+  D = config.east_D;
+  max_.e_dot = config.max_e_dot;
+  PID_e_.setGains(P, I, D, tau, max_.e_dot, -max_.e_dot);
 
   P = config.z_P;
   I = config.z_I;
   D = config.z_D;
   max_.z_dot = config.max_z_dot;
   PID_z_.setGains(P, I, D, tau, max_.z_dot, -max_.z_dot);
-  // PID_z_.setGains(P, I, D, tau);
 
   P = config.psi_P;
   I = config.psi_I;
@@ -207,9 +204,8 @@ void Controller::computeControl(double dt)
   {
     // Figure out desired velocities (in inertial frame)
     // By running the position controllers
-    double pndot_c = PID_x_.computePID(xc_.pn, xhat_.pn, dt);
-    // ROS_INFO("pndot_c = %f, max_.x_dot = %f", pndot_c, max_.x_dot);
-    double pedot_c = PID_y_.computePID(xc_.pe, xhat_.pe, dt);
+    double pndot_c = PID_n_.computePID(xc_.pn, xhat_.pn, dt);
+    double pedot_c = PID_e_.computePID(xc_.pe, xhat_.pe, dt);
 
     // Calculate desired yaw rate
     // First, determine the shortest direction to the commanded psi
@@ -238,7 +234,9 @@ void Controller::computeControl(double dt)
     xc_.ay = PID_y_dot_.computePID(xc_.y_dot, xhat_.v, dt);
 
     // Nested Loop for Altitude
-    double pddot = -sin(xhat_.theta) * xhat_.u + sin(xhat_.phi)*cos(xhat_.theta)*xhat_.v + cos(xhat_.phi)*cos(xhat_.theta)*xhat_.w;
+    double pddot = -sin(xhat_.theta) * xhat_.u +
+                   sin(xhat_.phi) * cos(xhat_.theta) * xhat_.v +
+                   cos(xhat_.phi) * cos(xhat_.theta) * xhat_.w;
     double pddot_c = PID_z_dot_.computePID(xc_.pd, xhat_.pd, dt, pddot);
     xc_.az = PID_z_.computePID(pddot_c, pddot, dt);
     // ROS_INFO("pddot = %f, pddot_c = %f, az_c = %f", pddot, pddot_c, xc_.az);
@@ -268,7 +266,7 @@ void Controller::computeControl(double dt)
 
     xc_.az = xc_.az;
     total_acc_c = sqrt((1.0-xc_.az)*(1.0-xc_.az) + xc_.ax*xc_.ax + xc_.ay*xc_.ay); // (in g's)
-    xc_.throttle = total_acc_c*thrust_eq_; // calculate the total thrust in normalized units
+    xc_.throttle = total_acc_c*throttle_eq_; // calculate the total thrust in normalized units
 
     // ROS_INFO("xc_.az = %f, max_az = %f, total_acc_c = %f, throttle = %f", xc_.az, max_az_, total_acc_c, xc_.throttle);
 
@@ -295,8 +293,8 @@ void Controller::resetIntegrators()
 {
   PID_x_dot_.clearIntegrator();
   PID_y_dot_.clearIntegrator();
-  PID_x_.clearIntegrator();
-  PID_y_.clearIntegrator();
+  PID_n_.clearIntegrator();
+  PID_e_.clearIntegrator();
   PID_z_.clearIntegrator();
   PID_psi_.clearIntegrator();
 }

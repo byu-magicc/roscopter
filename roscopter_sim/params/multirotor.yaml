@@ -39,11 +39,11 @@ alt_D: 32.0
 waypoint_manager: {
 
 waypoints:
- [[50, 50, -50, 0]],
+ #[[50, 50, -50, 0]],
  # [50, 50, -2, 2.3]],
- # [-1.4, 2.7, -2, 3.9],
- # [-2.6, -4.3, -2, 5.5],
- # [2.7, -2.7, -2, 0.78]],
+  [[-1.4, 2.7, -4, 3.9],
+  [-2.6, -4.3, -7, 5.5],
+  [2.7, -2.7, -2, 0.78]],
 
 threshold: 1,
 cyle: True
@@ -66,13 +66,13 @@ z_dot_P: 4.0,
 z_dot_I: 0.0,
 z_dot_D: 1.0,
 
-x_P: 0.4,
-x_I: 0.1,
-x_D: 0.2,
+north_P: 0.4,
+north_I: 0.1,
+north_d: 0.2,
 
-y_P: 0.4,
-y_I: 0.1,
-y_D: 0.2,
+east_P: 0.4,
+east_I: 0.1,
+east_d: 0.2,
 
 z_P: 0.9,
 z_I: 0.2,
@@ -84,14 +84,14 @@ psi_D: 0.0,
 
 tau: 0.05,
 
-equilibrium_thrust: 0.5,
+equilibrium_throttle: 0.5,
 
 max_roll: 0.196,
 max_pitch: 0.196,
 max_yaw_rate: 0.785,
 max_throttle: 0.85,
-max_x_dot: 1.5,
-max_y_dot: 1.5,
+max_n_dot: 1.5,
+max_e_dot: 1.5,
 max_z_dot: 1.25
 
 }

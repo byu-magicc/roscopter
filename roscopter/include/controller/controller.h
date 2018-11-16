@@ -63,8 +63,8 @@ typedef struct
   double pitch;
   double yaw_rate;
   double throttle;
-  double x_dot;
-  double y_dot;
+  double n_dot;
+  double e_dot;
   double z_dot;
 } max_t;
 
@@ -90,11 +90,11 @@ private:
   ros::Publisher command_pub_;
 
   // Paramters
-  double thrust_eq_;
+  double throttle_eq_;
   double mass_;
   double max_thrust_;
-  double max_a_;
-  double max_az_;
+  double max_accel_xy_;
+  double max_accel_z_;
   double drag_constant_;
   bool is_flying_;
   bool armed_;
@@ -103,8 +103,8 @@ private:
   controller::SimplePID PID_x_dot_;
   controller::SimplePID PID_y_dot_;
   controller::SimplePID PID_z_dot_;
-  controller::SimplePID PID_x_;
-  controller::SimplePID PID_y_;
+  controller::SimplePID PID_n_;
+  controller::SimplePID PID_e_;
   controller::SimplePID PID_z_;
   controller::SimplePID PID_psi_;
 
