@@ -28,7 +28,7 @@ Controller::Controller() :
   nh_private_.getParam("max_throttle", max_.throttle);
   nh_private_.getParam("max_n_dot", max_.n_dot);
   nh_private_.getParam("max_e_dot", max_.e_dot);
-  nh_private_.getParam("max_z_dot", max_.z_dot);
+  nh_private_.getParam("max_d_dot", max_.d_dot);
 
   _func = boost::bind(&Controller::reconfigure_callback, this, _1, _2);
   _server.setCallback(_func);
@@ -154,6 +154,7 @@ void Controller::reconfigure_callback(roscopter::ControllerConfig &config, uint3
   P = config.z_dot_P;
   I = config.z_dot_I;
   D = config.z_dot_D;
+  // set max z accelerations so that we can't fall faster than 1 gravity
   PID_z_dot_.setGains(P, I, D, tau, 1.0, -max_accel_z_);
 
   P = config.north_P;
@@ -168,11 +169,11 @@ void Controller::reconfigure_callback(roscopter::ControllerConfig &config, uint3
   max_.e_dot = config.max_e_dot;
   PID_e_.setGains(P, I, D, tau, max_.e_dot, -max_.e_dot);
 
-  P = config.z_P;
-  I = config.z_I;
-  D = config.z_D;
-  max_.z_dot = config.max_z_dot;
-  PID_z_.setGains(P, I, D, tau, max_.z_dot, -max_.z_dot);
+  P = config.down_P;
+  I = config.down_I;
+  D = config.down_D;
+  max_.d_dot = config.max_d_dot;
+  PID_d_.setGains(P, I, D, tau, max_.d_dot, -max_.d_dot);
 
   P = config.psi_P;
   I = config.psi_I;
@@ -237,9 +238,8 @@ void Controller::computeControl(double dt)
     double pddot = -sin(xhat_.theta) * xhat_.u +
                    sin(xhat_.phi) * cos(xhat_.theta) * xhat_.v +
                    cos(xhat_.phi) * cos(xhat_.theta) * xhat_.w;
-    double pddot_c = PID_z_dot_.computePID(xc_.pd, xhat_.pd, dt, pddot);
-    xc_.az = PID_z_.computePID(pddot_c, pddot, dt);
-    // ROS_INFO("pddot = %f, pddot_c = %f, az_c = %f", pddot, pddot_c, xc_.az);
+    double pddot_c = PID_d_.computePID(xc_.pd, xhat_.pd, dt, pddot);
+    xc_.az = PID_z_dot_.computePID(pddot_c, pddot, dt);
     mode_flag = rosflight_msgs::Command::MODE_XACC_YACC_YAWRATE_AZ;
   }
 
@@ -293,9 +293,10 @@ void Controller::resetIntegrators()
 {
   PID_x_dot_.clearIntegrator();
   PID_y_dot_.clearIntegrator();
+  PID_z_dot_.clearIntegrator();
   PID_n_.clearIntegrator();
   PID_e_.clearIntegrator();
-  PID_z_.clearIntegrator();
+  PID_d_.clearIntegrator();
   PID_psi_.clearIntegrator();
 }
 

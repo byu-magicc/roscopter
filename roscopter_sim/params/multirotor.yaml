@@ -74,9 +74,9 @@ east_P: 0.4,
 east_I: 0.1,
 east_d: 0.2,
 
-z_P: 0.9,
-z_I: 0.2,
-z_D: 0.35,
+down_P: 0.9,
+down_I: 0.2,
+down_D: 0.35,
 
 psi_P: 1.0,
 psi_I: 0.0,
@@ -92,7 +92,7 @@ max_yaw_rate: 0.785,
 max_throttle: 0.85,
 max_n_dot: 1.5,
 max_e_dot: 1.5,
-max_z_dot: 1.25
+max_d_dot: 1.25
 
 }
 

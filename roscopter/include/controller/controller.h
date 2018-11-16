@@ -65,7 +65,7 @@ typedef struct
   double throttle;
   double n_dot;
   double e_dot;
-  double z_dot;
+  double d_dot;
 } max_t;
 
 class Controller
@@ -105,7 +105,7 @@ private:
   controller::SimplePID PID_z_dot_;
   controller::SimplePID PID_n_;
   controller::SimplePID PID_e_;
-  controller::SimplePID PID_z_;
+  controller::SimplePID PID_d_;
   controller::SimplePID PID_psi_;
 
   // Dynamic Reconfigure Hooks
