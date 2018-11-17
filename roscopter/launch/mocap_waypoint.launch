@@ -21,7 +21,7 @@
   <node name="rosflight_io" pkg="rosflight" type="rosflight_io" output="screen"/>
 
   <!-- Load common parameters -->
-  <rosparam command="load" file="$(find roscopter)/params/planck.yaml"/>
+  <rosparam command="load" file="$(find roscopter)/params/F450.yaml"/>
 
   <!-- PID Position Controller -->
   <node name="controller" pkg="roscopter" type="controller">
