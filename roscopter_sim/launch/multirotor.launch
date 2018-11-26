@@ -39,30 +39,23 @@
     <!-- Status Publisher -->
     <node pkg="rostopic" type="rostopic" name="status_pub" args="pub -r 1 status rosflight_msgs/Status '{armed: true, failsafe: false, rc_override: false, offboard: true, error_code: 0, num_errors: 0, loop_time_us: 1}'"/>
 
-    <!-- State Estimator -->
-    <node pkg="roscopter" type="mekf" name="mekf" output="screen">
-      <remap from="baro" to="baro/data"/>
-      <remap from="sonar" to="sonar/data"/>
-      <remap from="magnetometer" to="mag/data"/>
-    </node>
-
     <!-- PID Position Controller -->
-    <node name="controller" pkg="roscopter" type="controller">
-      <!-- <remap from="estimate" to="ground_truth/odometry/NED"/> -->
-      <remap from="estimate" to="estimate"/>
+    <node name="controller" pkg="roscopter" type="controller" output="screen">
+      <remap from="estimate" to="ground_truth/odometry/NED"/> 
+      <!--<remap from="estimate" to="estimate"/>-->
     </node>
 
     <!-- Waypoint Manager -->
     <node name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
       <remap from="waypoint" to="high_level_command"/>
-      <!-- <remap from="state" to="ground_truth/odometry/NED"/> -->
-      <remap from="state" to="estimate"/>
+      <remap from="state" to="ground_truth/odometry/NED"/> 
+      <!--<remap from="state" to="estimate"/>-->
     </node>
 
     <!-- plot states -->
-    <node pkg="roscopter" type="states_plotter.py" name="states_plotter" output="screen">
+    <!--<node pkg="roscopter" type="states_plotter.py" name="states_plotter" output="screen">
       <param name="time_window" value="10.0"/>
-    </node>
+    </node>-->
 
   </group>
 

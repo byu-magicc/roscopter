@@ -19,6 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
   nav_msgs
   sensor_msgs
   rosbag
+  roslib
 )
 find_package(Eigen3 REQUIRED)
 
@@ -28,7 +29,8 @@ generate_dynamic_reconfigure_options(
 
 catkin_package(
   INCLUDE_DIRS include ${EIGEN3_INCLUDE_DIRS}
-  CATKIN_DEPENDS roscpp rospy dynamic_reconfigure eigen_conversions rosflight_msgs rosflight_utils std_msgs nav_msgs sensor_msgs
+  CATKIN_DEPENDS roscpp rospy dynamic_reconfigure eigen_conversions
+    rosflight_msgs rosflight_utils std_msgs nav_msgs sensor_msgs roslib
   DEPENDS EIGEN3
 )
 
@@ -45,7 +47,8 @@ include_directories(include
 add_executable(controller
   src/controller/controller_node.cpp
   src/controller/controller.cpp
-  include/controller/controller.h)
+  include/controller/controller.h
+  src/controller/simple_pid.cpp)
 add_dependencies(controller ${catkin_EXPORTED_TARGETS})
 target_link_libraries(controller ${catkin_LIBRARIES})
 
