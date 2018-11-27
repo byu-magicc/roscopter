@@ -1,0 +1,77 @@
+{
+## Initial Uncertainty
+P0: [0.001, 0.001, 0.001,
+     0.001, 0.001, 0.001,
+     0.001, 0.001, 0.001,
+     0.3, 0.3, 0.3,
+     0.1, 0.1, 0.1,
+     0.01],
+P0_feat: [0.2, 0.2, 0.1],
+
+## Additive Process Noise
+Qx: [0.000, 0.000, 0.000,
+     0.001, 0.001, 0.001,
+     0.001, 0.001, 0.001,
+     0.001, 0.001, 0.001,
+     0.0001, 0.0001, 0.0001,
+     0.00],
+Qx_feat: [0.05, 0.05, 0.1],
+
+# Input Process Noise
+Qu: [0.05, 0.05, 0.05,      # u_acc
+     0.01, 0.01, 0.01],  # u_gyro
+
+## Partial Update Gain
+lambda: [0.7, 0.7, 0.7,     # POS
+         0.8, 0.8, 0.8,     # VEL
+         1.0, 1.0, 1.0,     # ATT
+         0.1, 0.1, 0.1,     # B_A
+         0.3, 0.3, 0.3,     # B_G
+         0.001],              # MU
+lambda_feat: [1.0, 1.0, 0.7],
+
+## Sensor Noise
+depth_R: 0.5,
+feat_R: [10.0, 10.0],
+acc_R_drag: [0.5, 0.5],
+acc_R_grav: [0.75, 0.75, 0.75],
+att_R: [0.01, 0.01, 0.01],
+pos_R: [0.1, 0.1, 0.1],
+
+vel_R: [0.01, 0.01, 0.01],
+alt_R: 0.1,
+
+## Low-Pass Filtering on IMU and Truth
+imu_LPF: 0.0,
+truth_LPF: 0.0,
+
+## Measurement Model Flags
+use_truth: true,
+use_depth: false,
+use_features: false,
+use_acc: false,
+use_imu_att: false,
+use_alt: false,
+
+## Feature Flags
+drag_term: false,
+partial_update: false,
+keyframe_reset: false,
+
+## Tracking Paramters
+min_depth: 1.5,
+keyframe_overlap: 0.8,
+num_features: 0,
+feature_radius: 45,
+
+## CPU Threads
+num_threads: 1,
+
+record_video: false,
+
+sync_time_samples: 20,  
+gating_threshold: 16,
+cov_prop_skips: 1
+
+
+}
