@@ -299,4 +299,23 @@ void EKF::h_vel(const xVector& x, zVector& h, hMatrix& H) const
   H.block<3,3>(0, (int)dxVEL) = I_3x3;
 }
 
+void VIEKF::h_gps(const xVector &x, zVector &h, hMatrix &H) const
+{
+  Map<Vector3d> vel(x.block<3,1>((int)xVEL,0));
+  Quatd q_I_b(x.block<4,1>((int)xATT, 0));
+  Map<Vector3d> p_e_I(T_e_I_.t_);
+
+  Matrix3d R_I_b = q_I_b.R();
+  R_I_NED = T_e_I_.q().R();
+
+  h.setZero();
+  h.topRows(3) = q_I_NED.rotp(pos + p_e_I);
+  h.bottomRows(3) = q_I_NED.rotp(q_I_b.rotp(vel);
+
+  H.setZero();
+  H.block<3,3>(0,(int)dxPOS) = R_I_NED;
+  H.block<3,3>(3,(int)dxVEL) = R_I_NED * R_I_b;
+  H.block<3,3>(3,(int)dxATT) = R_I_NED * R_I_b * skew(vel);
+}
+
 }
