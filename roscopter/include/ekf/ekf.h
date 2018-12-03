@@ -46,8 +46,8 @@ typedef Matrix<double, MAX_DX, MAX_DX> dxMatrix;
 typedef Matrix<double, MAX_DX, 6> dxuMatrix;
 typedef Matrix<double, 6, 1> uVector;
 typedef Matrix<double, 6, 6> Matrix6d;
-typedef Matrix<double, 4, 1> zVector;
-typedef Matrix<double, 3, MAX_DX> hMatrix;
+typedef Matrix<double, 6, 1> zVector;
+typedef Matrix<double, 6, MAX_DX> hMatrix;
 
 namespace roscopter
 {
@@ -105,6 +105,7 @@ public:
     ATT,
     POS,
     VEL,
+    GPS,
     TOTAL_MEAS
   } measurement_type_t;
 
@@ -183,6 +184,8 @@ private:
   bool partial_update_;
   double gating_threshold_;
 
+  Xformd T_e_I_; // The transform from ECEF to the local initial NED frame
+
   // Log Stuff
   std::vector<std::ofstream>* log_ = nullptr;
 
@@ -215,6 +218,7 @@ public:
   void set_x0(const Matrix<double, xZ, 1>& _x0);
   void set_imu_bias(const Vector3d& b_g, const Vector3d& b_a);
   void set_drag_term(const bool use_drag_term) {use_drag_term_ = use_drag_term;}
+  void set_ecef_to_NED_transform(const Xformd& T_e_I) { T_e_I_ = T_e_I; }
   bool get_drag_term() const {return use_drag_term_;}
 
   // State Propagation
@@ -234,6 +238,7 @@ public:
   void h_att(const xVector& x, zVector& h, hMatrix& H) const;
   void h_pos(const xVector& x, zVector& h, hMatrix& H) const;
   void h_vel(const xVector& x, zVector& h, hMatrix& H) const;
+  void h_gps(const xVector& x, zVector& h, hMatrix& H) const;
 
   // Logger
   void log_state(const double t, const xVector& x, const dxVector& P, const uVector& u, const dxVector& dx);
@@ -250,6 +255,7 @@ static std::vector<std::string> measurement_names = [] {
   tmp[EKF::ATT] = "ATT";
   tmp[EKF::POS] = "POS";
   tmp[EKF::VEL] = "VEL";
+  tmp[EKF::GPS] = "GPS";
   return tmp;
 }();
 
@@ -261,6 +267,7 @@ static std::vector<measurement_function_ptr> measurement_functions = [] {
   tmp[EKF::ATT] = &EKF::h_att;
   tmp[EKF::POS] = &EKF::h_pos;
   tmp[EKF::VEL] = &EKF::h_vel;
+  tmp[EKF::GPS] = &EKF::h_gps;
   return tmp;
 }();
 

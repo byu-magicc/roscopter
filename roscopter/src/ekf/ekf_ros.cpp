@@ -10,6 +10,7 @@ EKF_ROS::EKF_ROS() :
     pose_sub_ = nh_.subscribe("truth/pose", 10, &EKF_ROS::pose_truth_callback, this);
     transform_sub_ = nh_.subscribe("truth/transform", 10, &EKF_ROS::transform_truth_callback, this);
     status_sub_ = nh_.subscribe("status", 1, &EKF_ROS::status_callback, this);
+    gps_sub_ = nh_.subscribe("gps", 10, &EKF_ROS::gps_callback, this);
     odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odom", 1);
     bias_pub_ = nh_.advertise<sensor_msgs::Imu>("imu/bias", 1);
     is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1, true);
@@ -72,6 +73,7 @@ EKF_ROS::EKF_ROS() :
     ROS_FATAL_COND(!nh_private_.getParam("use_acc", use_acc_), "you need to specify the 'use_acc' parameter");
     ROS_FATAL_COND(!nh_private_.getParam("use_imu_att", use_imu_att_), "you need to specify the 'use_imu_att' parameter");
     ROS_FATAL_COND(!nh_private_.getParam("use_alt", use_alt_), "you need to specify the 'use_alt' parameter");
+    ROS_FATAL_COND(!nh_private_.getParam("use_gps", use_gps_), "you need to specify the 'use_gps' parameter");
 
     cout << "\nlog file: " << log_directory << "\n";
     cout << "\nMEASUREMENTS\tFEATURES\n==============================\n";
@@ -81,7 +83,7 @@ EKF_ROS::EKF_ROS() :
     cout << "acc: " << use_acc_ << "\n";
     cout << "imu_att: " << use_imu_att_ << "\n";
     cout << "imu_alt: " << use_alt_ << "\n";
-
+    cout << "gps: " << use_gps_ << "\n";
 
     // Wait for truth to initialize pose
     imu_init_ = false;
@@ -329,6 +331,50 @@ void EKF_ROS::status_callback(const rosflight_msgs::StatusConstPtr &msg)
         is_flying_ = false;
 
     armed_ = msg->armed;
+}
+
+void EKF_ROS::gps_callback(const inertial_sense::GPSConstPtr &msg)
+{
+    if (!gps_init_)
+    {
+      xform::Xformd T_e_I;
+      Vector3d ZECEF;
+      Vector3d YECEF;
+      Vector3d ZNEDI;
+      Vector3d YNEDI;
+      Quatd q1;
+      Quatd q2;
+
+      T_e_I.t_ << msg->posEcef.x, msg->posEcef.y, msg->posEcef.z;
+      ZECEF << 0,0,1;
+      YECEF << 0,1,0;
+      ZNEDI = -1*(T_e_I.t_)/(sqrt(T_e_I.t_.transpose()*T_e_I.t_)); //normalize
+      YNEDI = skew(ZECEF)*(-ZNEDI);
+      q1.from_two_unit_vectors(ZNEDI,ZECEF);
+      q2.from_two_unit_vectors(YNEDI,YECEF);
+      T_e_I.q_ = q1.otimes(q2);
+
+      ekf_mtx_.lock();
+      ekf_.set_ecef_to_NED_transform(T_e_I);
+      ekf_mtx_.unlock();
+      gps_init_ = true;
+      return;
+    }
+
+    Vector6d z_gps_;
+    Matrix3d Rbe = Matrix3d::Zero();
+    Matrix3d hvAcc = Matrix3d::Zero();
+    Matrix6d gps_R_ = Matrix6d::Zero();
+
+    z_gps_ << msg->posEcef.x, msg->posEcef.y, msg->posEcef.z, msg->velEcef.x, msg->velEcef.y, msg->velEcef.z;
+    Rbe = Quatd(ekf_.get_state().segment<4>(EKF::ATT)).R();
+    hvAcc.block<3,3>(0,0) << pow(msg->hAcc,2), 0, 0, 0, pow(msg->hAcc,2), 0, 0, 0, pow(msg->vAcc,2);
+    gps_R_.block<3,3>(0,0) = Rbe*hvAcc;
+    gps_R_.block<3,3>(3,3) << pow(msg->sAcc,2), 0, 0, 0, pow(msg->sAcc,2), 0, 0, 0, pow(msg->sAcc,2);
+    double t = (msg->header.stamp - start_time_).toSec();
+    ekf_mtx_.lock();
+    ekf_.add_measurement(t, z_gps_, EKF::GPS, gps_R_, !use_gps_);
+    ekf_mtx_.unlock();
 }
 
 }

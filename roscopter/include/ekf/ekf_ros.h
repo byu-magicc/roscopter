@@ -13,6 +13,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <std_msgs/Bool.h>
+#include <inertial_sense/GPS.h>
 
 
 using namespace Eigen;
@@ -34,6 +35,7 @@ public:
   void truth_callback(Vector3d &z_pos_, Vector4d &z_att_, ros::Time time);
   void imu_callback(const sensor_msgs::ImuConstPtr& msg);
   void status_callback(const rosflight_msgs::StatusConstPtr& msg);
+  void gps_callback(const inertial_sense::GPSConstPtr &msg);
   EKF ekf_;
   
 private:
@@ -46,6 +48,7 @@ private:
   ros::Subscriber pose_sub_;
   ros::Subscriber transform_sub_;
   ros::Subscriber status_sub_;
+  ros::Subscriber gps_sub_;
   ros::Publisher odometry_pub_;
   ros::Publisher bias_pub_;
   ros::Publisher is_flying_pub_;
@@ -55,6 +58,7 @@ private:
 
   bool imu_init_ = false;
   bool truth_init_ = false;
+  bool gps_init_ = false;
   
   bool use_drag_term_ = false;
   bool is_flying_ = false;
@@ -63,6 +67,7 @@ private:
   bool use_acc_;
   bool use_imu_att_;
   bool use_alt_;
+  bool use_gps_;
   double IMU_LPF_;
   double truth_LPF_;
   ros::Time time_took_off_;
