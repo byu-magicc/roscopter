@@ -1,5 +1,7 @@
 #include "ekf/ekf.h"
 
+#include "geometry/support.h"
+
 namespace roscopter
 {
 
@@ -277,7 +279,7 @@ void EKF::h_alt(const xVector& x, zVector& h, hMatrix& H) const
 
 void EKF::h_att(const xVector& x, zVector& h, hMatrix& H) const
 {
-  h = x.block<4,1>((int)xATT, 0);
+  h.topRows<4>() = x.block<4,1>((int)xATT, 0);
   
   H.setZero();
   H.block<3,3>(0, dxATT) = I_3x3;
@@ -301,14 +303,14 @@ void EKF::h_vel(const xVector& x, zVector& h, hMatrix& H) const
 
 void EKF::h_gps(const xVector &x, zVector &h, hMatrix &H) const
 {
-  Map<Vector3d> vel(x.data() + xVEL);
-  Map<Vector3d> pos(x.data() + xPOS);
+  Map<const Vector3d> vel(x.data() + xVEL);
+  Map<const Vector3d> pos(x.data() + xPOS);
   Quatd q_I_b(x.data() + xATT);
   Map<Vector3d> p_e_I(T_e_I_.t_);
 
   Matrix3d R_I_b = q_I_b.R();
-  Matrix3d R_I_NED = T_e_I_.q().R();
-  Quatd q_I_NED = T_e_I_.q();
+  Matrix3d R_I_NED = T_e_I_.q_.R();
+  Quatd q_I_NED = T_e_I_.q_;
 
   h.setZero();
   h.topRows(3) = q_I_NED.rotp(pos + p_e_I);

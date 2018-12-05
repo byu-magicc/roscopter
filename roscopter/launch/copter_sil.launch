@@ -15,7 +15,7 @@
   <rosparam command="load" file="$(find roscopter_sim)/params/multirotor.yaml"/>
 
   <!-- Estimator -->
-  <node name="mekf" pkg="roscopter" type="mekf" output="screen"/>
+  <node name="ekf" pkg="roscopter" type="ekf" output="screen"/>
 
 
   <!-- RC -->

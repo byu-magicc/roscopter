@@ -19,6 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
   nav_msgs
   sensor_msgs
   rosbag
+  roslib
 )
 find_package(Eigen3 REQUIRED)
 
