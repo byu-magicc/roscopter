@@ -15,7 +15,7 @@ EKF_ROS::EKF_ROS() :
   is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1, true);
   
   std::string log_directory, feature_mask;
-  std::string default_log_folder = ros::package::getPath("vi_ekf") + "/logs/" + to_string(ros::Time::now().sec);
+  std::string default_log_folder = ros::package::getPath("roscopter") + "/logs/" + to_string(ros::Time::now().sec);
   nh_private_.param<std::string>("log_directory", log_directory, default_log_folder );
   nh_private_.param<std::string>("feature_mask", feature_mask, "");
 
@@ -73,7 +73,7 @@ EKF_ROS::EKF_ROS() :
   ROS_FATAL_COND(!nh_private_.getParam("use_imu_att", use_imu_att_), "you need to specify the 'use_imu_att' parameter");
   ROS_FATAL_COND(!nh_private_.getParam("use_alt", use_alt_), "you need to specify the 'use_alt' parameter");
   
-  cout << "\nlog file: " << log_directory << "\n";
+  cout << "\nlog file: " << (log_directory.compare("~") != 0) ? log_directory : "N/A" << "\n";
   cout << "\nMEASUREMENTS\tFEATURES\n==============================\n";
   cout << "truth: " << use_truth_ << "\t";
   cout << "partial update: " << partial_update << "\n";

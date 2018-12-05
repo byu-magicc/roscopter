@@ -110,7 +110,7 @@ int main(int argc, char * argv[])
     cout << "Please Specify bag file" << endl;
   }
 
-  ros::init(argc, argv, "vi_ekf_rosbag");
+  ros::init(argc, argv, "ekf_rosbag");
 
   rosbag::Bag bag;
   try
@@ -218,4 +218,6 @@ int main(int argc, char * argv[])
       node.transform_truth_callback(pose);
     }
   }
+  print_progress(bag_elapsed / (bag_end - bag_start).toSec(), bag_elapsed / system_elapsed);
+  cout << endl;
 }
