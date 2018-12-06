@@ -205,6 +205,12 @@ int main(int argc, char * argv[])
 
       seen_imu_topic = m.getTopic();
     }
+
+    else if (datatype.compare("inertial_sense/GPS") == 0)
+    {
+      const inertial_sense::GPSConstPtr gps(m.instantiate<inertial_sense::GPS>());
+      node.gps_callback(gps);
+    }
     
     else if (datatype.compare("geometry_msgs/PoseStamped") == 0)
     {
