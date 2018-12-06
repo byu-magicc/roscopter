@@ -367,7 +367,7 @@ void EKF_ROS::gps_callback(const inertial_sense::GPSConstPtr &msg)
     Matrix6d gps_R_ = Matrix6d::Zero();
 
     z_gps_ << msg->posEcef.x, msg->posEcef.y, msg->posEcef.z, msg->velEcef.x, msg->velEcef.y, msg->velEcef.z;
-    Rbe = Quatd(ekf_.get_state().segment<4>(EKF::ATT)).R();
+    Rbe = Quatd(ekf_.get_state().segment<4>(roscopter::EKF::ATT)).R();
     hvAcc.block<3,3>(0,0) << pow(msg->hAcc,2), 0, 0, 0, pow(msg->hAcc,2), 0, 0, 0, pow(msg->vAcc,2);
     gps_R_.block<3,3>(0,0) = Rbe*hvAcc;
     gps_R_.block<3,3>(3,3) << pow(msg->sAcc,2), 0, 0, 0, pow(msg->sAcc,2), 0, 0, 0, pow(msg->sAcc,2);
