@@ -72,6 +72,7 @@ EKF_ROS::EKF_ROS() :
   ROS_FATAL_COND(!nh_private_.getParam("use_acc", use_acc_), "you need to specify the 'use_acc' parameter");
   ROS_FATAL_COND(!nh_private_.getParam("use_imu_att", use_imu_att_), "you need to specify the 'use_imu_att' parameter");
   ROS_FATAL_COND(!nh_private_.getParam("use_alt", use_alt_), "you need to specify the 'use_alt' parameter");
+  ROS_FATAL_COND(!nh_private_.getParam("use_gps", use_gps_), "you need to specify the 'use_gps' parameter");
   
 //  string NA = ;
   cout << "\nlog file: " << ((log_directory.compare("~") != 0) ? log_directory : "N/A")  << "\n";
@@ -372,7 +373,7 @@ void EKF_ROS::gps_callback(const inertial_sense::GPSConstPtr &msg)
     gps_R_.block<3,3>(3,3) << pow(msg->sAcc,2), 0, 0, 0, pow(msg->sAcc,2), 0, 0, 0, pow(msg->sAcc,2);
     double t = (msg->header.stamp - start_time_).toSec();
     ekf_mtx_.lock();
-    ekf_.add_measurement(t, z_gps_, EKF::GPS, gps_R_, !use_gps_);
+    ekf_.add_measurement(t, z_gps_, EKF::GPS, gps_R_, use_gps_);
     ekf_mtx_.unlock();
 }
 
