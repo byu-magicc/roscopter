@@ -147,7 +147,7 @@ private:
     double t;
     measurement_type_t type;
     zVector z;
-    Matrix3d R;
+    Matrix6d R;
     bool active;
     int zdim;
     int rdim;
