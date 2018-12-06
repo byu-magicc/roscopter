@@ -17,9 +17,11 @@
   <!-- Estimator -->
   <node name="ekf" pkg="roscopter" type="ekf" output="screen"/>
 
+  <!-- Is Flying Publisher -->
+  <node pkg="rostopic" type="rostopic" name="is_flying_pub" args="pub is_flying std_msgs/Bool true"/>
 
   <!-- RC -->
-  <node name="rc_joy" pkg="rosflight_joy" type="rc_joy">
+  <node name="rc_joy" pkg="rosflight_utils" type="rc_joy">
     <remap from="RC" to="multirotor/RC"/>
   </node>
 

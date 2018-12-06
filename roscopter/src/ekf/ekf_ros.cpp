@@ -6,92 +6,91 @@ namespace roscopter {
 EKF_ROS::EKF_ROS() :
     nh_private_("~")
 {
-    imu_sub_ = nh_.subscribe("imu", 500, &EKF_ROS::imu_callback, this);
-    pose_sub_ = nh_.subscribe("truth/pose", 10, &EKF_ROS::pose_truth_callback, this);
-    transform_sub_ = nh_.subscribe("truth/transform", 10, &EKF_ROS::transform_truth_callback, this);
-    status_sub_ = nh_.subscribe("status", 1, &EKF_ROS::status_callback, this);
-    gps_sub_ = nh_.subscribe("gps", 10, &EKF_ROS::gps_callback, this);
-    odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odom", 1);
-    bias_pub_ = nh_.advertise<sensor_msgs::Imu>("imu/bias", 1);
-    is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1, true);
+  imu_sub_ = nh_.subscribe("imu", 500, &EKF_ROS::imu_callback, this);
+  pose_sub_ = nh_.subscribe("truth/pose", 10, &EKF_ROS::pose_truth_callback, this);
+  transform_sub_ = nh_.subscribe("truth/transform", 10, &EKF_ROS::transform_truth_callback, this);
+  status_sub_ = nh_.subscribe("status", 1, &EKF_ROS::status_callback, this);
+  odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odom", 1);
+  bias_pub_ = nh_.advertise<sensor_msgs::Imu>("imu/bias", 1);
+  is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1, true);
+  
+  std::string log_directory, feature_mask;
+  std::string default_log_folder = ros::package::getPath("roscopter") + "/logs/" + to_string(ros::Time::now().sec);
+  nh_private_.param<std::string>("log_directory", log_directory, default_log_folder );
+  nh_private_.param<std::string>("feature_mask", feature_mask, "");
 
-    std::string log_directory, feature_mask;
-    std::string default_log_folder = ros::package::getPath("roscopter") + "/logs/" + to_string(ros::Time::now().sec);
-    nh_private_.param<std::string>("log_directory", log_directory, default_log_folder );
-    nh_private_.param<std::string>("feature_mask", feature_mask, "");
+  Eigen::Matrix<double, roscopter::EKF::xZ, 1> x0;
+  Eigen::Matrix<double, roscopter::EKF::dxZ, 1> P0diag, Qxdiag, lambda;
+  uVector Qudiag;
+  Vector4d q_b_IMU, q_I_truth;
+  Vector2d acc_r_drag_diag;
+  Vector3d att_r_diag, pos_r_diag, vel_r_diag, acc_r_grav_diag;
+  importMatrixFromParamServer(nh_private_, x0, "x0");
+  importMatrixFromParamServer(nh_private_, P0diag, "P0");
+  importMatrixFromParamServer(nh_private_, Qxdiag, "Qx");
+  importMatrixFromParamServer(nh_private_, lambda, "lambda");
+  importMatrixFromParamServer(nh_private_, Qudiag, "Qu");
+  importMatrixFromParamServer(nh_private_, acc_r_drag_diag, "acc_R_drag");
+  importMatrixFromParamServer(nh_private_, acc_r_grav_diag, "acc_R_grav");
+  importMatrixFromParamServer(nh_private_, att_r_diag, "att_R");
+  importMatrixFromParamServer(nh_private_, pos_r_diag, "pos_R");
+  importMatrixFromParamServer(nh_private_, vel_r_diag, "vel_R");
+  importMatrixFromParamServer(nh_private_, q_b_IMU, "q_b_IMU");
+  importMatrixFromParamServer(nh_private_, q_I_truth, "q_I_truth");
+  q_b_IMU_.arr_ = q_b_IMU;
+  q_I_truth_.arr_ = q_I_truth;
+  double alt_r, gating_threshold;
+  bool partial_update;
+  int cov_prop_skips;
+  ROS_FATAL_COND(!nh_private_.getParam("alt_R", alt_r), "you need to specify the 'alt_R' parameter");
+  ROS_FATAL_COND(!nh_private_.getParam("imu_LPF", IMU_LPF_), "you need to specify the 'imu_LPF' parameter");
+  ROS_FATAL_COND(!nh_private_.getParam("truth_LPF", truth_LPF_), "you need to specify the 'truth_LPF' parameter");
+  ROS_FATAL_COND(!nh_private_.getParam("partial_update", partial_update), "you need to specify the 'partial_update' parameter");
+  ROS_FATAL_COND(!nh_private_.getParam("drag_term", use_drag_term_), "you need to specify the 'drag_term' parameter");
+  ROS_FATAL_COND(!nh_private_.getParam("cov_prop_skips", cov_prop_skips), "you need to specify the 'cov_prop_skips' parameter");
+  ROS_FATAL_COND(!nh_private_.getParam("sync_time_samples", num_sync_time_samples_), "you need to specify the 'sync_time_samples' parameter");
+  ROS_FATAL_COND(!nh_private_.getParam("gating_threshold", gating_threshold), "you need to specify the 'gating_threshold' parameter");
+  
+  ekf_.init(x0, P0diag, Qxdiag, lambda, Qudiag, log_directory, use_drag_term_, partial_update, cov_prop_skips, gating_threshold);
+  
+  is_flying_ = false; // Start out not flying
+  ekf_.set_drag_term(false); // Start out not using the drag term
+  
+  // Initialize keyframe variables
+  init_pos_.setZero();
+  
+  // Initialize the measurement noise covariance matrices
+  acc_R_drag_ = acc_r_drag_diag.asDiagonal();
+  acc_R_grav_ = acc_r_grav_diag.asDiagonal();
+  att_R_ = att_r_diag.asDiagonal();
+  pos_R_ = pos_r_diag.asDiagonal();
+  vel_R_ = vel_r_diag.asDiagonal();
+  alt_R_ << alt_r;
+  
+  // Turn on the specified measurements
+  ROS_FATAL_COND(!nh_private_.getParam("use_truth", use_truth_), "you need to specify the 'use_truth' parameter");
+  ROS_FATAL_COND(!nh_private_.getParam("use_acc", use_acc_), "you need to specify the 'use_acc' parameter");
+  ROS_FATAL_COND(!nh_private_.getParam("use_imu_att", use_imu_att_), "you need to specify the 'use_imu_att' parameter");
+  ROS_FATAL_COND(!nh_private_.getParam("use_alt", use_alt_), "you need to specify the 'use_alt' parameter");
+  
+//  string NA = ;
+  cout << "\nlog file: " << ((log_directory.compare("~") != 0) ? log_directory : "N/A")  << "\n";
+  cout << "\nMEASUREMENTS\tFEATURES\n==============================\n";
+  cout << "truth: " << use_truth_ << "\t";
+  cout << "partial update: " << partial_update << "\n";
+  cout << "drag_term: " << use_drag_term_ << "\n";
+  cout << "acc: " << use_acc_ << "\n";
+  cout << "imu_att: " << use_imu_att_ << "\n";
+  cout << "imu_alt: " << use_alt_ << "\n";
+  cout << "gps: " << use_gps_ << "\n";
 
-    Eigen::Matrix<double, roscopter::EKF::xZ, 1> x0;
-    Eigen::Matrix<double, roscopter::EKF::dxZ, 1> P0diag, Qxdiag, lambda;
-    uVector Qudiag;
-    Vector4d q_b_IMU, q_I_truth;
-    Vector2d acc_r_drag_diag;
-    Vector3d att_r_diag, pos_r_diag, vel_r_diag, acc_r_grav_diag;
-    importMatrixFromParamServer(nh_private_, x0, "x0");
-    importMatrixFromParamServer(nh_private_, P0diag, "P0");
-    importMatrixFromParamServer(nh_private_, Qxdiag, "Qx");
-    importMatrixFromParamServer(nh_private_, lambda, "lambda");
-    importMatrixFromParamServer(nh_private_, Qudiag, "Qu");
-    importMatrixFromParamServer(nh_private_, acc_r_drag_diag, "acc_R_drag");
-    importMatrixFromParamServer(nh_private_, acc_r_grav_diag, "acc_R_grav");
-    importMatrixFromParamServer(nh_private_, att_r_diag, "att_R");
-    importMatrixFromParamServer(nh_private_, pos_r_diag, "pos_R");
-    importMatrixFromParamServer(nh_private_, vel_r_diag, "vel_R");
-    importMatrixFromParamServer(nh_private_, q_b_IMU, "q_b_IMU");
-    importMatrixFromParamServer(nh_private_, q_I_truth, "q_I_truth");
-    q_b_IMU_.arr_ = q_b_IMU;
-    q_I_truth_.arr_ = q_I_truth;
-    double alt_r, gating_threshold;
-    bool partial_update;
-    int cov_prop_skips;
-    ROS_FATAL_COND(!nh_private_.getParam("alt_R", alt_r), "you need to specify the 'alt_R' parameter");
-    ROS_FATAL_COND(!nh_private_.getParam("imu_LPF", IMU_LPF_), "you need to specify the 'imu_LPF' parameter");
-    ROS_FATAL_COND(!nh_private_.getParam("truth_LPF", truth_LPF_), "you need to specify the 'truth_LPF' parameter");
-    ROS_FATAL_COND(!nh_private_.getParam("partial_update", partial_update), "you need to specify the 'partial_update' parameter");
-    ROS_FATAL_COND(!nh_private_.getParam("drag_term", use_drag_term_), "you need to specify the 'drag_term' parameter");
-    ROS_FATAL_COND(!nh_private_.getParam("cov_prop_skips", cov_prop_skips), "you need to specify the 'cov_prop_skips' parameter");
-    ROS_FATAL_COND(!nh_private_.getParam("sync_time_samples", num_sync_time_samples_), "you need to specify the 'sync_time_samples' parameter");
-    ROS_FATAL_COND(!nh_private_.getParam("gating_threshold", gating_threshold), "you need to specify the 'gating_threshold' parameter");
-
-    ekf_.init(x0, P0diag, Qxdiag, lambda, Qudiag, log_directory, use_drag_term_, partial_update, cov_prop_skips, gating_threshold);
-
-    is_flying_ = false; // Start out not flying
-    ekf_.set_drag_term(false); // Start out not using the drag term
-
-    // Initialize keyframe variables
-    init_pos_.setZero();
-
-    // Initialize the measurement noise covariance matrices
-    acc_R_drag_ = acc_r_drag_diag.asDiagonal();
-    acc_R_grav_ = acc_r_grav_diag.asDiagonal();
-    att_R_ = att_r_diag.asDiagonal();
-    pos_R_ = pos_r_diag.asDiagonal();
-    vel_R_ = vel_r_diag.asDiagonal();
-    alt_R_ << alt_r;
-
-    // Turn on the specified measurements
-    ROS_FATAL_COND(!nh_private_.getParam("use_truth", use_truth_), "you need to specify the 'use_truth' parameter");
-    ROS_FATAL_COND(!nh_private_.getParam("use_acc", use_acc_), "you need to specify the 'use_acc' parameter");
-    ROS_FATAL_COND(!nh_private_.getParam("use_imu_att", use_imu_att_), "you need to specify the 'use_imu_att' parameter");
-    ROS_FATAL_COND(!nh_private_.getParam("use_alt", use_alt_), "you need to specify the 'use_alt' parameter");
-    ROS_FATAL_COND(!nh_private_.getParam("use_gps", use_gps_), "you need to specify the 'use_gps' parameter");
-
-    cout << "\nlog file: " << log_directory << "\n";
-    cout << "\nMEASUREMENTS\tFEATURES\n==============================\n";
-    cout << "truth: " << use_truth_ << "\t";
-    cout << "partial update: " << partial_update << "\n";
-    cout << "drag_term: " << use_drag_term_ << "\n";
-    cout << "acc: " << use_acc_ << "\n";
-    cout << "imu_att: " << use_imu_att_ << "\n";
-    cout << "imu_alt: " << use_alt_ << "\n";
-    cout << "gps: " << use_gps_ << "\n";
-
-    // Wait for truth to initialize pose
-    imu_init_ = false;
-    truth_init_ = false;
-    time_took_off_.fromSec(1e9);
-
-    odom_msg_.header.frame_id = "body";
-
+  
+  // Wait for truth to initialize pose
+  imu_init_ = false;
+  truth_init_ = false;
+  time_took_off_.fromSec(1e9);
+  
+  odom_msg_.header.frame_id = "body";
 }
 
 EKF_ROS::~EKF_ROS()

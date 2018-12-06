@@ -1,0 +1,23 @@
+## Inertialsense Hardware Geometry
+{
+  ## Initial State
+x0: [0, 0, 0,    # POS
+     0, 0, 0,         # VEL
+     1, 0, 0, 0,      # ATT
+     0.0,  0.0, 0.0, # B_A
+     0.0,  0.0, 0.0, # B_G
+     0.25],           # MU
+     
+image_size: [640, 480],
+cam_center: [316.680559, 230.660661],
+focal_len: [533.013144, 533.503964],
+distortion: [-0.28340811, 0.07395907, 0.00019359, 1.76187114e-05],
+invert_image: false,
+
+q_b_c: [0.5, 0.5, 0.5, 0.5],
+p_b_c: [0.0, 0.00, 0.015],
+q_b_IMU: [1.0, 0.0, 0.0, 0.0],
+q_I_truth: [0.5, 0.5, -0.5, 0.5],
+
+feature_mask: /home/superjax/dev_ws/src/vi_ekf/params/mask.png,  
+}
