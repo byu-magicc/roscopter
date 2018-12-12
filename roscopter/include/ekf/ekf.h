@@ -219,6 +219,7 @@ public:
   void set_imu_bias(const Vector3d& b_g, const Vector3d& b_a);
   void set_drag_term(const bool use_drag_term) {use_drag_term_ = use_drag_term;}
   void set_ecef_to_NED_transform(const Xformd& T_e_I) { T_e_I_ = T_e_I; }
+  Xformd* get_ecef_to_NED_transform() {return &T_e_I_; }
   bool get_drag_term() const {return use_drag_term_;}
 
   // State Propagation

@@ -60,11 +60,14 @@ void EKF::handle_measurements(std::vector<int>* gated_feature_ids)
   }
 
   // Make sure everything is lined up
-  if (t_[i_] > z_it->t || t_[i_] < u_it->first)
+  if (t_[i_] > z_it->t)
   {
-    cerr << "Time history misaligned\n";
+    cerr << "Time history misaligned (t_ at i_ is > the end of z buffer)" << endl;
   }
-
+  else if (t_[i_] < u_it->first)
+  {
+      cerr << "Time history misaligned (t_ at i_ is < the beginning of u buffer, aka the latest imu measurments)" << endl;
+  }
 
   // Process all inputs and measurements to catch back up
   while (u_it != u_.begin())
