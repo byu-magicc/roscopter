@@ -2,7 +2,7 @@
 
 int main(int argc, char* argv[])
 {
-  ros::init(argc, argv, "vi_ekf_node");
+  ros::init(argc, argv, "ekf");
   roscopter::EKF_ROS ekf;
   
   ros::NodeHandle nh("~");

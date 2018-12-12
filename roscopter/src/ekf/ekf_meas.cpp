@@ -182,7 +182,7 @@ EKF::meas_result_t EKF::update(measurement_t& meas)
   zVector residual;
   if (meas.type == ATT)
   {
-    residual.topRows(3) = Quatd(meas.z) - Quatd(zhat_);
+    residual.topRows(3) = Quatd(meas.z.topRows<4>()) - Quatd(zhat_.topRows<4>());
   }
   else
   {

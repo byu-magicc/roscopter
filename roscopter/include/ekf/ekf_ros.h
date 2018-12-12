@@ -32,6 +32,7 @@ public:
   ~EKF_ROS();
   void pose_truth_callback(const geometry_msgs::PoseStampedConstPtr &msg);
   void transform_truth_callback(const geometry_msgs::TransformStampedConstPtr &msg);
+  void odom_truth_callback(const nav_msgs::OdometryConstPtr &msg);
   void truth_callback(Vector3d &z_pos_, Vector4d &z_att_, ros::Time time);
   void imu_callback(const sensor_msgs::ImuConstPtr& msg);
   void status_callback(const rosflight_msgs::StatusConstPtr& msg);
@@ -47,6 +48,7 @@ private:
   ros::Subscriber imu_sub_;
   ros::Subscriber pose_sub_;
   ros::Subscriber transform_sub_;
+  ros::Subscriber odom_sub_;
   ros::Subscriber status_sub_;
   ros::Subscriber gps_sub_;
   ros::Publisher odometry_pub_;
