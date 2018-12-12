@@ -112,7 +112,7 @@ void EKF_ROS::imu_callback(const sensor_msgs::ImuConstPtr &msg)
     imu_ = (1. - IMU_LPF_) * u_ + IMU_LPF_ * imu_;
     imu_time_ = msg->header.stamp;
 
-    if (use_truth_ && !truth_init_)
+    if ((use_truth_ && !truth_init_) || (use_gps_ && !gps_init_))
         return;
     else if (!imu_init_)
     {
@@ -121,11 +121,10 @@ void EKF_ROS::imu_callback(const sensor_msgs::ImuConstPtr &msg)
         start_time_ = msg->header.stamp;
         return;
     }
-    if (use_truth_ && !time_sync_complete_)
+    if ((use_truth_ || use_gps_) && !time_sync_complete_)
         return;
 
     double t = (msg->header.stamp - start_time_).toSec();
-
 
     // Propagate filter
     ekf_mtx_.lock();
@@ -146,6 +145,7 @@ void EKF_ROS::imu_callback(const sensor_msgs::ImuConstPtr &msg)
         double norm = z_acc_grav_.norm();
         if (norm < 9.80665 * 1.15 && norm > 9.80665 * 0.85)
             ekf_.add_measurement(t, z_acc_grav_, roscopter::EKF::ACC, acc_R_grav_, use_acc_);
+
     }
     ekf_mtx_.unlock();
 
@@ -153,7 +153,7 @@ void EKF_ROS::imu_callback(const sensor_msgs::ImuConstPtr &msg)
     z_att_ << msg->orientation.w, msg->orientation.x, msg->orientation.y, msg->orientation.z;
     ekf_mtx_.lock();
     if (use_imu_att_)
-        ekf_.add_measurement(t, z_att_, roscopter::EKF::ATT, att_R_, (use_truth_) ? true : use_imu_att_);
+        ekf_.add_measurement(t, z_att_, roscopter::EKF::ATT, att_R_, (use_truth_ || use_gps_) ? true : use_imu_att_);
     ekf_mtx_.unlock();
 
     if (odometry_pub_.getNumSubscribers() > 0)
@@ -372,8 +372,41 @@ void EKF_ROS::gps_callback(const inertial_sense::GPSConstPtr &msg)
     gps_R_.block<3,3>(0,0) = Rbe*hvAcc;
     gps_R_.block<3,3>(3,3) << pow(msg->sAcc,2), 0, 0, 0, pow(msg->sAcc,2), 0, 0, 0, pow(msg->sAcc,2);
     double t = (msg->header.stamp - start_time_).toSec();
+
+
+    if (!time_sync_complete_)
+    {
+        if (!imu_init_)
+            return;
+        if (++time_sync_samples_ < num_sync_time_samples_)
+        {
+            ros::Time time = msg->header.stamp;
+            double offset = (time - imu_time_).toSec();
+            min_offset_ = (fabs(offset) < min_offset_) ? offset : min_offset_;
+        }
+        else
+        {
+            time_sync_complete_ = true;
+            if (!isfinite(min_offset_))
+            {
+                min_offset_ = 0;
+            }
+        }
+        return;
+    }
+
+    t -= min_offset_;
+
+    // temp hacky way to log GPS POS
+    Vector3d logMeas = (z_gps_.block<3,1>(0,0) - ekf_.get_ecef_to_NED_transform()->t_);
+    Vector3d dummyZHat;
+    dummyZHat << 0, 0, 0;
+
     ekf_mtx_.lock();
-    ekf_.add_measurement(t, z_gps_, EKF::GPS, gps_R_, use_gps_);
+    ekf_.add_measurement(t, z_gps_, roscopter::EKF::GPS, gps_R_, use_gps_);
+    // log GPS POS
+    ekf_.log_measurement(roscopter::EKF::POS, t, 3, logMeas, dummyZHat, false);
+    ekf_.handle_measurements();
     ekf_mtx_.unlock();
 }
 
