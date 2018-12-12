@@ -15,7 +15,12 @@
   <rosparam command="load" file="$(find roscopter_sim)/params/multirotor.yaml"/>
 
   <!-- Estimator -->
-  <node name="ekf" pkg="roscopter" type="ekf" output="screen"/>
+  <node name="ekf" pkg="roscopter" type="ekf_node" output="screen">
+    <rosparam command="load" file="$(find roscopter)/params/ekf_gains.yaml"/>
+    <rosparam command="load" file="$(find roscopter)/params/ekf_sim.yaml"/>
+    <remap from="imu" to="imu/data"/>
+    <remap from="truth/odom" to="multirotor/truth/NED"/>
+  </node>
 
   <!-- Is Flying Publisher -->
   <node pkg="rostopic" type="rostopic" name="is_flying_pub" args="pub is_flying std_msgs/Bool true"/>
@@ -27,7 +32,7 @@
 
   <!-- Control -->
   <node name="controller" pkg="roscopter" type="controller" output="screen">
-    <remap from="estimate" to="multirotor/truth/NED"/>
+    <remap from="estimate" to="odom"/>
   </node>
 
   <!-- Waypoint Management -->
