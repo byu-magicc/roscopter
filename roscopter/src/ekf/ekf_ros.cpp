@@ -341,6 +341,23 @@ void EKF_ROS::status_callback(const rosflight_msgs::StatusConstPtr &msg)
     armed_ = msg->armed;
 }
 
+void EKF_ROS::nav_truth_callback(const nav_msgs::OdometryConstPtr &msg)
+{
+    if (!nav_truth_init_) {
+        //get initial position
+        init_nav_truth_time_ = msg->header.stamp;
+        init_nav_truth_ << msg->pose.pose.position.y, msg->pose.pose.position.x, msg->pose.pose.position.z, 0, 0, 0;
+        nav_truth_init_ = true;
+        return;
+    }
+    Vector6d navTruth;
+    navTruth << msg->pose.pose.position.y, msg->pose.pose.position.x, msg->pose.pose.position.z,
+                msg->twist.twist.linear.x, msg->twist.twist.linear.y, msg->twist.twist.linear.z;
+    navTruth = (navTruth - init_nav_truth_); //subtract initial position
+    double t = (msg->header.stamp - init_nav_truth_time_).toSec();
+    ekf_.log_nav_truth(t, navTruth);
+}
+
 void EKF_ROS::gps_callback(const inertial_sense::GPSConstPtr &msg)
 {
     if (!gps_init_)

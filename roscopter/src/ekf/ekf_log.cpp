@@ -33,6 +33,15 @@ void EKF::log_measurement(const measurement_type_t type, const double t, const i
   }
 }
 
+void EKF::log_nav_truth(const double t, const Vector6d& z)
+{
+  if (log_ != NULL)
+  {
+    (*log_)[LOG_NAV_TRUTH].write((char*)&t, sizeof(double));
+    (*log_)[LOG_NAV_TRUTH].write((char*)z.data(), sizeof(double) * 6);
+  }
+}
+
 void EKF::disable_logger()
 {
   for (auto i = log_->begin(); i != log_->end(); i++)
@@ -63,6 +72,7 @@ void EKF::init_logger(string root_filename, string prefix)
   (*log_)[LOG_INPUT].open(root_filename + "/" + prefix +"input.bin", std::ofstream::out | std::ofstream::trunc);
   (*log_)[LOG_XDOT].open(root_filename + "/" + prefix +"xdot.bin", std::ofstream::out | std::ofstream::trunc);
   (*log_)[LOG_KF].open(root_filename + "/" + prefix +"kf.bin", std::ofstream::out | std::ofstream::trunc);
+  (*log_)[LOG_NAV_TRUTH].open(root_filename + "/" + prefix +"nav_truth.bin", std::ofstream::out | std::ofstream::trunc);
   (*log_)[LOG_DEBUG].open(root_filename + "/" + prefix +"debug.txt", std::ofstream::out | std::ofstream::trunc);
 
   // Save configuration

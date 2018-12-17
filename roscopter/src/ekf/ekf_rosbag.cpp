@@ -34,8 +34,10 @@ int main(int argc, char * argv[])
   string bag_filename = "";
   string imu_topic = "";
   string seen_imu_topic = "";
+  string nav_truth_topic = "";
   bool realtime = false;
   bool verbose = false;
+  bool log_nav_truth = false;
   double start_time = 0;
   double duration = INFINITY;
   for (int i = 0; i < argc; i++)
@@ -51,6 +53,8 @@ int main(int argc, char * argv[])
       cout << "\t -r \t\tRun bag in real time\n";
       cout << "\t -u DURATION\tduration to run bag (seconds)\n";
       cout << "\t -v Show Verbose Output\n";
+      cout << "\t -t Dump nav truth measurements (ie: topic of type nav_msgs/Odometry) into a log file\n";
+      cout << "\t -nav Odometry topic to use for nav truth\n";
       cout << "\t -imu IMU topic to use\n";
       cout << endl;
       return 0;
@@ -63,6 +67,15 @@ int main(int argc, char * argv[])
         return 0;
       }
       imu_topic = argv[++i];
+    }
+    else if (arg == "-nav")
+    {
+      if (i + 1 >= argc)
+      {
+        cout << "Please supply Nav topic" << endl;
+        return 0;
+      }
+      nav_truth_topic = argv[++i];
     }
     else if (arg == "-f")
     {
@@ -98,6 +111,10 @@ int main(int argc, char * argv[])
     else if (arg == "-v")
     {
       verbose = true;
+    }
+    else if (arg == "-t")
+    {
+      log_nav_truth = true;
     }
     else if (i == 0)
     {
@@ -206,6 +223,23 @@ int main(int argc, char * argv[])
         ROS_WARN_ONCE("Subscribed to Two IMU messages, use the -imu argument to specify IMU topic");
 
       seen_imu_topic = m.getTopic();
+    }
+
+    else if (log_nav_truth && datatype.compare("nav_msgs/Odometry") == 0)
+    {
+      if (nav_truth_topic.empty() || nav_truth_topic.compare(m.getTopic()) == 0)
+      {
+        const nav_msgs::OdometryConstPtr odom(m.instantiate<nav_msgs::Odometry>());
+        node.nav_truth_callback(odom);
+        if (nav_truth_topic.empty())
+        {
+          // if this is the first time we're handling an odom message, and the
+          // topic wasn't manually specified, assume we're tracking this first topic
+          nav_truth_topic = m.getTopic();
+        }
+      } else {
+        ROS_WARN_ONCE("It appears there are two different Odometry topics which could be used for Nav Truth. Use the -nav argument to specify which topic to use");
+      }
     }
 
     else if (datatype.compare("inertial_sense/GPS") == 0)
