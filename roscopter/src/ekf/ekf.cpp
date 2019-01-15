@@ -7,7 +7,7 @@ EKF::EKF(){}
 
 void EKF::init(Matrix<double, xZ,1>& x0, Matrix<double, dxZ,1> &P0, Matrix<double, dxZ,1> &Qx,
                Matrix<double, dxZ,1> &lambda, uVector &Qu, std::string log_directory, bool use_drag_term,
-               bool partial_update, int cov_prop_skips, double gating_threshold, std::string prefix)
+               bool partial_update, int cov_prop_skips, std::vector<double>& gating_thresholds, std::string prefix)
 {
   x_.resize(LEN_STATE_HIST);
   P_.resize(LEN_STATE_HIST);
@@ -33,7 +33,7 @@ void EKF::init(Matrix<double, xZ,1>& x0, Matrix<double, dxZ,1> &P0, Matrix<doubl
   partial_update_ = partial_update;
   start_t_ = NAN; // indicate that we need to initialize the filter
     
-  gating_threshold_ = gating_threshold;
+  gating_thresholds_ = gating_thresholds;
   
   if (log_directory.compare("~") != 0)
     init_logger(log_directory);

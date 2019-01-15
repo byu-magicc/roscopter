@@ -6,6 +6,7 @@ subFolders = logTopDir([logTopDir.isdir]);
 dirNames = {subFolders.name};
 latestDir = dirNames{end};
 logDir = strcat(strcat('../logs/', latestDir), '/');
+use_nav_truth = 0;
 
 names = ["t", "px", "py", "pz", "vx", "vy", "vz", "qw", "qx", "qy", "qz", "ax", "ay", "az", "bx", "by", "bz"];
 
@@ -30,6 +31,7 @@ est_file = fopen(strcat(logDir, 'prop.bin'), 'r');
 pos_file = fopen(strcat(logDir, 'POS.bin'), 'r');
 att_file = fopen(strcat(logDir, 'ATT.bin'), 'r');
 imu_file = fopen(strcat(logDir, 'input.bin'), 'r');
+gps_file = fopen(strcat(logDir, 'GPS.bin'), 'r');
 % read in optional nav_truth file
 if isfile(strcat(logDir, 'nav_truth.bin'))
     temp = dir(strcat(logDir, 'nav_truth.bin'));
@@ -54,6 +56,9 @@ att = reshape(fread(att_file, 'double'), 1+8+1, []);
 
 % Read IMU
 imu = reshape(fread(imu_file, 'double'), 1+6, []);
+
+% Read GPS
+gps = reshape(fread(gps_file, 'double'), 1+6+6+1, []);
 
 % Read Nav Truth (Odom data from another estimator)
 if use_nav_truth
@@ -136,6 +141,20 @@ for i = 1:2
         subplot(3,2,(j-1)*2+i)
         plot(imu(1,:), imu(imu_idx,:),'lineWidth', 3.0);
         title(names(imu_idx+10));
+    end
+end
+
+%% Plot GPS Residuals
+figure(6); clf;
+set(gcf, 'name', 'GPS', 'NumberTitle', 'off');
+gps_names=["x_e", "y_e", "z_e", "\dot{x}_e", "\dot{y}_e", "\dot{z}_e"];
+for i = 1:2
+    for j = 1:3
+        subplot(3,2,(j-1)*2+i);
+        plot(gps(1,:), gps((i-1)*3 + j+1, :), 'linewidth', 3.0)
+        hold on;
+        plot(gps(1,:), gps((i-1)*3 + j+7, :), 'linewidth', 3.0)
+        legend("z", "\hat{z}")
     end
 end
 

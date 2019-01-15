@@ -106,12 +106,26 @@ void EKF::handle_measurements(std::vector<int>* gated_feature_ids)
 
   // Clear any old measurements in the queue
   while (zbuf_.size() > LEN_MEAS_HIST)
+  {
+    if (!zbuf_.back().handled)
+    {
+            cerr << "popping unhandled " << measurement_names[z_it->type]
+                 << " measurement from measurement history.  EKF.t_ = " << t_[i_]
+                 << " z.t = " << zbuf_.back().t
+                 << " Consider increasing measurement buffer size" << endl;
+            cerr << " zbuf = " << endl;
+            for (zBuf::iterator it = zbuf_.begin(); it != zbuf_.end(); it++)
+            {
+                cerr << measurement_names[z_it->type] << ": " << it->t << ", " << it->handled << endl;
+            }
+    }
+
     zbuf_.pop_back();
+  }
 
   // Clear old propagation memory
   while (u_.size() > LEN_STATE_HIST)
     u_.pop_back();
-
 }
 
 
@@ -181,6 +195,11 @@ EKF::meas_result_t EKF::update(measurement_t& meas)
   (this->*(measurement_functions[meas.type]))(x_[i_], zhat_, H_);
   
   NAN_CHECK;
+
+  if (meas.type == GPS)
+  {
+      int debug = 1;
+  }
   
   zVector residual;
   if (meas.type == ATT)
@@ -204,7 +223,7 @@ EKF::meas_result_t EKF::update(measurement_t& meas)
     auto innov =  (H * P_[i_] * H.transpose() + R).inverse();
 
     double mahal = res.transpose() * innov * res;
-    if (mahal > gating_threshold_)
+    if (mahal > gating_thresholds_[meas.type])
     {
       //      std::cout << "gating " << measurement_names[meas_type] << " measurement: " << mahal << std::endl;
       return MEAS_GATED;

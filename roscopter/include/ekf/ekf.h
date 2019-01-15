@@ -35,9 +35,10 @@ using namespace Eigen;
 
 #define MAX_X 17
 #define MAX_DX 16
+#define MAX_Z 6
 
 #define LEN_STATE_HIST 250
-#define LEN_MEAS_HIST 2
+#define LEN_MEAS_HIST 100
 
 typedef Matrix<double, MAX_X, 1> xVector;
 typedef Matrix<double, MAX_DX, 1> dxVector;
@@ -46,8 +47,8 @@ typedef Matrix<double, MAX_DX, MAX_DX> dxMatrix;
 typedef Matrix<double, MAX_DX, 6> dxuMatrix;
 typedef Matrix<double, 6, 1> uVector;
 typedef Matrix<double, 6, 6> Matrix6d;
-typedef Matrix<double, 6, 1> zVector;
-typedef Matrix<double, 6, MAX_DX> hMatrix;
+typedef Matrix<double, MAX_Z, 1> zVector;
+typedef Matrix<double, MAX_Z, MAX_DX> hMatrix;
 
 namespace roscopter
 {
@@ -176,14 +177,14 @@ private:
   const dxMatrix Ones_big_ = dxMatrix::Constant(1.0);
   const dxVector dx_ones_ = dxVector::Constant(1.0);
   xVector xp_;
-  Matrix<double, MAX_DX, 3>  K_;
+  Matrix<double, MAX_DX, MAX_Z>  K_;
   zVector zhat_;
   hMatrix H_;
 
   // EKF Configuration Parameters
   bool use_drag_term_;
   bool partial_update_;
-  double gating_threshold_;
+  std::vector<double> gating_thresholds_;
 
   Xformd T_e_I_; // The transform from ECEF to the local initial NED frame
 
@@ -199,7 +200,7 @@ public:
 #endif
   void init(Matrix<double, xZ,1> &x0, Matrix<double, dxZ,1> &P0, Matrix<double, dxZ,1> &Qx,
             Matrix<double, dxZ,1> &lambda, uVector &Qu, std::string log_directory, bool use_drag_term,
-            bool partial_update, int cov_prop_skips, double gating_threshold, string prefix="");
+            bool partial_update, int cov_prop_skips, std::vector<double>& gating_threshold, string prefix="");
 
   inline double now() const
   {

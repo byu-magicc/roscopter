@@ -48,11 +48,18 @@ truth_LPF: 0.7,
 ## Measurement Model Flags
 use_truth: true,
 use_depth: false,
-use_features: false,
 use_acc: false,
 use_imu_att: false,
 use_alt: false,
 use_gps: false,
+
+## Measurement Covariance Gating (mahalanobis distance)
+pos_gating: 999,
+att_gating: 999,
+acc_gating: 999,
+vel_gating: 999,
+alt_gating: 999,
+gps_gating: 999,
 
 ## Feature Flags
 drag_term: false,
@@ -71,7 +78,6 @@ num_threads: 1,
 record_video: false,
 
 sync_time_samples: 20,  
-gating_threshold: 16,
 cov_prop_skips: 1
 
 

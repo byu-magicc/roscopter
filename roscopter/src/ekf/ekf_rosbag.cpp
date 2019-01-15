@@ -244,7 +244,9 @@ int main(int argc, char * argv[])
 
     else if (datatype.compare("inertial_sense/GPS") == 0)
     {
-      const inertial_sense::GPSConstPtr gps(m.instantiate<inertial_sense::GPS>());
+      boost::shared_ptr<inertial_sense::GPS> msg = m.instantiate<inertial_sense::GPS>();
+      msg->header.stamp = m.getTime();
+      const inertial_sense::GPSConstPtr gps(msg);
       node.gps_callback(gps);
     }
     
@@ -258,6 +260,12 @@ int main(int argc, char * argv[])
     {
       const geometry_msgs::TransformStampedConstPtr pose(m.instantiate<geometry_msgs::TransformStamped>());
       node.transform_truth_callback(pose);
+    }
+
+    else if (datatype.compare("nav_msgs/Odometry") == 0)
+    {
+        const nav_msgs::OdometryConstPtr pose(m.instantiate<nav_msgs::Odometry>());
+        node.odom_truth_callback(pose);
     }
   }
   ros::Time now = ros::Time::now();

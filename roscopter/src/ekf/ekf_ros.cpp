@@ -50,9 +50,17 @@ EKF_ROS::EKF_ROS() :
   ROS_FATAL_COND(!nh_private_.getParam("drag_term", use_drag_term_), "you need to specify the 'drag_term' parameter");
   ROS_FATAL_COND(!nh_private_.getParam("cov_prop_skips", cov_prop_skips), "you need to specify the 'cov_prop_skips' parameter");
   ROS_FATAL_COND(!nh_private_.getParam("sync_time_samples", num_sync_time_samples_), "you need to specify the 'sync_time_samples' parameter");
-  ROS_FATAL_COND(!nh_private_.getParam("gating_threshold", gating_threshold), "you need to specify the 'gating_threshold' parameter");
+
+  std::vector<double> gating_thresholds;
+  gating_thresholds.resize(EKF::TOTAL_MEAS);
+  ROS_FATAL_COND(!nh_private_.getParam("pos_gating", gating_thresholds[EKF::POS]), "you need to specify the 'pos_gating' parameter");
+  ROS_FATAL_COND(!nh_private_.getParam("att_gating", gating_thresholds[EKF::ATT]), "you need to specify the 'att_gating' parameter");
+  ROS_FATAL_COND(!nh_private_.getParam("acc_gating", gating_thresholds[EKF::ACC]), "you need to specify the 'acc_gating' parameter");
+  ROS_FATAL_COND(!nh_private_.getParam("alt_gating", gating_thresholds[EKF::ALT]), "you need to specify the 'alt_gating' parameter");
+  ROS_FATAL_COND(!nh_private_.getParam("vel_gating", gating_thresholds[EKF::VEL]), "you need to specify the 'vel_gating' parameter");
+  ROS_FATAL_COND(!nh_private_.getParam("gps_gating", gating_thresholds[EKF::GPS]), "you need to specify the 'gps_gating' parameter");
   
-  ekf_.init(x0, P0diag, Qxdiag, lambda, Qudiag, log_directory, use_drag_term_, partial_update, cov_prop_skips, gating_threshold);
+  ekf_.init(x0, P0diag, Qxdiag, lambda, Qudiag, log_directory, use_drag_term_, partial_update, cov_prop_skips, gating_thresholds);
   
   is_flying_ = false; // Start out not flying
   ekf_.set_drag_term(false); // Start out not using the drag term
@@ -144,21 +152,21 @@ void EKF_ROS::imu_callback(const sensor_msgs::ImuConstPtr &msg)
 
 
     // update accelerometer measurement
-    ekf_mtx_.lock();
-    if (ekf_.get_drag_term() == true)
-    {
-        z_acc_drag_ = imu_.block<2,1>(0, 0);
-        ekf_.add_measurement(t, z_acc_drag_, roscopter::EKF::ACC, acc_R_drag_, use_acc_ && is_flying_);
-    }
-    else
-    {
-        z_acc_grav_ = imu_.block<3,1>(0, 0);
-        double norm = z_acc_grav_.norm();
-        if (norm < 9.80665 * 1.15 && norm > 9.80665 * 0.85)
-            ekf_.add_measurement(t, z_acc_grav_, roscopter::EKF::ACC, acc_R_grav_, use_acc_);
+//    ekf_mtx_.lock();
+//    if (ekf_.get_drag_term() == true)
+//    {
+//        z_acc_drag_ = imu_.block<2,1>(0, 0);
+//        ekf_.add_measurement(t, z_acc_drag_, roscopter::EKF::ACC, acc_R_drag_, use_acc_ && is_flying_);
+//    }
+//    else
+//    {
+//        z_acc_grav_ = imu_.block<3,1>(0, 0);
+//        double norm = z_acc_grav_.norm();
+//        if (norm < 9.80665 * 1.15 && norm > 9.80665 * 0.85)
+//            ekf_.add_measurement(t, z_acc_grav_, roscopter::EKF::ACC, acc_R_grav_, use_acc_);
 
-    }
-    ekf_mtx_.unlock();
+//    }
+//    ekf_mtx_.unlock();
 
     // update attitude measurement
     z_att_ << msg->orientation.w, msg->orientation.x, msg->orientation.y, msg->orientation.z;
@@ -416,8 +424,6 @@ void EKF_ROS::gps_callback(const inertial_sense::GPSConstPtr &msg)
 
     ekf_mtx_.lock();
     ekf_.add_measurement(t, z_gps_, roscopter::EKF::GPS, gps_R_, use_gps_);
-    // log GPS POS
-    ekf_.log_measurement(roscopter::EKF::POS, t, 3, logMeas, dummyZHat, false);
     ekf_.handle_measurements();
     ekf_mtx_.unlock();
 }
