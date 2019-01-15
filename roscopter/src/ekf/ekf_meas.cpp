@@ -196,11 +196,6 @@ EKF::meas_result_t EKF::update(measurement_t& meas)
   
   NAN_CHECK;
 
-  if (meas.type == GPS)
-  {
-      int debug = 1;
-  }
-  
   zVector residual;
   if (meas.type == ATT)
   {
