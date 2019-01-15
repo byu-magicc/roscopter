@@ -20,4 +20,5 @@ q_b_IMU: [1.0, 0.0, 0.0, 0.0],
 q_I_truth: [0.5, 0.5, -0.5, 0.5],
 
 feature_mask: /home/superjax/dev_ws/src/vi_ekf/params/mask.png,  
+log_directory: "~"
 }

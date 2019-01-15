@@ -35,13 +35,12 @@ Controller::Controller() :
 
   // Set up Publishers and Subscriber
   state_sub_ = nh_.subscribe("estimate", 1, &Controller::stateCallback, this);
-  is_flying_sub_ =
-      nh_.subscribe("is_flying", 1, &Controller::isFlyingCallback, this);
-  cmd_sub_ =
-      nh_.subscribe("high_level_command", 1, &Controller::cmdCallback, this);
+  is_flying_sub_ = nh_.subscribe("is_flying", 1, &Controller::isFlyingCallback, this);
+  cmd_sub_ = nh_.subscribe("high_level_command", 1, &Controller::cmdCallback, this);
   status_sub_ = nh_.subscribe("status", 1, &Controller::statusCallback, this);
 
   command_pub_ = nh_.advertise<rosflight_msgs::Command>("command", 1);
+  armed_ = false;
 }
 
 
@@ -82,7 +81,7 @@ void Controller::stateCallback(const nav_msgs::OdometryConstPtr &msg)
   xhat_.q = msg->twist.twist.angular.y;
   xhat_.r = msg->twist.twist.angular.z;
 
-  if(is_flying_ && armed_)
+  if(armed_)
   {
     ROS_WARN_ONCE("CONTROLLER ACTIVE");
     computeControl(dt);

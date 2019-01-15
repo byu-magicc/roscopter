@@ -42,8 +42,8 @@ vel_R: [0.01, 0.01, 0.01],
 alt_R: 0.1,
 
 ## Low-Pass Filtering on IMU and Truth
-imu_LPF: 0.0,
-truth_LPF: 0.0,
+imu_LPF: 0.7,
+truth_LPF: 0.7,
 
 ## Measurement Model Flags
 use_truth: true,
