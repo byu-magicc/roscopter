@@ -36,6 +36,7 @@ public:
   void truth_callback(Vector3d &z_pos_, Vector4d &z_att_, ros::Time time);
   void imu_callback(const sensor_msgs::ImuConstPtr& msg);
   void status_callback(const rosflight_msgs::StatusConstPtr& msg);
+  void nav_truth_callback(const nav_msgs::OdometryConstPtr &msg);
   void gps_callback(const inertial_sense::GPSConstPtr &msg);
   EKF ekf_;
   
@@ -61,6 +62,7 @@ private:
   bool imu_init_ = false;
   bool truth_init_ = false;
   bool gps_init_ = false;
+  bool nav_truth_init_ = false;
   
   bool use_drag_term_ = false;
   bool is_flying_ = false;
@@ -77,6 +79,8 @@ private:
 
   Vector6d imu_;
   Vector3d init_pos_;
+  Vector6d init_nav_truth_;
+  ros::Time init_nav_truth_time_;
   Vector3d truth_pos_;
   Quatd truth_att_;
   

@@ -30,6 +30,18 @@ est_file = fopen(strcat(logDir, 'prop.bin'), 'r');
 pos_file = fopen(strcat(logDir, 'POS.bin'), 'r');
 att_file = fopen(strcat(logDir, 'ATT.bin'), 'r');
 imu_file = fopen(strcat(logDir, 'input.bin'), 'r');
+% read in optional nav_truth file
+if isfile(strcat(logDir, 'nav_truth.bin'))
+    temp = dir(strcat(logDir, 'nav_truth.bin'));
+    navFileSize = temp.bytes;
+    if navFileSize > 2 % only gonna deal with the file if it holds data
+        use_nav_truth = true;
+        nav_file = fopen(strcat(logDir, 'nav_truth.bin'), 'r');
+    end
+else
+   use_nav_truth = false;
+end
+
 
 % Read state
 prop_data = reshape(fread(est_file, 'double'), (1+len_xVector+len_dxVector), []);
@@ -43,6 +55,10 @@ att = reshape(fread(att_file, 'double'), 1+8+1, []);
 % Read IMU
 imu = reshape(fread(imu_file, 'double'), 1+6, []);
 
+% Read Nav Truth (Odom data from another estimator)
+if use_nav_truth
+    nav = reshape(fread(nav_file, 'double'), 1+6, []);
+end
 
 
 %% Plot States
@@ -55,8 +71,15 @@ for i = 1:3
     plot(pos(1,:), pos(idx,:), '-', 'lineWidth', 3);
     hold on;
     plot(xhat(1,:), xhat(idx,:), '-', 'lineWidth', 2.0);
+
+    if use_nav_truth
+        plot(nav(1,:), nav(idx,:), '-', 'lineWidth', 2.0);
+        legend("mocap", "est", 'navtruth')
+    else
+        legend("mocap", "est")
+    end
     title(names(idx));
-    legend("mocap", "est")
+
 end
 
 %% Plot Velocity

@@ -126,6 +126,7 @@ private:
     LOG_GLOBAL,
     LOG_CONF,
     LOG_KF,
+    LOG_NAV_TRUTH,
     LOG_DEBUG,
     TOTAL_LOGS
   } log_type_t;
@@ -243,6 +244,7 @@ public:
 
   // Logger
   void log_state(const double t, const xVector& x, const dxVector& P, const uVector& u, const dxVector& dx);
+  void log_nav_truth(const double t, const Vector6d& z);
   void log_measurement(const measurement_type_t type, const double t, const int dim, const MatrixXd& z, const MatrixXd& zhat, const bool active);
   void init_logger(std::string root_filename, string prefix="");
   void disable_logger();
