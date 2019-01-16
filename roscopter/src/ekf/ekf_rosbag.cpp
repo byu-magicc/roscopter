@@ -154,6 +154,8 @@ int main(int argc, char * argv[])
   ros::Time bag_start = view.getBeginTime() + ros::Duration(start_time);
   ros::Time bag_end = view.getBeginTime() + ros::Duration(end_time);
   cout << "\n";
+  double bag_elapsed = 0;
+  double system_elapsed = 0;
   foreach (rosbag::MessageInstance const m, view)
   {
     // break on Ctrl+C
@@ -181,8 +183,8 @@ int main(int argc, char * argv[])
     ros::Time now = ros::Time::now();
     if (now - last_print > ros::Duration(0.03333))
     {
-      double bag_elapsed = (m.getTime() - bag_start).toSec();
-      double system_elapsed = (now - system_start).toSec();  
+      bag_elapsed = (m.getTime() - bag_start).toSec();
+      system_elapsed = (now - system_start).toSec();
       print_progress(bag_elapsed / (bag_end - bag_start).toSec(), bag_elapsed / system_elapsed);
       last_print = now;
     }
@@ -218,6 +220,7 @@ int main(int argc, char * argv[])
       node.transform_truth_callback(pose);
     }
   }
-  print_progress(bag_elapsed / (bag_end - bag_start).toSec(), bag_elapsed / system_elapsed);
+  bag_elapsed = (bag_end - bag_start).toSec();
+  print_progress(1.0, bag_elapsed / system_elapsed);
   cout << endl;
 }

@@ -7,12 +7,25 @@ The `roscopter` autopilot has been built with reference to Dr. Randy Beard's [Qu
 
 ## Getting Started ##
 
-Once you have cloned this repo and the [ROSflight_plugins](github.com/byu-magicc/rosflight_plugins) repo into `catkin_ws/src`, you can run the Gazebo simulator with
+### Simplified Dynamics Model
+
+Clone this repo and the [ROSflight_plugins](github.com/byu-magicc/rosflight_plugins) repo into `catkin_ws/src`, you can run the Gazebo simulator with
 
 ```bash
 $ catkin_make
 $ source devel/setup.bash
 $ roslaunch roscopter_sim multirotor.launch
+```
+
+This simulation does not simulate the firmware and does not require a joystick. It has the same API as the SIL stack, and can be useful for developing high-level algorithms, however it makes some simplifying assumptions in the dynamics which reduces the fidelity of the simulation.
+
+### Software In The Loop 
+To run the `rosflight` SIL simulation [information](http://docs.rosflight.org/en/latest/user-guide/gazebo_simulation/) with the full roscopter stack, clone the [ROSflight](github.com/rosflight/rosflight) repo, connect a joystick or transmitter and run
+
+```bash
+$ catkin_make
+$ source devel/setup.bash
+$ roslaunch roscopter copter_sil..launch
 ```
 
 ## Core Autopilot Components ##

@@ -73,7 +73,7 @@ EKF_ROS::EKF_ROS() :
   ROS_FATAL_COND(!nh_private_.getParam("use_imu_att", use_imu_att_), "you need to specify the 'use_imu_att' parameter");
   ROS_FATAL_COND(!nh_private_.getParam("use_alt", use_alt_), "you need to specify the 'use_alt' parameter");
   
-  cout << "\nlog file: " << (log_directory.compare("~") != 0) ? log_directory : "N/A" << "\n";
+  cout << "\nlog file: " << ((log_directory.compare("~") != 0) ? log_directory : "N/A") << "\n";
   cout << "\nMEASUREMENTS\tFEATURES\n==============================\n";
   cout << "truth: " << use_truth_ << "\t";
   cout << "partial update: " << partial_update << "\n";
