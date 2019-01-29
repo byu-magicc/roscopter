@@ -417,11 +417,6 @@ void EKF_ROS::gps_callback(const inertial_sense::GPSConstPtr &msg)
     gps_R_.block<3,3>(3,3) << pow(msg->sAcc,2), 0, 0, 0, pow(msg->sAcc,2), 0, 0, 0, pow(msg->sAcc,2);
     double t = (msg->header.stamp - start_time_).toSec();
 
-    // temp hacky way to log GPS POS
-    Vector3d logMeas = (z_gps_.block<3,1>(0,0) - ekf_.get_ecef_to_NED_transform()->t_);
-    Vector3d dummyZHat;
-    dummyZHat << 0, 0, 0;
-
     ekf_mtx_.lock();
     ekf_.add_measurement(t, z_gps_, roscopter::EKF::GPS, gps_R_, use_gps_);
     ekf_.handle_measurements();

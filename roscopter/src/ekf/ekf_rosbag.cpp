@@ -230,7 +230,7 @@ int main(int argc, char * argv[])
       if (nav_truth_topic.empty() || nav_truth_topic.compare(m.getTopic()) == 0)
       {
         const nav_msgs::OdometryConstPtr odom(m.instantiate<nav_msgs::Odometry>());
-        node.nav_truth_callback(odom);
+        node.odom_truth_callback(odom);
         if (nav_truth_topic.empty())
         {
           // if this is the first time we're handling an odom message, and the
@@ -266,6 +266,12 @@ int main(int argc, char * argv[])
     {
         const nav_msgs::OdometryConstPtr pose(m.instantiate<nav_msgs::Odometry>());
         node.odom_truth_callback(pose);
+    }
+
+    else if (datatype.compare("rosflight_msgs/Status") == 0)
+    {
+        const rosflight_msgs::StatusConstPtr status(m.instantiate<rosflight_msgs::Status>());
+        node.status_callback(status);
     }
   }
   ros::Time now = ros::Time::now();
