@@ -320,20 +320,20 @@ void EKF::h_vel(const xVector& x, zVector& h, hMatrix& H) const
 
 void EKF::h_gps(const xVector &x, zVector &h, hMatrix &H) const
 {
-  Map<const Vector3d> vel(x.data() + xVEL);
-  Map<const Vector3d> pos(x.data() + xPOS);
-  Quatd q_I_b(x.data() + xATT);
-  Map<Vector3d> p_e_I(T_e_I_.t_);
+  Map<const Vector3d> vel(x.data() + xVEL); //state estimation velocity
+  Map<const Vector3d> pos(x.data() + xPOS); //state estimation position
+  Quatd q_I_b(x.data() + xATT);             //state estimation quaternion relative to initial frame
+  Map<Vector3d> p_e_I(T_e_I_.t_);           //map initial translation
 
-  Matrix3d R_I_b = q_I_b.R();
-  Matrix3d R_I_NED = T_e_I_.q_.R();
-  Quatd q_I_NED = T_e_I_.q_;
+  Matrix3d R_I_b = q_I_b.R();               //rotation matrix of current quaternion relative to initial frame
+  Matrix3d R_I_NED = T_e_I_.q_.R();         //rotation matrix of ECEF to init frame
+  Quatd q_I_NED = T_e_I_.q_;                //quaternion of ECEF to init frame
 
-  h.setZero();
-  h.topRows(3) = q_I_NED.rotp(pos + p_e_I);
-  h.bottomRows(3) = q_I_NED.rotp(q_I_b.rotp(vel));
+  h.setZero();                                      //initialize h matrix
+  h.topRows(3) = q_I_NED.rota(pos)+p_e_I;           //calculate ECEF position using state
+  h.bottomRows(3) = q_I_NED.rota(q_I_b.rotp(vel));  //calculate ECEF velocity using state
 
-  H.setZero();
+  H.setZero();                                                  //initialize H matrix
   H.block<3,3>(0,(int)dxPOS) = R_I_NED;
   H.block<3,3>(3,(int)dxVEL) = R_I_NED * R_I_b;
   H.block<3,3>(3,(int)dxATT) = R_I_NED * R_I_b * skew(vel);

@@ -148,6 +148,7 @@ end
 figure(6); clf;
 set(gcf, 'name', 'GPS', 'NumberTitle', 'off');
 gps_names=["x_e", "y_e", "z_e", "\dot{x}_e", "\dot{y}_e", "\dot{z}_e"];
+
 for i = 1:2
     for j = 1:3
         subplot(3,2,(j-1)*2+i);
@@ -157,4 +158,13 @@ for i = 1:2
         legend("z", "\hat{z}")
     end
 end
+
+% %PLOT GPS ERROR
+% for i = 1:2
+%     for j = 1:3
+%         subplot(3,2,(j-1)*2+i);
+%         plot(gps(1,:), gps((i-1)*3 + j+1, :)-gps((i-1)*3 + j+7, :), 'linewidth', 3.0)
+%         legend("error")
+%     end
+% end
 

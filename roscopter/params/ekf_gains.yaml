@@ -51,7 +51,7 @@ use_depth: false,
 use_acc: false,
 use_imu_att: false,
 use_alt: false,
-use_gps: false,
+use_gps: true,
 
 ## Measurement Covariance Gating (mahalanobis distance)
 pos_gating: 999,

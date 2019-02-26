@@ -1,5 +1,6 @@
 #include "ekf/ekf_ros.h"
 #include "roscopter/eigen_helpers.h"
+#include "ekf/wgs84.h"
 
 namespace roscopter {
 
@@ -381,23 +382,29 @@ void EKF_ROS::gps_callback(const inertial_sense::GPSConstPtr &msg)
 {
     if (!gps_init_)
     {
+
+
       xform::Xformd T_e_I;
-      Vector3d ZECEF;
-      Vector3d YECEF;
-      Vector3d ZNEDI;
-      Vector3d YNEDI;
-      Quatd q1;
-      Quatd q2;
-
       T_e_I.t_ << msg->posEcef.x, msg->posEcef.y, msg->posEcef.z;
-      ZECEF << 0,0,1;
-      YECEF << 0,1,0;
-      ZNEDI = -1*(T_e_I.t_)/(sqrt(T_e_I.t_.transpose()*T_e_I.t_)); //normalize
-      YNEDI = skew(ZECEF)*(-ZNEDI);
-      q1.from_two_unit_vectors(ZNEDI,ZECEF);
-      q2.from_two_unit_vectors(YNEDI,YECEF);
-      T_e_I.q_ = q1.otimes(q2);
+      T_e_I = WSG84::x_ecef2ned(T_e_I.t_);
 
+//      Vector3d ZECEF;
+//      Vector3d YECEF;
+//      Vector3d ZNEDI;
+//      Vector3d YNEDI;
+//      Quatd q1;
+//      Quatd q2;
+//      Quatd q3;
+
+//      ZECEF << 0,0,1;
+//      YECEF << 0,1,0;
+//      ZNEDI = -1*(T_e_I.t_)/(sqrt(T_e_I.t_.transpose()*T_e_I.t_)); //normalize
+//      YNEDI = skew(ZECEF)*(-ZNEDI);
+//      q1 = q1.from_two_unit_vectors(ZNEDI,ZECEF);
+//      q2 = q2.from_two_unit_vectors(YNEDI,YECEF);
+//      q3 = q2.otimes(q1);
+//      T_e_I.q_ = q1.otimes(q2);
+//      T_e_I.q_ = q1.otimes(q2);
       ekf_mtx_.lock();
       ekf_.set_ecef_to_NED_transform(T_e_I);
       ekf_mtx_.unlock();

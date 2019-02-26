@@ -229,8 +229,20 @@ int main(int argc, char * argv[])
     {
       if (nav_truth_topic.empty() || nav_truth_topic.compare(m.getTopic()) == 0)
       {
-        const nav_msgs::OdometryConstPtr odom(m.instantiate<nav_msgs::Odometry>());
-        node.odom_truth_callback(odom);
+        nav_msgs::Odometry odom = *(m.instantiate<nav_msgs::Odometry>());
+        static const double x0 = odom.pose.pose.position.x;
+        static const double y0 = odom.pose.pose.position.y;
+        static const double z0 = odom.pose.pose.position.z;
+
+        odom.pose.pose.position.x -= x0;
+        odom.pose.pose.position.y -= y0;
+        odom.pose.pose.position.z -= z0;
+
+        nav_msgs::Odometry* dumb_ptr = new nav_msgs::Odometry();
+        *dumb_ptr = odom;
+
+        const nav_msgs::OdometryConstPtr ptr(dumb_ptr);
+        node.odom_truth_callback(ptr);
         if (nav_truth_topic.empty())
         {
           // if this is the first time we're handling an odom message, and the

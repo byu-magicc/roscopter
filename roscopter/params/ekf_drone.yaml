@@ -16,8 +16,8 @@ invert_image: false,
 
 q_b_c: [0.5, 0.5, 0.5, 0.5],
 p_b_c: [0.0, 0.00, 0.015],
-q_b_IMU: [1.0, 0.0, 0.0, 0.0],
-q_I_truth: [0.5, 0.5, -0.5, 0.5],
-
+q_b_IMU: [1.0, 0.0, 0.0, 0.0], 
+# q_I_truth: [0.5, 0.5, -0.5, 0.5], #MOCAP transform
+q_I_truth: [1,0,0,0], #unaltered
 feature_mask: /home/superjax/dev_ws/src/vi_ekf/params/mask.png,  
 }
