@@ -40,8 +40,8 @@ class CarFollower():
             commanded_alt = -1.5
             commanded_heading = 0.0
 
-            commanded_north = msg.pose.position.z
-            commanded_east = -msg.pose.position.x
+            commanded_north = msg.pose.position.x
+            commanded_east = msg.pose.position.z
         elif self._state == 'take_off':
             commanded_alt = -1.5
             commanded_heading = 0.0

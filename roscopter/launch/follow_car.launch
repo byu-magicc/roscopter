@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <launch>
-  <rosparam command="load" file="$(find roscopter)/param/vi_ekf_gains.yaml" ns="vi_ekf_node"/>
-  <rosparam command="load" file="$(find roscopter)/param/vi_ekf_drone.yaml" ns="vi_ekf_node"/>
+  <rosparam command="load" file="$(find roscopter)/params/ekf_gains.yaml" ns="ekf_node"/>
+  <rosparam command="load" file="$(find roscopter)/params/ekf_drone.yaml" ns="ekf_node"/>
 
-  <node name="vi_ekf_node" type="vi_ekf_node" pkg="vi_ekf" output="screen">
+  <node name="ekf_node" type="ekf_node" pkg="roscopter" output="screen">
     <remap from="imu" to="/imu/data"/>
     <remap from="truth/pose" to="/vrpn_client_node/planck/pose"/>
   </node>
@@ -21,7 +21,7 @@
   <node name="rosflight_io" pkg="rosflight" type="rosflight_io" output="screen"/>
 
   <!-- Load common parameters -->
-  <rosparam command="load" file="$(find roscopter)/params/planck.yaml"/>
+  <rosparam command="load" file="$(find roscopter)/params/planck_450.yaml"/>
 
   <!-- PID Position Controller -->
   <node name="controller" pkg="roscopter" type="controller">
