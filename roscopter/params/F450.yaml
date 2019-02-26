@@ -1,0 +1,63 @@
+### Waypoints ###
+
+waypoint_manager: {
+
+waypoints:
+ [[1, -1, -1.5, 0],
+  [1, 1, -1.5, 0],
+  [0, 1, -1.5, 0],
+  [0, -1, -1.5, 0],
+  [-1, -1, -1.5, 0],
+  [-1, 1, -1.5, 0],
+  [0, 1, -1.5, 0],
+  [0, -1, -1.5, 0]],
+
+threshold: 0.1,
+cyle: True
+}
+
+### Controller Parameters
+
+controller: {
+
+x_dot_P: 0.5,
+x_dot_I: 0.0,
+x_dot_D: 0.05,
+
+y_dot_P: 0.5,
+y_dot_I: 0.0,
+y_dot_D: 0.05,
+
+z_dot_P: 0.6,
+z_dot_I: 0.25,
+z_dot_D: 0.1,
+
+north_P: 1.0,
+north_I: 0.1,
+north_D: 0.35,
+
+east_P: 1.0,
+east_I: 0.1,
+east_D: 0.2,
+
+down_P: 1.0,
+down_I: 0.0,
+down_D: 0.0,
+
+psi_P: 1.0,
+psi_I: 0.0,
+psi_D: 0.0,
+
+tau: 0.05,
+
+equilibrium_throttle: 0.65,
+
+max_roll: 0.196,
+max_pitch: 0.196,
+max_yaw_rate: 0.785,
+max_throttle: 0.85,
+max_n_dot: 1.5,
+max_e_dot: 1.5,
+max_d_dot: 0.5
+
+}

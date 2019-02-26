@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<launch>
+  <rosparam command="load" file="$(find mocap_controller)/param/vi_ekf_gains.yaml" ns="vi_ekf_node"/>
+  <rosparam command="load" file="$(find mocap_controller)/param/vi_ekf_drone.yaml" ns="vi_ekf_node"/>
+
+  <node name="vi_ekf_node" type="vi_ekf_node" pkg="vi_ekf" output="screen">
+    <remap from="imu" to="/imu/data"/>
+    <remap from="truth/pose" to="/vrpn_client_node/planck/pose"/>
+  </node>
+
+  <!--Note: You should run the motion capture node on the motion capture computer-->
+  <!--motion capture-->
+  <!--<node name="vrpn" type="vrpn_client_node" pkg="vrpn_client_ros" output="screen">-->
+    <!--<param name="refresh_tracker_frequency" value="1"/>-->
+    <!--<param name="use_server_time" value="true"/>-->
+    <!--<param name="server" value="192.168.1.186"/>-->
+    <!--<remap from="vrpn/planck/pose" to="truth/pose"/>-->
+    <!--</node>-->
+
+  <!-- FCU communication -->
+  <node name="rosflight_io" pkg="rosflight" type="rosflight_io" output="screen"/>
+
+  <!-- Load common parameters -->
+  <rosparam command="load" file="$(find roscopter)/params/F450.yaml"/>
+
+  <!-- PID Position Controller -->
+  <node name="controller" pkg="roscopter" type="controller">
+    <remap from="estimate" to="odom"/>
+    <!-- <remap from="estimate" to="estimate"/> -->
+  </node>
+
+  <!-- Waypoint Manager -->
+  <node name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
+    <remap from="waypoint" to="high_level_command"/>
+    <remap from="state" to="odom"/>
+    <!-- <remap from="state" to="estimate"/> -->
+  </node>
+
+</launch>

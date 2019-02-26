@@ -6,3 +6,4 @@
 *.swp
 *.autosave
 *.pdf
+roscopter/logs/*
