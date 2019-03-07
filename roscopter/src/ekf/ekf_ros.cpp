@@ -130,6 +130,7 @@ void EKF_ROS::imu_callback(const sensor_msgs::ImuConstPtr &msg)
     else if (use_gps_ && !gps_init_)
     {
         ROS_WARN_THROTTLE(5, "EKF: Waiting for GPS");
+        start_time_ = msg->header.stamp;
     }
     else if (!imu_init_)
     {
@@ -382,29 +383,9 @@ void EKF_ROS::gps_callback(const inertial_sense::GPSConstPtr &msg)
 {
     if (!gps_init_)
     {
-
-
       xform::Xformd T_e_I;
       T_e_I.t_ << msg->posEcef.x, msg->posEcef.y, msg->posEcef.z;
       T_e_I = WSG84::x_ecef2ned(T_e_I.t_);
-
-//      Vector3d ZECEF;
-//      Vector3d YECEF;
-//      Vector3d ZNEDI;
-//      Vector3d YNEDI;
-//      Quatd q1;
-//      Quatd q2;
-//      Quatd q3;
-
-//      ZECEF << 0,0,1;
-//      YECEF << 0,1,0;
-//      ZNEDI = -1*(T_e_I.t_)/(sqrt(T_e_I.t_.transpose()*T_e_I.t_)); //normalize
-//      YNEDI = skew(ZECEF)*(-ZNEDI);
-//      q1 = q1.from_two_unit_vectors(ZNEDI,ZECEF);
-//      q2 = q2.from_two_unit_vectors(YNEDI,YECEF);
-//      q3 = q2.otimes(q1);
-//      T_e_I.q_ = q1.otimes(q2);
-//      T_e_I.q_ = q1.otimes(q2);
       ekf_mtx_.lock();
       ekf_.set_ecef_to_NED_transform(T_e_I);
       ekf_mtx_.unlock();
@@ -416,11 +397,16 @@ void EKF_ROS::gps_callback(const inertial_sense::GPSConstPtr &msg)
     Matrix3d Rbe = Matrix3d::Zero();
     Matrix3d hvAcc = Matrix3d::Zero();
     Matrix6d gps_R_ = Matrix6d::Zero();
+    int hAcctest = 2;
+    int vAcctest = 10;
 
     z_gps_ << msg->posEcef.x, msg->posEcef.y, msg->posEcef.z, msg->velEcef.x, msg->velEcef.y, msg->velEcef.z;
     Rbe = Quatd(ekf_.get_state().segment<4>(roscopter::EKF::ATT)).R();
-    hvAcc.block<3,3>(0,0) << pow(msg->hAcc,2), 0, 0, 0, pow(msg->hAcc,2), 0, 0, 0, pow(msg->vAcc,2);
-    gps_R_.block<3,3>(0,0) = Rbe*hvAcc;
+//    hvAcc.block<3,3>(0,0) << pow(msg->hAcc,2), 0, 0, 0, pow(msg->hAcc,2), 0, 0, 0, pow(msg->vAcc,2);
+//    gps_R_.block<3,3>(0,0) = Rbe*hvAcc;
+//    gps_R_.block<3,3>(3,3) << pow(msg->sAcc,2), 0, 0, 0, pow(msg->sAcc,2), 0, 0, 0, pow(msg->sAcc,2);
+    hvAcc.block<3,3>(0,0) << pow(hAcctest,2), 0, 0, 0, pow(hAcctest,2), 0, 0, 0, pow(vAcctest,2);
+    gps_R_.block<3,3>(0,0) = Rbe*hvAcc*Rbe.transpose();
     gps_R_.block<3,3>(3,3) << pow(msg->sAcc,2), 0, 0, 0, pow(msg->sAcc,2), 0, 0, 0, pow(msg->sAcc,2);
     double t = (msg->header.stamp - start_time_).toSec();
 

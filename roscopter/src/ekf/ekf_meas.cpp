@@ -132,11 +132,17 @@ void EKF::handle_measurements(std::vector<int>* gated_feature_ids)
 EKF::meas_result_t EKF::add_measurement(const double t, const VectorXd& z, const measurement_type_t& meas_type,
                                             const MatrixXd& R, bool active)
 {
-  if (t < start_t_)
+  if (t < start_t_ || std::isnan(start_t_))
+  {
+      cerr << "invalid measurement" << endl;
     return MEAS_INVALID;
+  }
 
   if ((z.array() != z.array()).any())
+  {
+      cerr << "nans in measurement" <<endl;
     return MEAS_NAN;
+  }
 
   // Figure out the measurement that goes just before this one
   auto z_it = zbuf_.begin();
@@ -229,6 +235,12 @@ EKF::meas_result_t EKF::update(measurement_t& meas)
     
     //    CHECK_MAT_FOR_NANS(H_);
     //    CHECK_MAT_FOR_NANS(K_);
+
+    if (std::abs(x_[i_].segment<4>(xATT).norm() -1.0) > 1e-7)
+    {
+        int debug = 1;
+        cout << "bad quaternion 1" << endl;
+    }
     
     if (NO_NANS(K_) && NO_NANS(H_))
     {
@@ -241,7 +253,6 @@ EKF::meas_result_t EKF::update(measurement_t& meas)
         x_[i_] = xp_;
         A_ = (I_big_ - K * H);
         P_[i_] += (Lambda_).cwiseProduct(A_*P_[i_]*A_.transpose() + K * R * K.transpose() - P_[i_]);
-
       }
       else
       {
