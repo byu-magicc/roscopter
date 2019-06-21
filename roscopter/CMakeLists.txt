@@ -53,22 +53,22 @@ add_dependencies(controller ${catkin_EXPORTED_TARGETS})
 target_link_libraries(controller ${catkin_LIBRARIES})
 
 add_library(ekf
+  src/ekf/state.cpp
+  src/ekf/dynamics.cpp
   src/ekf/ekf.cpp
-  src/ekf/ekf_dyn.cpp
-  src/ekf/ekf_meas.cpp
-  src/ekf/ekf_helper.cpp
-  src/ekf/ekf_log.cpp
+  src/ekf/meas.cpp
+  src/ekf/log.cpp
 )
 target_include_directories(ekf PUBLIC lib/geometry/include)
 target_link_libraries(ekf)
 
-add_library(ekf_ros src/ekf/ekf_ros.cpp)
-target_link_libraries(ekf_ros ekf ${catkin_LIBRARIES})
-add_dependencies(ekf_ros ${catkin_EXPORTED_TARGETS})
+#add_library(ekf_ros src/ekf/ekf_ros.cpp)
+#target_link_libraries(ekf_ros ekf ${catkin_LIBRARIES})
+#add_dependencies(ekf_ros ${catkin_EXPORTED_TARGETS})
 
-add_executable(ekf_node src/ekf/ekf_node.cpp)
-target_link_libraries(ekf_node ekf_ros ${catkin_LIBRARIES})
+#add_executable(ekf_node src/ekf/ekf_node.cpp)
+#target_link_libraries(ekf_node ekf_ros ${catkin_LIBRARIES})
 
-add_executable(ekf_rosbag src/ekf/ekf_rosbag.cpp)
-target_link_libraries(ekf_rosbag ekf_ros ${catkin_LIBRARIES})
-add_dependencies(ekf_rosbag ${catkin_EXPORTED_TARGETS})
+#add_executable(ekf_rosbag src/ekf/ekf_rosbag.cpp)
+#target_link_libraries(ekf_rosbag ekf_ros ${catkin_LIBRARIES})
+#add_dependencies(ekf_rosbag ${catkin_EXPORTED_TARGETS})

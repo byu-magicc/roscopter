@@ -1,156 +1,183 @@
 #include "ekf/ekf.h"
 
+#define T transpose()
+
+using namespace Eigen;
+
 namespace roscopter
 {
-
-EKF::EKF(){}
-
-void EKF::init(Matrix<double, xZ,1>& x0, Matrix<double, dxZ,1> &P0, Matrix<double, dxZ,1> &Qx,
-               Matrix<double, dxZ,1> &lambda, uVector &Qu, std::string log_directory, bool use_drag_term,
-               bool partial_update, int cov_prop_skips, double gating_threshold, std::string prefix)
+namespace ekf
 {
-  x_.resize(LEN_STATE_HIST);
-  P_.resize(LEN_STATE_HIST);
-  t_.resize(LEN_STATE_HIST, -1);
 
-  u_.clear();
-  zbuf_.clear();
+void EKF::propagate(const double &t, const Vector6d &imu, const Matrix6d &R)
+{
+    double dt = t - x().t;
+    assert(dt >= 0);
+    if (dt < 1e-6)
+        return;
 
-  i_ = 0;
+    dynamics(x(), imu, dx_, true);
 
-  xp_.setZero();
-  Qx_.setZero();
-  x_[i_].block<(int)xZ, 1>(0,0) = x0;
-  P_[i_].block<(int)dxZ, (int)dxZ>(0,0) = P0.asDiagonal();
-  Qx_.block<(int)dxZ, (int)dxZ>(0,0) = Qx.asDiagonal();
-  lambda_.block<(int)dxZ, 1>(0,0) = lambda;
-  
-  Qu_ = Qu.asDiagonal();
-  
-  Lambda_ = dx_ones_ * lambda_.transpose() + lambda_*dx_ones_.transpose() - lambda_*lambda_.transpose();
-  
-  use_drag_term_ = use_drag_term;
-  partial_update_ = partial_update;
-  start_t_ = NAN; // indicate that we need to initialize the filter
-    
-  gating_threshold_ = gating_threshold;
-  
-  if (log_directory.compare("~") != 0)
-    init_logger(log_directory);
-  
-  K_.setZero();
-  H_.setZero();
+    xbuf_.next().x = x() + dx_ * dt;
+    xbuf_.next().x.t = t;
+    xbuf_.next().x.imu = imu;
+    xbuf_.next().x.x_e2I = x().x_e2I;
+
+    A_ = I_Big_ + A_*dt;
+    B_ = B_*dt;
+    if (isNan(P())) throw std::runtime_error("NaNs" + std::to_string(__LINE__));
+    if (isNan(A_)) throw std::runtime_error("NaNs"+ std::to_string(__LINE__));
+    if (isNan(B_)) throw std::runtime_error("NaNs"+ std::to_string(__LINE__));
+    if (isNan(Qu_)) throw std::runtime_error("NaNs"+ std::to_string(__LINE__));
+    if (isNan(Qx_)) throw std::runtime_error("NaNs"+ std::to_string(__LINE__));
+    xbuf_.next().P = A_*P()*A_.T + B_*Qu_*B_.T + Qx_*dt*dt;
+    if (isNan(xbuf_.next().P)) throw std::runtime_error("NaNs"+ std::to_string(__LINE__));
 }
 
-void EKF::set_x0(const Matrix<double, xZ, 1>& _x0)
+void EKF::run()
 {
-  x_[i_].topRows(xZ) = _x0;
-}
+    meas::MeasSet::iterator nmit = getOldestNewMeas();
+    if (nmit == meas_.end())
+        return;
 
+    // rewind state history
+    if (!xbuf_.rewind((*nmit)->t))
+        throw std::runtime_error("unable to rewind enough, expand STATE_BUF");
 
-EKF::~EKF()
-{
-  if (log_)
-  {
-    for (std::vector<std::ofstream>::iterator it=log_->begin(); it!=log_->end(); ++it)
+    // re-propagate forward, integrating measurements on the way
+    /// TODO:: Make this use the cool "overload" method shown in
+    /// https://en.cppreference.com/w/cpp/utility/variant/visit
+    while (nmit != meas_.end())
     {
-      (*it) << endl;
-      (*it).close();
+        update(*nmit);
+        nmit++;
     }
-  }
+
+    // clear off measurements older than the state history
+    while (xbuf_.begin().x.t > (*meas_.begin())->t)
+        meas_.erase(meas_.begin());
+
+    logState();
 }
 
-void EKF::set_imu_bias(const Vector3d& b_g, const Vector3d& b_a)
+void EKF::update(const meas::Base* m)
 {
-  x_[i_].block<3,1>((int)xB_G,0) = b_g;
-  x_[i_].block<3,1>((int)xB_A,0) = b_a;
+    if (m->type == meas::Base::IMU)
+    {
+        const meas::Imu* z = dynamic_cast<const meas::Imu*>(m);
+        propagate(z->t, z->z, z->R);
+    }
+    else
+    {
+        propagate(m->t, x().imu, Qu_);
+        switch(m->type)
+        {
+        case meas::Base::GNSS:
+        {
+            const meas::Gnss* z = dynamic_cast<const meas::Gnss*>(m);
+            gnssUpdate(*z);
+            break;
+        }
+        case meas::Base::MOCAP:
+        {
+            const meas::Mocap* z = dynamic_cast<const meas::Mocap*>(m);
+            mocapUpdate(*z);
+            break;
+        }
+        default:
+            break;
+        }
+    }
 }
 
-
-const xVector& EKF::get_state() const
+meas::MeasSet::iterator EKF::getOldestNewMeas()
 {
-  return x_[i_];
+    meas::MeasSet::iterator it = meas_.begin();
+    while (it != meas_.end() && (*it)->handled)
+    {
+        it++;
+    }
+    return it;
 }
 
-
-const dxMatrix& EKF::get_covariance() const
+bool EKF::measUpdate(const VectorXd &res, const MatrixXd &R, const MatrixXd &H)
 {
-  return P_[i_];
-}
+    int size = res.rows();
+    auto K = K_.leftCols(size);
 
-const dxVector EKF::get_covariance_diagonal() const
-{
-  dxVector ret = P_[i_].diagonal();
-  return ret;
-}
+    // perform covariance gating
+    MatrixXd innov = (H*P()*H.T + R).inverse();
 
-void EKF::propagate_state(const uVector &u, const double t, bool save_input)
-{
-  if (save_input)
-  {
-    u_.push_front(std::pair<double, uVector>{t, u});
-  }
+    CHECK_NAN(H); CHECK_NAN(R); CHECK_NAN(P());
+    K = P() * H.T * innov;
+    CHECK_NAN(K);
 
-  if (std::isnan(start_t_))
-  {
-    start_t_ = t;
-    t_[i_] = t;
-    return;
-  }
+    x() += K * res;
+    MatrixXd ImKH = I_Big_.topLeftCorner(size, size) - K*H;
+    P() = ImKH*P()*ImKH.T + K*R*K.T;
 
-  double dt = t - t_[i_];
-  if (dt < 1e-6)
-    return;
-
-  NAN_CHECK;
-
-  // Calculate Dynamics and Jacobians
-  dynamics(x_[i_], u, true, true);
-
-  NAN_CHECK;
-  int ip = (i_ + 1) % LEN_STATE_HIST; // next state history index
-
-  // Propagate State and Covariance
-  boxplus(x_[i_], dx_*dt, x_[ip]);
-  A_ = I_big_ + A_*dt;
-  P_[ip] = A_ * P_[i_]* A_.transpose() + G_ * Qu_ * G_.transpose() + Qx_;
-  t_[ip] = t;
-  i_ = ip;
-
-  NAN_CHECK;  
-  
-  log_state(t, x_[i_], P_[i_].diagonal(), u, dx_);
-}
-
-
-bool EKF::NaNsInTheHouse() const
-{
-  if ((x_[i_].array() != x_[i_].array()).any() || (P_[i_].array() != P_[i_].array()).any())
-  {
-    std::cout << "x:\n" << x_[i_] << "\n";
-    std::cout << "P:\n" << P_[i_] << "\n";
-    return true;
-  }
-  else
+    CHECK_NAN(P());
     return false;
 }
 
-bool EKF::BlowingUp() const
+void EKF::gnssCallback(const double &t, const Vector6d &z, const Matrix6d &R)
 {
-  if ( ((x_[i_]).array() > 1e6).any() || ((P_[i_]).array() > 1e6).any())
-    return true;
-  else
-    return false;
+    gnss_meas_buf_.push_back(meas::Gnss(t, z, R));
+    meas_.insert(meas_.end(), &gnss_meas_buf_.back());
+}
+
+void EKF::mocapCallback(const double& t, const xform::Xformd& z, const Matrix6d& R)
+{
+    mocap_meas_buf_.push_back(meas::Mocap(t, z, R));
+    meas_.insert(meas_.end(), &mocap_meas_buf_.back());
+}
+
+void EKF::gnssUpdate(const meas::Gnss &z)
+{
+    Vector3d w = x().w - x().bg;
+    Vector3d gps_pos_I = x().p + x().q.rota(p_b2g_);
+    Vector3d gps_vel_b = x().v + w.cross(p_b2g_);
+    Vector3d gps_vel_I = x().q.rota(gps_vel_b);
+
+    Vector6d zhat;
+    zhat << x().x_e2I.transforma(gps_pos_I),
+            x().x_e2I.rota(gps_vel_I);
+    Vector6d r = z.z - zhat;
+
+    Matrix3d R_I2e = x().x_e2I.q().R().T;
+    Matrix3d R_b2I = x().q.R().T;
+    Matrix3d R_e2b = R_I2e * R_b2I;
+
+    typedef ErrorState E;
+
+    Matrix<double, 6, E::NDX> H;
+    H.setZero();
+    H.block<3,3>(0, E::DP) = R_I2e;
+    H.block<3,3>(0, E::DQ) = -R_e2b * skew(p_b2g_);
+    H.block<3,3>(3, E::DQ) = -R_e2b * skew(gps_vel_b);
+    H.block<3,3>(3, E::DV) = R_e2b;
+    H.block<3,3>(3, E::DBG) = R_e2b * skew(p_b2g_);
+
+    /// TODO: Saturate r
+    measUpdate(r, z.R, H);
+}
+
+void EKF::mocapUpdate(const meas::Mocap &z)
+{
+    xform::Xformd zhat = x().x;
+    Vector6d r = zhat - z.z;
+
+    typedef ErrorState E;
+    Matrix<double, 6, E::NDX> H;
+    H.setZero();
+    H.block<3,3>(0, E::DP) = I_3x3;
+    H.block<3,3>(3, E::DQ) = I_3x3; // Check this, it's probalby wrong
+
+    /// TODO: Saturate r
+    measUpdate(r, z.R, H);
 }
 
 
 
 }
-
-
-
-
-
-
-
-
+}

@@ -34,7 +34,7 @@ public:
   void truth_callback(Vector3d &z_pos_, Vector4d &z_att_, ros::Time time);
   void imu_callback(const sensor_msgs::ImuConstPtr& msg);
   void status_callback(const rosflight_msgs::StatusConstPtr& msg);
-  EKF ekf_;
+  ekf ekf_;
   
 private:
 
