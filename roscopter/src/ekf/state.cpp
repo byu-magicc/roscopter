@@ -244,9 +244,7 @@ bool StateBuf::rewind(double t)
     int tmp = head;
     while (buf[tmp].x.t > t)
     {
-        tmp--;
-        if (tmp < 0)
-            tmp = size-1;
+        tmp = (tmp + size - 1) % size;
         if (tmp == head)
             return false;
     }

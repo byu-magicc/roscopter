@@ -18,20 +18,22 @@ void EKF::propagate(const double &t, const Vector6d &imu, const Matrix6d &R)
 
     dynamics(x(), imu, dx_, true);
 
+    // do the state propagation
     xbuf_.next().x = x() + dx_ * dt;
     xbuf_.next().x.t = t;
     xbuf_.next().x.imu = imu;
     xbuf_.next().x.x_e2I = x().x_e2I;
 
+    // discretize jacobians (first order)
     A_ = I_Big_ + A_*dt;
     B_ = B_*dt;
-    if (isNan(P())) throw std::runtime_error("NaNs" + std::to_string(__LINE__));
-    if (isNan(A_)) throw std::runtime_error("NaNs"+ std::to_string(__LINE__));
-    if (isNan(B_)) throw std::runtime_error("NaNs"+ std::to_string(__LINE__));
-    if (isNan(Qu_)) throw std::runtime_error("NaNs"+ std::to_string(__LINE__));
-    if (isNan(Qx_)) throw std::runtime_error("NaNs"+ std::to_string(__LINE__));
-    xbuf_.next().P = A_*P()*A_.T + B_*Qu_*B_.T + Qx_*dt*dt;
-    if (isNan(xbuf_.next().P)) throw std::runtime_error("NaNs"+ std::to_string(__LINE__));
+    CHECK_NAN(P());
+    CHECK_NAN(A_);
+    CHECK_NAN(B_);
+    CHECK_NAN(Qu_);
+    CHECK_NAN(Qx_);
+    xbuf_.next().P = A_*P()*A_.T + B_*Qu_*B_.T + Qx_*dt*dt; // covariance propagation
+    CHECK_NAN(xbuf_.next().P);
 }
 
 void EKF::run()
@@ -45,8 +47,6 @@ void EKF::run()
         throw std::runtime_error("unable to rewind enough, expand STATE_BUF");
 
     // re-propagate forward, integrating measurements on the way
-    /// TODO:: Make this use the cool "overload" method shown in
-    /// https://en.cppreference.com/w/cpp/utility/variant/visit
     while (nmit != meas_.end())
     {
         update(*nmit);
@@ -105,13 +105,14 @@ bool EKF::measUpdate(const VectorXd &res, const MatrixXd &R, const MatrixXd &H)
     int size = res.rows();
     auto K = K_.leftCols(size);
 
-    // perform covariance gating
+    ///TODO: perform covariance gating
     MatrixXd innov = (H*P()*H.T + R).inverse();
 
     CHECK_NAN(H); CHECK_NAN(R); CHECK_NAN(P());
     K = P() * H.T * innov;
     CHECK_NAN(K);
 
+    ///TODO: Partial Update
     x() += K * res;
     MatrixXd ImKH = I_Big_.topLeftCorner(size, size) - K*H;
     P() = ImKH*P()*ImKH.T + K*R*K.T;
@@ -122,6 +123,7 @@ bool EKF::measUpdate(const VectorXd &res, const MatrixXd &R, const MatrixXd &H)
 
 void EKF::gnssCallback(const double &t, const Vector6d &z, const Matrix6d &R)
 {
+    ///TODO: make thread-safe (wrap in mutex)
     gnss_meas_buf_.push_back(meas::Gnss(t, z, R));
     meas_.insert(meas_.end(), &gnss_meas_buf_.back());
 }
@@ -142,7 +144,7 @@ void EKF::gnssUpdate(const meas::Gnss &z)
     Vector6d zhat;
     zhat << x().x_e2I.transforma(gps_pos_I),
             x().x_e2I.rota(gps_vel_I);
-    Vector6d r = z.z - zhat;
+    Vector6d r = z.z - zhat; // residual
 
     Matrix3d R_I2e = x().x_e2I.q().R().T;
     Matrix3d R_b2I = x().q.R().T;
@@ -152,9 +154,9 @@ void EKF::gnssUpdate(const meas::Gnss &z)
 
     Matrix<double, 6, E::NDX> H;
     H.setZero();
-    H.block<3,3>(0, E::DP) = R_I2e;
+    H.block<3,3>(0, E::DP) = R_I2e; // dpE/dpI
     H.block<3,3>(0, E::DQ) = -R_e2b * skew(p_b2g_);
-    H.block<3,3>(3, E::DQ) = -R_e2b * skew(gps_vel_b);
+    H.block<3,3>(3, E::DQ) = -R_e2b * skew(gps_vel_b); // dvE/dQI
     H.block<3,3>(3, E::DV) = R_e2b;
     H.block<3,3>(3, E::DBG) = R_e2b * skew(p_b2g_);
 
@@ -171,7 +173,7 @@ void EKF::mocapUpdate(const meas::Mocap &z)
     Matrix<double, 6, E::NDX> H;
     H.setZero();
     H.block<3,3>(0, E::DP) = I_3x3;
-    H.block<3,3>(3, E::DQ) = I_3x3; // Check this, it's probalby wrong
+    H.block<3,3>(3, E::DQ) = I_3x3; // Check this, it's probably wrong
 
     /// TODO: Saturate r
     measUpdate(r, z.R, H);

@@ -10,6 +10,19 @@
 #include "ekf/meas.h"
 #include "logger.h"
 
+/// TO ADD A NEW MEASUREMENT
+/// Add a new Meas type to the meas.h header file and meas.cpp
+/// Add a new callback like mocapCallback()...
+/// Add a new update function like mocapUpdate()...
+/// Add new cases to the update function
+/// Profit.
+
+/// TO ADD A NEW STATE
+/// Add an index in the ErrorState and State objects in state.cpp/state.h
+/// Make sure the SIZE enums are correct
+/// Add relevant Jacobians and Dynamics to measurement update functions and dynamics
+/// Profit.
+
 namespace roscopter
 {
 
@@ -17,13 +30,6 @@ namespace roscopter
 if ((mat.array() != mat.array()).any())\
 {\
     throw std::runtime_error(#mat " Has NaNs" + std::to_string(__LINE__));\
-}
-
-
-template <typename Derived>
-static bool isNan(Derived a)
-{
-    return (a.array() != a.array()).any();
 }
 
 namespace ekf

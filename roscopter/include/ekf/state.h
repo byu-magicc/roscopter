@@ -69,15 +69,15 @@ public:
 
   enum {
       T = 0,
-      X = 1,
+      X = 1, // for Xform access (p, q)
       P = 1,
       Q = 4,
       V = 8,
       BA = 11,
       BG = 14,
-      NX = 17,
-      A = 0,
-      W = 3,
+      A = 17,
+      W = 20,
+      NX = 16, // number of states
       SIZE = 1 + NX + 6
   };
   Eigen::Matrix<double, SIZE, 1> arr;
@@ -141,7 +141,7 @@ public:
         dxMat P;
     };
 
-    std::vector<Snapshot, Eigen::aligned_allocator<Snapshot>> buf;
+    std::vector<Snapshot, Eigen::aligned_allocator<Snapshot>> buf; // circular buffer
     int head;
     int tail;
     int size;
