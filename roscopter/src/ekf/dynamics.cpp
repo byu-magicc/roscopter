@@ -21,6 +21,7 @@ void EKF::dynamics(const State &x, const Vector6d& u, ErrorState &dx, bool calc_
     dx.ba.setZero();
     dx.bg.setZero();
 
+    CHECK_NAN(dx.arr);
     if (calc_jac)
     {
         Matrix3d R = x.q.R();
@@ -43,8 +44,7 @@ void EKF::dynamics(const State &x, const Vector6d& u, ErrorState &dx, bool calc_
         B_.block<3,3>(DX::DV, U::A) = I_3x3;
         B_.block<3,3>(DX::DV, U::W) = skew(x.v);
 
-        if (isNan(A_)) std::runtime_error("NaN " + std::to_string(__LINE__));
-        if (isNan(B_)) std::runtime_error("NaN " + std::to_string(__LINE__));
+        CHECK_NAN(A_); CHECK_NAN(B_);
     }
 }
 

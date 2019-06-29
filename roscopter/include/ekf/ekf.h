@@ -68,6 +68,8 @@ public:
     void gnssUpdate(const meas::Gnss &z);
     void mocapUpdate(const meas::Mocap &z);
 
+    void cleanUpMeasurementBuffers();
+
 
     void initLog();
     void logState();

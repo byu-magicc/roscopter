@@ -88,6 +88,7 @@ void EKF::update(const meas::Base* m)
             break;
         }
     }
+    cleanUpMeasurementBuffers();
 }
 
 meas::MeasSet::iterator EKF::getOldestNewMeas()
@@ -121,9 +122,15 @@ bool EKF::measUpdate(const VectorXd &res, const MatrixXd &R, const MatrixXd &H)
     return false;
 }
 
-void EKF::gnssCallback(const double &t, const Vector6d &z, const Matrix6d &R)
+void EKF::imuCallback(const double &t, const Vector6d &z, const Matrix6d &R)
 {
     ///TODO: make thread-safe (wrap in mutex)
+    imu_meas_buf_.push_back(meas::Imu(t, z, R));
+    meas_.insert(meas_.end(), &imu_meas_buf_.back());
+}
+
+void EKF::gnssCallback(const double &t, const Vector6d &z, const Matrix6d &R)
+{
     gnss_meas_buf_.push_back(meas::Gnss(t, z, R));
     meas_.insert(meas_.end(), &gnss_meas_buf_.back());
 }
@@ -133,6 +140,7 @@ void EKF::mocapCallback(const double& t, const xform::Xformd& z, const Matrix6d&
     mocap_meas_buf_.push_back(meas::Mocap(t, z, R));
     meas_.insert(meas_.end(), &mocap_meas_buf_.back());
 }
+
 
 void EKF::gnssUpdate(const meas::Gnss &z)
 {
@@ -179,6 +187,18 @@ void EKF::mocapUpdate(const meas::Mocap &z)
     measUpdate(r, z.R, H);
 }
 
+void EKF::cleanUpMeasurementBuffers()
+{
+  // Remove all measurements older than our oldest state in the measurement buffer
+  while ((*meas_.begin())->t < xbuf_.begin().x.t)
+    meas_.erase(meas_.begin());
+  while (imu_meas_buf_.front().t < xbuf_.begin().x.t)
+    imu_meas_buf_.pop_front();
+  while (mocap_meas_buf_.front().t < xbuf_.begin().x.t)
+    mocap_meas_buf_.pop_front();
+  while (gnss_meas_buf_.front().t < xbuf_.begin().x.t)
+    gnss_meas_buf_.pop_front();
+}
 
 
 }

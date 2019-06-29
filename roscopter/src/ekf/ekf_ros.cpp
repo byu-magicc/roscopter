@@ -28,89 +28,32 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-#pragma once
-
-
-#include "ekf.h"
-
-#include <mutex>
-#include <deque>
-#include <vector>
-
-#include <ros/ros.h>
 #include <ros/package.h>
-#include <sensor_msgs/Imu.h>
-#include <sensor_msgs/Range.h>
-#include <nav_msgs/Odometry.h>
-#include <rosflight_msgs/Status.h>
-#include <rosflight_msgs/GPS.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <geometry_msgs/TransformStamped.h>
-#include <std_msgs/Bool.h>
+
+#include "ekf/ekf_ros.h"
 
 namespace roscopter::ekf
 {
-class EKF_ROS
+
+EKF_ROS::EKF_ROS() :
+  nh_(), nh_private_("~")
+{}
+
+void EKF_ROS::initROS()
 {
-public:
+  std::string roscopter_path = ros::package::getPath("roscopter");
+  std::string parameter_filename = nh_private_.param<std::string>("param_filename", roscopter_path + "/params/ekf.yaml");
 
-  EKF_ROS();
-  ~EKF_ROS();
-  void init(const std::string& param_file);
-  void initROS();
+  imu_sub_ = nh_.subscribe("imu", 100, EKF_ROS::imuCallback, this);
+  pose_sub_ = nh_.subscribe("pose", 10, EKF_ROS::poseTruthCallback, this);
+  transform_sub_ = nh_.subscribe("transform", 10, EKF_ROS::transformTruthCallback, this);
+  gnss_sub_ = nh_.subscribe("gnss", 10, EKF_ROS::gnss_sub)
+}
 
-  void imuCallback(const sensor_msgs::ImuConstPtr& msg);
-  void poseTruthCallback(const geometry_msgs::PoseStampedConstPtr &msg);
-  void transformTruthCallback(const geometry_msgs::TransformStampedConstPtr &msg);
-  void gnssCallback(const ros::Time& time, const xform::Xformd &z);
-  void truthCallback(const ros::Time& time, const xform::Xformd &z);
-  void statusCallback(const rosflight_msgs::StatusConstPtr& msg);
-
-  
-private:
-  EKF ekf_;
-
-  ros::Time last_imu_update_;
-
-  ros::NodeHandle nh_;
-  ros::NodeHandle nh_private_;
-
-  ros::Subscriber imu_sub_;
-  ros::Subscriber pose_sub_;
-  ros::Subscriber transform_sub_;
-  ros::Subscriber gnss_sub_;
-  ros::Subscriber status_sub_;
-
-  ros::Publisher odometry_pub_;
-  ros::Publisher bias_pub_;
-  ros::Publisher is_flying_pub_;
-  nav_msgs::Odometry odom_msg_;
-
-  std::mutex ekf_mtx_;
-
-  bool imu_init_ = false;
-  bool truth_init_ = false;
-  
-  bool is_flying_ = false;
-  bool armed_ = false;
-  bool use_truth_;
-  bool use_acc_;
-  bool use_imu_att_;
-  bool use_alt_;
-  ros::Time time_took_off_;
-  ros::Time start_time_;
-
-  Vector6d imu_;
-  
-  Matrix6d imu_R_;
-  Matrix6d mocap_R_;
-  Matrix6d gnss_R_;
-  Eigen::Matrix<double, 1, 1> alt_R_;
-};
+void EKF_ROS::init(const std::string &param_file)
+{
 
 }
 
 
-
-
+}
