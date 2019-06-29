@@ -44,10 +44,10 @@ void EKF_ROS::initROS()
   std::string roscopter_path = ros::package::getPath("roscopter");
   std::string parameter_filename = nh_private_.param<std::string>("param_filename", roscopter_path + "/params/ekf.yaml");
 
-  imu_sub_ = nh_.subscribe("imu", 100, EKF_ROS::imuCallback, this);
-  pose_sub_ = nh_.subscribe("pose", 10, EKF_ROS::poseTruthCallback, this);
-  transform_sub_ = nh_.subscribe("transform", 10, EKF_ROS::transformTruthCallback, this);
-  gnss_sub_ = nh_.subscribe("gnss", 10, EKF_ROS::gnss_sub)
+  imu_sub_ = nh_.subscribe("imu", 100, &EKF_ROS::imuCallback, this);
+  pose_sub_ = nh_.subscribe("pose", 10, &EKF_ROS::poseTruthCallback, this);
+  transform_sub_ = nh_.subscribe("transform", 10, &EKF_ROS::transformTruthCallback, this);
+  gnss_sub_ = nh_.subscribe("gnss", 10, &EKF_ROS::gnssCallback, this);
 }
 
 void EKF_ROS::init(const std::string &param_file)

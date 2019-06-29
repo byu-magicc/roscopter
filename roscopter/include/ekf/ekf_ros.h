@@ -44,7 +44,7 @@
 #include <sensor_msgs/Range.h>
 #include <nav_msgs/Odometry.h>
 #include <rosflight_msgs/Status.h>
-#include <rosflight_msgs/GPS.h>
+#include <rosflight_msgs/GNSS.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <std_msgs/Bool.h>
@@ -63,7 +63,7 @@ public:
   void imuCallback(const sensor_msgs::ImuConstPtr& msg);
   void poseTruthCallback(const geometry_msgs::PoseStampedConstPtr &msg);
   void transformTruthCallback(const geometry_msgs::TransformStampedConstPtr &msg);
-  void gnssCallback(const ros::Time& time, const xform::Xformd &z);
+  void gnssCallback(const rosflight_msgs::GNSSConstPtr& msg);
   void truthCallback(const ros::Time& time, const xform::Xformd &z);
   void statusCallback(const rosflight_msgs::StatusConstPtr& msg);
 
