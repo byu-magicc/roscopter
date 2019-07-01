@@ -28,13 +28,16 @@ $ source devel/setup.bash
 $ roslaunch roscopter copter_sil..launch
 ```
 
-## Core Autopilot Components ##
+# Core Autopilot Components #
 
-### EKF ###
+## EKF ##
 
-An Extended Kalman Filter (EKF) on manifold is used for state estimation using ROSflight attitude estimates as measurements. See *Derivation of the Relative Multiplicative Kalman Filter* by David Wheeler and Daniel Koch for more information.
+The EKF estimates the position of the multirotor given GPS and IMU measurements.
 
-The EKF supports measurements from a position and attitude estimator (motion capture system), altitude sensor (sonar or barometer) and IMU.  GPS support is currently being developed.  Measurement models can be added quite easily to the filter, please create an Issue if you have a measurement model you want supported and we can walk you through the steps on how to do it.
+###TODO:###
+ 1. residual saturation and outlier rejection
+ 2. Altimeter Fusion
+ 3. Currently, the estimator doesn't work properly if it is compiled in Release mode.
 
 ### Controller ###
 

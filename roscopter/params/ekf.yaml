@@ -1,7 +1,7 @@
 ## Post-Process Information
-# bag_name: "/home/superjax/rosbag/roscopter_carry/carry1.bag"
+bag_name: "/home/superjax/rosbag/roscopter_carry/carry1.bag"
 # bag_name: "/home/superjax/rosbag/roscopter_carry/carry2.bag"
-bag_name: "/home/superjax/rosbag/roscopter_carry/carry3.bag"
+# bag_name: "/home/superjax/rosbag/roscopter_carry/carry3.bag"
 imu_topic: "/rf/imu"
 start_time: 10
 duration: 100000
