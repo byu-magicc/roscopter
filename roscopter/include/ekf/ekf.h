@@ -1,271 +1,154 @@
 #pragma once
 
-#include "Eigen/Core"
-#include "Eigen/Geometry"
-#include "Eigen/StdVector"
-#include "unsupported/Eigen/MatrixFunctions"
-
 #include <deque>
-#include <set>
-#include <map>
 #include <functional>
-#include <fstream>
-#include <chrono>
-#include <iostream>
-#include <random>
-#include <tuple>
 
-#include "geometry/quat.h"
-#include "geometry/xform.h"
+#include <Eigen/Core>
+#include <geometry/xform.h>
 
-using namespace quat;
-using namespace xform;
-using namespace std;
-using namespace Eigen;
+#include "ekf/state.h"
+#include "ekf/meas.h"
+#include "roscopter_utils/logger.h"
+#include "roscopter_utils/gnss.h"
+#include "roscopter_utils/yaml.h"
 
-#define NO_NANS(mat) (mat.array() == mat.array()).all()
+/// TO ADD A NEW MEASUREMENT
+/// Add a new Meas type to the meas.h header file and meas.cpp
+/// Add a new callback like mocapCallback()...
+/// Add a new update function like mocapUpdate()...
+/// Add new cases to the update function
+/// Profit.
 
-#ifndef NDEBUG
-#define NAN_CHECK if (NaNsInTheHouse()) { std::cout << "NaNs In The House at line " << __LINE__ << "!!!\n"; exit(0); }
-#define CHECK_MAT_FOR_NANS(mat) if ((K_.array() != K_.array()).any()) { std::cout << "NaN detected in " << #mat << " at line " << __LINE__ << "!!!\n" << mat << "\n"; exit(0); }
-#else
-#define NAN_CHECK {}
-#define CHECK_MAT_FOR_NANS(mat) {}
-#endif
-
-#define MAX_X 17
-#define MAX_DX 16
-
-#define LEN_STATE_HIST 250
-#define LEN_MEAS_HIST 2
-
-typedef Matrix<double, MAX_X, 1> xVector;
-typedef Matrix<double, MAX_DX, 1> dxVector;
-typedef Matrix<double, MAX_X, MAX_X> xMatrix;
-typedef Matrix<double, MAX_DX, MAX_DX> dxMatrix;
-typedef Matrix<double, MAX_DX, 6> dxuMatrix;
-typedef Matrix<double, 6, 1> uVector;
-typedef Matrix<double, 6, 6> Matrix6d;
-typedef Matrix<double, 4, 1> zVector;
-typedef Matrix<double, 3, MAX_DX> hMatrix;
+/// TO ADD A NEW STATE
+/// Add an index in the ErrorState and State objects in state.cpp/state.h
+/// Make sure the SIZE enums are correct
+/// Add relevant Jacobians and Dynamics to measurement update functions and dynamics
+/// Profit.
 
 namespace roscopter
 {
 
-class EKF;
+#define CHECK_NAN(mat) \
+  if ((mat.array() != mat.array()).any())\
+{\
+  throw std::runtime_error(#mat " Has NaNs" + std::to_string(__LINE__));\
+}
 
-typedef void (EKF::*measurement_function_ptr)(const xVector& x, zVector& h, hMatrix& H) const;
+namespace ekf
+{
 
-static const Vector3d gravity = [] {
-  Vector3d tmp;
-  tmp << 0, 0, 9.80665;
-  return tmp;
-}();
 
-static const Vector3d khat = [] {
-  Vector3d tmp;
-  tmp << 0, 0, 1.0;
-  return tmp;
-}();
+static const Eigen::Vector3d gravity = (Eigen::Vector3d() << 0, 0, 9.80665).finished();
 
 class EKF
 {
 public:
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW // http://eigen.tuxfamily.org/dox-devel/group__TopicStructHavingEigenMembers.html
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-  enum : int{
-    xPOS = 0,
-    xVEL = 3,
-    xATT = 6,
-    xB_A = 10,
-    xB_G = 13,
-    xMU = 16,
-    xZ = 17
-  };
-
-  enum : int{
-    uA = 0,
-    uG = 3,
-    uTOTAL = 6
-  };
-
-  enum : int {
-    dxPOS = 0,
-    dxVEL = 3,
-    dxATT = 6,
-    dxB_A = 9,
-    dxB_G = 12,
-    dxMU = 15,
-    dxZ = 16
-  };
-
-  typedef enum {
-    ACC,
-    ALT,
-    ATT,
-    POS,
-    VEL,
-    TOTAL_MEAS
-  } measurement_type_t;
-
-  typedef enum {
-    MEAS_SUCCESS,
-    MEAS_GATED,
-    MEAS_NAN,
-    MEAS_INVALID,
-    MEAS_NEW_FEATURE
-  } meas_result_t;
-
-private:
-  typedef enum {
-    LOG_STATE = TOTAL_MEAS,
-    LOG_FEATURE_IDS,
-    LOG_INPUT,
-    LOG_XDOT,
-    LOG_GLOBAL,
-    LOG_CONF,
-    LOG_KF,
-    LOG_DEBUG,
-    TOTAL_LOGS
-  } log_type_t;
-
-
-  // State, Covariance History
-  int i_;
-  std::vector<xVector, aligned_allocator<xVector>> x_;
-  std::vector<dxMatrix, aligned_allocator<dxMatrix>> P_;
-  std::vector<double> t_;
-
-  // Input Buffer
-  typedef std::deque<std::pair<double, uVector>, aligned_allocator<std::pair<double, uVector>>> uBuf;
-  uBuf u_;
-
-  // Measurement Buffer
-  typedef struct
-  {
-    double t;
-    measurement_type_t type;
-    zVector z;
-    Matrix3d R;
-    bool active;
-    int zdim;
-    int rdim;
-    bool handled;
-  } measurement_t;
-  typedef std::deque<measurement_t, aligned_allocator<measurement_t>> zBuf;
-  zBuf zbuf_;
-
-  // State and Covariance and Process Noise Matrices
-  dxMatrix Qx_;
-  Matrix<double, 6, 6> Qu_;
-
-  // Partial Update Gains
-  dxVector lambda_;
-  dxMatrix Lambda_;
-
-  // Internal bookkeeping variables
-  double start_t_;
-
-  // Matrix Workspace
-  dxMatrix A_;
-  dxuMatrix G_;
-  dxVector dx_;
-  const dxMatrix I_big_ = dxMatrix::Identity();
-  const dxMatrix Ones_big_ = dxMatrix::Constant(1.0);
-  const dxVector dx_ones_ = dxVector::Constant(1.0);
-  xVector xp_;
-  Matrix<double, MAX_DX, 3>  K_;
-  zVector zhat_;
-  hMatrix H_;
-
-  // EKF Configuration Parameters
-  bool use_drag_term_;
-  bool partial_update_;
-  double gating_threshold_;
-
-  // Log Stuff
-  std::vector<std::ofstream>* log_ = nullptr;
-
-public:
+  static const dxMat I_BIG;
 
   EKF();
   ~EKF();
-#ifdef MC_SIM
-  void load(string ekf_file, string common_file, bool use_logger=true, string prefix="");
-#endif
-  void init(Matrix<double, xZ,1> &x0, Matrix<double, dxZ,1> &P0, Matrix<double, dxZ,1> &Qx,
-            Matrix<double, dxZ,1> &lambda, uVector &Qu, std::string log_directory, bool use_drag_term,
-            bool partial_update, int cov_prop_skips, double gating_threshold, string prefix="");
 
-  inline double now() const
-  {
-    std::chrono::microseconds now = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch());
-    return (double)now.count()*1e-6;
-  }
+  State& x() { return xbuf_.x(); } // The current state object
+  const State& x() const { return xbuf_.x(); }
+  dxMat& P() { return xbuf_.P(); } // The current covariance
+  const dxMat& P() const { return xbuf_.P(); }
 
-  // Errors
-  bool NaNsInTheHouse() const;
-  bool BlowingUp() const;
+  void initialize(double t);
+  void load(const std::string& filename);
+  void initLog(const std::string& filename);
 
-  // Getters and Setters
-  const xVector &get_state() const;
-  const dxMatrix &get_covariance() const;
-  const dxVector get_covariance_diagonal() const;
+  void run();
+  void update(const meas::Base *m);
 
-  void set_x0(const Matrix<double, xZ, 1>& _x0);
-  void set_imu_bias(const Vector3d& b_g, const Vector3d& b_a);
-  void set_drag_term(const bool use_drag_term) {use_drag_term_ = use_drag_term;}
-  bool get_drag_term() const {return use_drag_term_;}
+  void setArmed() { armed_ = true; }
+  void setDisarmed() { armed_ = false; }
+  bool isFlying() { return is_flying_; }
+  void checkIsFlying();
 
-  // State Propagation
-  void boxplus(const xVector &x, const dxVector &dx, xVector &out) const;
-  void boxminus(const xVector& x1, const xVector &x2, dxVector& out) const;
-  void step(const uVector& u, const double t);
-  void propagate_state(const uVector& u, const double t, bool save_input=true);
-  void dynamics(const xVector &x, const uVector& u, dxVector& xdot, dxMatrix& dfdx, dxuMatrix& dfdu);
-  void dynamics(const xVector &x, const uVector& u, bool state = true, bool jac = true);
+  bool measUpdate(const Eigen::VectorXd &res, const Eigen::MatrixXd &R, const Eigen::MatrixXd &H);
+  void propagate(const double& t, const Vector6d &imu, const Matrix6d &R);
+  void dynamics(const State &x, const Vector6d& u, ErrorState &dx, bool calc_jac=false);
+  void errorStateDynamics(const State& x, const ErrorState& dx, const Vector6d& u,
+                          const Vector6d& eta, ErrorState& dxdot);
 
-  // Measurement Updates
-  void handle_measurements(std::vector<int> *gated_feature_ids=nullptr);
-  meas_result_t add_measurement(const double t, const VectorXd& z, const measurement_type_t& meas_type, const MatrixXd& R, bool active=true);
-  meas_result_t update(measurement_t &meas);
-  void h_acc(const xVector& x, zVector& h, hMatrix& H) const;
-  void h_alt(const xVector& x, zVector& h, hMatrix& H) const;
-  void h_att(const xVector& x, zVector& h, hMatrix& H) const;
-  void h_pos(const xVector& x, zVector& h, hMatrix& H) const;
-  void h_vel(const xVector& x, zVector& h, hMatrix& H) const;
+  meas::MeasSet::iterator getOldestNewMeas();
+  void imuCallback(const double& t, const Vector6d& z, const Matrix6d& R);
+  void gnssCallback(const double& t, const Vector6d& z, const Matrix6d& R);
+  void mocapCallback(const double& t, const xform::Xformd& z, const Matrix6d& R);
 
-  // Logger
-  void log_state(const double t, const xVector& x, const dxVector& P, const uVector& u, const dxVector& dx);
-  void log_measurement(const measurement_type_t type, const double t, const int dim, const MatrixXd& z, const MatrixXd& zhat, const bool active);
-  void init_logger(std::string root_filename, string prefix="");
-  void disable_logger();
+  void gnssUpdate(const meas::Gnss &z);
+  void mocapUpdate(const meas::Mocap &z);
+  void zeroVelUpdate(double t);
+
+
+  void cleanUpMeasurementBuffers();
+
+
+  void initLog();
+  void logState();
+  void logCov();
+  enum {
+    LOG_STATE,
+    LOG_COV,
+    LOG_GNSS_RES,
+    LOG_MOCAP_RES,
+    LOG_ZERO_VEL_RES,
+    LOG_IMU,
+    LOG_LLA,
+    LOG_REF,
+    NUM_LOGS
+  };
+  std::vector<std::string> log_names_ {
+    "state",
+    "cov",
+    "gnss_res",
+    "mocap_res",
+    "zero_vel_res",
+    "imu",
+    "lla",
+    "ref"
+  };
+  bool enable_log_;
+  std::vector<Logger*> logs_;
+  std::string log_prefix_;
+
+  double is_flying_threshold_;
+  bool enable_arm_check_;
+  bool is_flying_;
+  bool armed_;
+
+  // Constants
+  xform::Xformd x0_;
+  Eigen::Vector3d p_b2g_;
+  xform::Xformd x_e2I_;
+  Eigen::Matrix4d R_zero_vel_;
+
+  // Matrix Workspace
+  dxMat A_;
+  dxMat Qx_;
+  Matrix6d Qu_;
+  dxuMat B_;
+  dxuMat K_;
+  ErrorState dx_;
+
+  // State buffer
+  StateBuf xbuf_;
+
+  // Measurement Buffers
+  bool use_truth_;
+  bool use_alt_;
+  bool use_gnss_;
+  bool use_zero_vel_;
+  bool enable_out_of_order_;
+  meas::MeasSet meas_;
+  std::deque<meas::Imu, Eigen::aligned_allocator<meas::Imu>> imu_meas_buf_;
+  std::deque<meas::Mocap, Eigen::aligned_allocator<meas::Mocap>> mocap_meas_buf_;
+  std::deque<meas::Gnss, Eigen::aligned_allocator<meas::Gnss>> gnss_meas_buf_;
+  std::deque<meas::ZeroVel, Eigen::aligned_allocator<meas::ZeroVel>> zv_meas_buf_;
 };
-
-static std::vector<std::string> measurement_names = [] {
-  std::vector<std::string> tmp;
-  tmp.resize(EKF::TOTAL_MEAS);
-  tmp[EKF::ACC] = "ACC";
-  tmp[EKF::ALT] = "ALT";
-  tmp[EKF::ATT] = "ATT";
-  tmp[EKF::POS] = "POS";
-  tmp[EKF::VEL] = "VEL";
-  return tmp;
-}();
-
-static std::vector<measurement_function_ptr> measurement_functions = [] {
-  std::vector<measurement_function_ptr> tmp;
-  tmp.resize(EKF::TOTAL_MEAS);
-  tmp[EKF::ACC] = &EKF::h_acc;
-  tmp[EKF::ALT] = &EKF::h_alt;
-  tmp[EKF::ATT] = &EKF::h_att;
-  tmp[EKF::POS] = &EKF::h_pos;
-  tmp[EKF::VEL] = &EKF::h_vel;
-  return tmp;
-}();
 
 }
 
-
-
-
+}
