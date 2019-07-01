@@ -17,7 +17,8 @@ StateType = np.dtype([
 	('ba', Vec3),
 	('bg', Vec3),
 	('a', Vec3),
-	('w', Vec3)
+	('w', Vec3),
+	('euler', Vec3)
 ])
 
 CovType = np.dtype([
@@ -27,7 +28,8 @@ CovType = np.dtype([
 
 RefType = np.dtype([
 	('t', f64),
-	('x', XType)
+	('x', XType),
+	('euler', Vec3)
 ])
 
 LlaType = np.dtype([
@@ -50,6 +52,11 @@ MocapResType = np.dtype([
 	('zhat', XType)
 ])
 
+ZVResType = np.dtype([
+	('t', f64),
+	('r', Vec4)
+])
+
 ImuType = np.dtype([
 	('t', f64),
 	('a', Vec3),
@@ -66,6 +73,7 @@ class Log:
 		setattr(self, "cov", np.fromfile(os.path.join(prefix, "cov.bin"), dtype=CovType))
 		setattr(self, "gnssRes", np.fromfile(os.path.join(prefix, "gnss_res.bin"), dtype=GnssResType))
 		setattr(self, "mocapRes", np.fromfile(os.path.join(prefix, "mocap_res.bin"), dtype=MocapResType))
+		setattr(self, "zvRes", np.fromfile(os.path.join(prefix, "zero_vel_res.bin"), dtype=ZVResType))
 		setattr(self, "imu", np.fromfile(os.path.join(prefix, "imu.bin"), dtype=ImuType))
 		setattr(self, "lla", np.fromfile(os.path.join(prefix, "lla.bin"), dtype=LlaType))
 		setattr(self, "ref", np.fromfile(os.path.join(prefix, "ref.bin"), dtype=RefType))

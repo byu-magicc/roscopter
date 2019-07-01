@@ -9,9 +9,10 @@ namespace roscopter
 namespace ekf
 {
 
+const dxMat EKF::I_BIG = dxMat::Identity();
+
 EKF::EKF() :
-  xbuf_(100),
-  I_Big_(dxMat::Identity())
+  xbuf_(100)
 {
 
 }
@@ -28,12 +29,18 @@ void EKF::load(const std::string &filename)
   get_yaml_eigen("p_b2g", filename, p_b2g_);
   get_yaml_diag("Qx", filename, Qx_);
   get_yaml_diag("P0", filename, P());
+  get_yaml_diag("R_zero_vel", filename, R_zero_vel_);
 
   // Measurement Flags
   get_yaml_node("enable_out_of_order", filename, enable_out_of_order_);
   get_yaml_node("use_truth", filename, use_truth_);
   get_yaml_node("use_gnss", filename, use_gnss_);
   get_yaml_node("use_alt", filename, use_alt_);
+  get_yaml_node("use_zero_vel", filename, use_zero_vel_);
+
+  // Armed Check
+  get_yaml_node("enable_arm_check", filename, enable_arm_check_);
+  get_yaml_node("is_flying_threshold", filename, is_flying_threshold_);
 
   // load initial state
   Vector3d ref_lla;
@@ -71,6 +78,8 @@ void EKF::initialize(double t)
   x().bg.setZero();
   x().a = -gravity;
   x().w.setZero();
+  is_flying_ = false;
+  armed_ = false;
 }
 
 void EKF::propagate(const double &t, const Vector6d &imu, const Matrix6d &R)
@@ -94,7 +103,7 @@ void EKF::propagate(const double &t, const Vector6d &imu, const Matrix6d &R)
   xbuf_.next().x.imu = imu;
 
   // discretize jacobians (first order)
-  A_ = I_Big_ + A_*dt;
+  A_ = I_BIG + A_*dt;
   B_ = B_*dt;
   CHECK_NAN(P());
   CHECK_NAN(A_);
@@ -107,7 +116,7 @@ void EKF::propagate(const double &t, const Vector6d &imu, const Matrix6d &R)
 
   if (enable_log_)
   {
-    logs_[LOG_STATE]->logVectors(x().arr);
+    logs_[LOG_STATE]->logVectors(x().arr, x().q.euler());
     logs_[LOG_COV]->log(x().t);
     logs_[LOG_COV]->logVectors(P());
     logs_[LOG_IMU]->log(t);
@@ -145,6 +154,9 @@ void EKF::update(const meas::Base* m)
   {
     const meas::Imu* z = dynamic_cast<const meas::Imu*>(m);
     propagate(z->t, z->z, z->R);
+
+    if (!is_flying_)
+      zeroVelUpdate(z->t);
   }
   else if (!std::isnan(x().t))
   {
@@ -194,7 +206,7 @@ bool EKF::measUpdate(const VectorXd &res, const MatrixXd &R, const MatrixXd &H)
 
   ///TODO: Partial Update
   x() += K * res;
-  dxMat ImKH = I_Big_ - K*H;
+  dxMat ImKH = I_BIG - K*H;
   P() = ImKH*P()*ImKH.T + K*R*K.T;
 
   CHECK_NAN(P());
@@ -203,6 +215,9 @@ bool EKF::measUpdate(const VectorXd &res, const MatrixXd &R, const MatrixXd &H)
 
 void EKF::imuCallback(const double &t, const Vector6d &z, const Matrix6d &R)
 {
+  if (!is_flying_)
+    checkIsFlying();
+
   ///TODO: make thread-safe (wrap in mutex)
   if (enable_out_of_order_)
   {
@@ -211,7 +226,13 @@ void EKF::imuCallback(const double &t, const Vector6d &z, const Matrix6d &R)
     run(); // For now, run on the IMU heartbeat (could be made multi-threaded)
   }
   else
+  {
     propagate(t, z, R);
+    if (!is_flying_)
+      zeroVelUpdate(t);
+  }
+
+  if (!is_flying_)
 
   if (enable_log_)
   {
@@ -253,7 +274,7 @@ void EKF::mocapCallback(const double& t, const xform::Xformd& z, const Matrix6d&
   if (enable_log_)
   {
     logs_[LOG_REF]->log(t);
-    logs_[LOG_REF]->logVectors(z.arr());
+    logs_[LOG_REF]->logVectors(z.arr(), z.q().euler());
   }
 }
 
@@ -304,7 +325,7 @@ void EKF::mocapUpdate(const meas::Mocap &z)
   Matrix<double, 6, E::NDX> H;
   H.setZero();
   H.block<3,3>(0, E::DP) = I_3x3;
-  H.block<3,3>(3, E::DQ) = I_3x3; // Check this, it's probably wrong
+  H.block<3,3>(3, E::DQ) = I_3x3;
 
   /// TODO: Saturate r
   if (use_truth_)
@@ -314,6 +335,29 @@ void EKF::mocapUpdate(const meas::Mocap &z)
   {
     logs_[LOG_MOCAP_RES]->log(z.t);
     logs_[LOG_MOCAP_RES]->logVectors(r, z.z.arr(), zhat.arr());
+  }
+}
+
+void EKF::zeroVelUpdate(double t)
+{
+  typedef ErrorState E;
+  Matrix<double, 4, E::NDX> H;
+  H.setZero();
+  H.block<3,3>(0, E::DV) = I_3x3;
+  H(3, E::DQ+2) = 0.5; // Check this, it's probably wrong (dyaw/dq)
+
+  Vector4d r;
+  r << -x().v,
+//        0.0;
+       -x().q.yaw();
+
+  if (use_zero_vel_)
+    measUpdate(r, R_zero_vel_, H);
+
+  if (enable_log_)
+  {
+    logs_[LOG_ZERO_VEL_RES]->log(t);
+    logs_[LOG_ZERO_VEL_RES]->logVectors(r);
   }
 }
 
@@ -328,6 +372,16 @@ void EKF::cleanUpMeasurementBuffers()
     mocap_meas_buf_.pop_front();
   while (gnss_meas_buf_.front().t < xbuf_.begin().x.t)
     gnss_meas_buf_.pop_front();
+}
+
+void EKF::checkIsFlying()
+{
+  bool okay_to_check = enable_arm_check_ ? armed_ : true;
+  if (okay_to_check && x().a.norm() > is_flying_threshold_)
+  {
+    std::cout << "Now Flying!  Go Go Go!" << std::endl;
+    is_flying_ = true;
+  }
 }
 
 

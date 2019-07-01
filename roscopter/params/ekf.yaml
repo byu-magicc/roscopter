@@ -1,9 +1,14 @@
 ## Post-Process Information
-bag_name: "/home/superjax/rosbag/roscopter_carry/carry1.bag"
+# bag_name: "/home/superjax/rosbag/roscopter_carry/carry1.bag"
+# bag_name: "/home/superjax/rosbag/roscopter_carry/carry2.bag"
+bag_name: "/home/superjax/rosbag/roscopter_carry/carry3.bag"
 imu_topic: "/rf/imu"
 start_time: 10
 duration: 100000
 
+## Is_flying checks
+enable_arm_check: false # require armed before checking for is_flying
+is_flying_threshold: 10.5 # if accel measurement exceed this magnitude, set is_flying
 
 ## Logging
 log_prefix: "/tmp/roscopter/ekf/"
@@ -14,6 +19,10 @@ enable_out_of_order: false
 use_truth: false
 use_gnss: true
 use_alt: true
+use_zero_vel: true
+
+R_zero_vel: [0.001, 0.001, 0.001,  # vel
+             0.01]                 # yaw
 
 ## Initial Uncertainty
 P0: [10., 10.0, 10.0,
@@ -34,7 +43,7 @@ p_b2g: [0, 0, 0]
 
 # Initial State
 ref_lla: [40.24632, -111.646882, 1415.0]
-ref_heading: 90.0
+ref_heading: 0.0
 x0: [0, 0, 0,       # pos
      1, 0, 0, 0]    # att
 

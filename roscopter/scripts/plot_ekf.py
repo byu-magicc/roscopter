@@ -83,6 +83,23 @@ def plotAttitude():
             plt.legend()
     pw.addPlot("Attitude", f)
 
+def plotEuler(): 
+    f = plt.figure()
+    plt.suptitle('Euler')
+    rad2deg = 180.0/np.pi
+    for i in range(3):
+        plt.subplot(3, 1, i+1)
+        plt.title(vtitles[i])
+        plt.plot(data.ref['t'], data.ref['euler'][:,i] * rad2deg, label='ref')
+        plt.plot(data.x['t'], data.x['euler'][:,i] * rad2deg, label=r"$\hat{x}$")
+        if plotCov:
+            plt.plot(data.cov['t'], rad2deg * (data.x['euler'][:,i] + 2.0*np.sqrt(data.cov['P'][:, i+3,i+3])), '-k', alpha=0.3)
+            plt.plot(data.cov['t'], rad2deg * (data.x['euler'][:,i] - 2.0*np.sqrt(data.cov['P'][:, i+3,i+3])), '-k', alpha=0.3)
+        if i == 0:
+            plt.legend()
+    pw.addPlot("Euler", f)
+
+
 def plotImuBias():
     f = plt.figure()
     plt.suptitle('Bias')
@@ -104,6 +121,27 @@ def plotImuBias():
             plt.legend()
     pw.addPlot("IMU Bias", f)
 
+def plotZVRes():
+    f = plt.figure()
+    plt.suptitle('ZeroVel')
+    for i in range(4):
+        plt.subplot(4, 1, i+1)
+        plt.plot(data.zvRes['t'], data.zvRes['r'][:,i], label="r")
+        if i == 0:
+            plt.legend()
+    pw.addPlot("ZeroVel", f)
+
+def plotGnssRes():
+    f = plt.figure()
+    plt.suptitle('Gnss Res')
+    for i in range(3):
+        for j in range(2):
+            plt.subplot(3, 2, i * 2 + j + 1)
+            plt.plot(data.gnssRes['t'], data.gnssRes['r'][:,j*3+i])                          
+        if i == 0:
+            plt.legend()
+    pw.addPlot("Gnss Res", f)
+
 
 def plotResults(directory):
     np.set_printoptions(linewidth=150)
@@ -124,9 +162,13 @@ def plotResults(directory):
     plotPosition()
     plotVelocity()
     plotAttitude()
+    plotEuler()
     plotLla()
     plotIMU()
     plotImuBias()
+
+    plotZVRes()
+    plotGnssRes()
 
     pw.show()
 

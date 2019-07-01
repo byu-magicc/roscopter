@@ -45,6 +45,8 @@ class EKF
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
+  static const dxMat I_BIG;
+
   EKF();
   ~EKF();
 
@@ -60,6 +62,11 @@ public:
   void run();
   void update(const meas::Base *m);
 
+  void setArmed() { armed_ = true; }
+  void setDisarmed() { armed_ = false; }
+  bool isFlying() { return is_flying_; }
+  void checkIsFlying();
+
   bool measUpdate(const Eigen::VectorXd &res, const Eigen::MatrixXd &R, const Eigen::MatrixXd &H);
   void propagate(const double& t, const Vector6d &imu, const Matrix6d &R);
   void dynamics(const State &x, const Vector6d& u, ErrorState &dx, bool calc_jac=false);
@@ -73,6 +80,8 @@ public:
 
   void gnssUpdate(const meas::Gnss &z);
   void mocapUpdate(const meas::Mocap &z);
+  void zeroVelUpdate(double t);
+
 
   void cleanUpMeasurementBuffers();
 
@@ -85,6 +94,7 @@ public:
     LOG_COV,
     LOG_GNSS_RES,
     LOG_MOCAP_RES,
+    LOG_ZERO_VEL_RES,
     LOG_IMU,
     LOG_LLA,
     LOG_REF,
@@ -95,6 +105,7 @@ public:
     "cov",
     "gnss_res",
     "mocap_res",
+    "zero_vel_res",
     "imu",
     "lla",
     "ref"
@@ -103,16 +114,21 @@ public:
   std::vector<Logger*> logs_;
   std::string log_prefix_;
 
+  double is_flying_threshold_;
+  bool enable_arm_check_;
+  bool is_flying_;
+  bool armed_;
+
   // Constants
   xform::Xformd x0_;
   Eigen::Vector3d p_b2g_;
   xform::Xformd x_e2I_;
+  Eigen::Matrix4d R_zero_vel_;
 
   // Matrix Workspace
   dxMat A_;
   dxMat Qx_;
   Matrix6d Qu_;
-  dxMat I_Big_;
   dxuMat B_;
   dxuMat K_;
   ErrorState dx_;
@@ -124,6 +140,7 @@ public:
   bool use_truth_;
   bool use_alt_;
   bool use_gnss_;
+  bool use_zero_vel_;
   bool enable_out_of_order_;
   meas::MeasSet meas_;
   std::deque<meas::Imu, Eigen::aligned_allocator<meas::Imu>> imu_meas_buf_;
