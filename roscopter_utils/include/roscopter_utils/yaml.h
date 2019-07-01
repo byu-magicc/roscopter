@@ -1,6 +1,7 @@
 #pragma once
 #include <stdexcept>
 #include <iostream>
+#include <experimental/filesystem>
 
 #include <Eigen/Core>
 #include <yaml-cpp/yaml.h>

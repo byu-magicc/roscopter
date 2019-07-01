@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Eigen/Core>
-#include "geometry/xform"
+#include "geometry/xform.h"
 
 namespace roscopter
 {
@@ -14,13 +14,6 @@ static constexpr double F_INV = 1.0 / F;     // Inverse flattening
 static constexpr double A2 = A * A;
 static constexpr double B2 = B * B;
 static constexpr double E2 = F * (2 - F);    // Square of Eccentricity
-
-static Eigen::Vector3d ecef2lla(const Eigen::Vector3d& ecef)
-{
-    Eigen::Vector3d lla;
-    ecef2lla(ecef, lla);
-    return lla;
-}
 
 static void ecef2lla(const Eigen::Vector3d& ecef, Eigen::Vector3d& lla)
 {
@@ -44,11 +37,11 @@ static void ecef2lla(const Eigen::Vector3d& ecef, Eigen::Vector3d& lla)
     lla.z() = std::sqrt(r2+z*z) - v;
 }
 
-static Eigen::Vector3d lla2ecef(const Eigen::Vector3d& lla)
+static Eigen::Vector3d ecef2lla(const Eigen::Vector3d& ecef)
 {
-    Eigen::Vector3d ecef;
-    lla2ecef(lla, ecef);
-    return ecef;
+    Eigen::Vector3d lla;
+    ecef2lla(ecef, lla);
+    return lla;
 }
 
 static void lla2ecef(const Eigen::Vector3d& lla, Eigen::Vector3d& ecef)
@@ -63,6 +56,21 @@ static void lla2ecef(const Eigen::Vector3d& lla, Eigen::Vector3d& ecef)
     ecef[0]=(v+lla[2])*cosp*cosl;
     ecef[1]=(v+lla[2])*cosp*sinl;
     ecef[2]=(v*(1.0-e2)+lla[2])*sinp;
+}
+
+static Eigen::Vector3d lla2ecef(const Eigen::Vector3d& lla)
+{
+    Eigen::Vector3d ecef;
+    lla2ecef(lla, ecef);
+    return ecef;
+}
+
+static quat::Quatd q_e2n(const Eigen::Vector3d& lla)
+{
+    quat::Quatd q1, q2;
+    q1 = quat::Quatd::from_axis_angle(e_z, lla(1));
+    q2 = quat::Quatd::from_axis_angle(e_y, -M_PI/2.0 - lla(0));
+    return q1 * q2;
 }
 
 static void x_ecef2ned(const Eigen::Vector3d& ecef, xform::Xformd& X_e2n)
@@ -126,13 +134,5 @@ static Eigen::Vector3d ned2lla(const Eigen::Vector3d& lla0, const Eigen::Vector3
     Eigen::Vector3d lla;
     ned2lla(lla0, ned, lla);
     return lla;
-}
-
-static quat::Quatd q_e2n(const Eigen::Vector3d& lla)
-{
-    quat::Quatd q1, q2;
-    q1 = quat::Quatd::from_axis_angle(e_z, lla(1));
-    q2 = quat::Quatd::from_axis_angle(e_y, -M_PI/2.0 - lla(0));
-    return q1 * q2;
 }
 }

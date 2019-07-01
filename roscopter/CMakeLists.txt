@@ -1,14 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(roscopter)
 
-set(CMAKE_CXX_STANDARD 11)
-if (NOT CMAKE_BUILD_TYPE)
-    message(STATUS "No build type selected, default to Release")
-    set(CMAKE_BUILD_TYPE "Release")
-endif()
-
-set(CMAKE_CXX_FLAGS "-fopenmp")
-
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
@@ -23,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   roslib
 )
 find_package(Eigen3 REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 generate_dynamic_reconfigure_options(
   cfg/Controller.cfg
@@ -34,6 +27,8 @@ catkin_package(
     rosflight_msgs rosflight_utils std_msgs nav_msgs sensor_msgs roslib
   DEPENDS EIGEN3
 )
+
+add_definitions(-DROSCOPTER_DIR="${CMAKE_CURRENT_LIST_DIR}")
 
 ###########
 ## Build ##
@@ -61,7 +56,7 @@ add_library(ekf
   src/ekf/log.cpp
 )
 target_include_directories(ekf PUBLIC lib/geometry/include)
-target_link_libraries(ekf)
+target_link_libraries(ekf ${YAML_CPP_LIBRARIES} stdc++fs)
 
 add_library(ekf_ros src/ekf/ekf_ros.cpp)
 target_link_libraries(ekf_ros ekf ${catkin_LIBRARIES})

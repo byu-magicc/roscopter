@@ -34,11 +34,16 @@
 #include "roscopter_utils/yaml.h"
 #include "roscopter_utils/gnss.h"
 
+using namespace Eigen;
+
 namespace roscopter::ekf
 {
 
 EKF_ROS::EKF_ROS() :
   nh_(), nh_private_("~")
+{}
+
+EKF_ROS::~EKF_ROS()
 {}
 
 void EKF_ROS::initROS()
@@ -48,7 +53,7 @@ void EKF_ROS::initROS()
 
   imu_sub_ = nh_.subscribe("imu", 100, &EKF_ROS::imuCallback, this);
   pose_sub_ = nh_.subscribe("pose", 10, &EKF_ROS::poseCallback, this);
-  transform_sub_ = nh_.subscribe("transform", 10, &EKF_ROS::transformCallback, this);
+  odom_sub_ = nh_.subscribe("reference", 10, &EKF_ROS::odomCallback, this);
   gnss_sub_ = nh_.subscribe("gnss", 10, &EKF_ROS::gnssCallback, this);
 
   init(parameter_filename);
@@ -58,10 +63,23 @@ void EKF_ROS::init(const std::string &param_file)
 {
   ekf_.load(param_file);
 
-  get_yaml_diag("imu_R", param_file, imu_R_);
-  get_yaml_diag("mocap_R", param_file, mocap_R_);
-  get_yaml_diag("gnss_R", param_file, gnss_R_);
-  get_yaml_diag("alt_R", param_file, alt_R_);
+  // Load Sensor Noise Parameters
+  double acc_stdev, gyro_stdev;
+  get_yaml_node("accel_noise_stdev", param_file, acc_stdev);
+  get_yaml_node("gyro_noise_stdev", param_file, gyro_stdev);
+  imu_R_.setZero();
+  imu_R_.topLeftCorner<3,3>() = acc_stdev * acc_stdev * I_3x3;
+  imu_R_.bottomRightCorner<3,3>() = gyro_stdev * gyro_stdev * I_3x3;
+
+  double pos_stdev, att_stdev;
+  get_yaml_node("position_noise_stdev", param_file, pos_stdev);
+  get_yaml_node("attitude_noise_stdev", param_file, att_stdev);
+  mocap_R_ << pos_stdev * pos_stdev * I_3x3,   Matrix3d::Zero(),
+      Matrix3d::Zero(),   att_stdev * att_stdev * I_3x3;
+
+  double alt_stdev;
+  get_yaml_node("alt_noise_stdev", param_file, alt_stdev);
+  alt_R_ << alt_stdev*alt_stdev;
   start_time_.fromSec(0.0);
 }
 
@@ -96,16 +114,16 @@ void EKF_ROS::poseCallback(const geometry_msgs::PoseStampedConstPtr &msg)
   mocapCallback(msg->header.stamp, z);
 }
 
-void EKF_ROS::transformCallback(const geometry_msgs::TransformStampedConstPtr &msg)
+void EKF_ROS::odomCallback(const nav_msgs::OdometryConstPtr &msg)
 {
   xform::Xformd z;
-  z.arr_ << msg->transform.translation.x,
-            msg->transform.translation.y,
-            msg->transform.translation.z,
-            msg->transform.rotation.w,
-            msg->transform.rotation.x,
-            msg->transform.rotation.y,
-            msg->transform.rotation.z;
+  z.arr_ << msg->pose.pose.position.x,
+            msg->pose.pose.position.y,
+            msg->pose.pose.position.z,
+            msg->pose.pose.orientation.w,
+            msg->pose.pose.orientation.x,
+            msg->pose.pose.orientation.y,
+            msg->pose.pose.orientation.z;
 
   mocapCallback(msg->header.stamp, z);
 }
@@ -133,17 +151,21 @@ void EKF_ROS::gnssCallback(const rosflight_msgs::GNSSConstPtr &msg)
        msg->velocity[2];
 
   // rotate covariance into the ECEF frame
-  Vector6d R_diag_NED;
-  R_diag_NED << msg->horizontal_accuracy,
+  Vector6d Sigma_diag_NED;
+  Sigma_diag_NED << msg->horizontal_accuracy,
                 msg->horizontal_accuracy,
                 msg->vertical_accuracy,
                 msg->speed_accuracy,
                 msg->speed_accuracy,
                 msg->speed_accuracy;
-  Matrix6d R_ecef =
+  Sigma_diag_NED = Sigma_diag_NED.cwiseProduct(Sigma_diag_NED);
+  Matrix3d R_e2n = q_e2n(ecef2lla(z.head<3>())).R();
+  Matrix6d Sigma_ecef;
+  Sigma_ecef << R_e2n.transpose() * Sigma_diag_NED.head<3>().asDiagonal() * R_e2n, Matrix3d::Zero(),
+                Matrix3d::Zero(), R_e2n.transpose() *  Sigma_diag_NED.tail<3>().asDiagonal() * R_e2n;
 
   double t = (msg->header.stamp - start_time_).toSec();
-  ekf_.gnssCallback();
+  ekf_.gnssCallback(t, z, Sigma_ecef);
 }
 
 

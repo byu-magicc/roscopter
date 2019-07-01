@@ -62,7 +62,7 @@ public:
 
   void imuCallback(const sensor_msgs::ImuConstPtr& msg);
   void poseCallback(const geometry_msgs::PoseStampedConstPtr &msg);
-  void transformCallback(const geometry_msgs::TransformStampedConstPtr &msg);
+  void odomCallback(const nav_msgs::OdometryConstPtr &msg);
   void gnssCallback(const rosflight_msgs::GNSSConstPtr& msg);
   void mocapCallback(const ros::Time& time, const xform::Xformd &z);
   void statusCallback(const rosflight_msgs::StatusConstPtr& msg);
@@ -78,7 +78,7 @@ private:
 
   ros::Subscriber imu_sub_;
   ros::Subscriber pose_sub_;
-  ros::Subscriber transform_sub_;
+  ros::Subscriber odom_sub_;
   ros::Subscriber gnss_sub_;
   ros::Subscriber status_sub_;
 
@@ -91,6 +91,9 @@ private:
 
   bool imu_init_ = false;
   bool truth_init_ = false;
+
+  bool use_odom_;
+  bool use_pose_;
   
   bool is_flying_ = false;
   bool armed_ = false;
@@ -101,7 +104,6 @@ private:
   
   Matrix6d imu_R_;
   Matrix6d mocap_R_;
-  Matrix6d gnss_R_;
   Eigen::Matrix<double, 1, 1> alt_R_;
 };
 

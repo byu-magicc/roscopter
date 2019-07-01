@@ -156,7 +156,6 @@ State State::operator+(const Matrix<double, ErrorState::SIZE, 1>& dx) const
 
 State& State::operator+=(const VectorXd& dx)
 {
-    assert(dx.rows() == nf()*3 + ErrorState::NDX);
     p += dx.segment<3>(ErrorState::DP);
     q += dx.segment<3>(ErrorState::DQ);
     v += dx.segment<3>(ErrorState::DV);
@@ -179,8 +178,6 @@ State& State::operator+=(const ErrorState& dx)
 
 ErrorState State:: operator-(const State& dx) const
 {
-    assert(dx.nf() == nf());
-
     ErrorState del;
     del.p = p - dx.p;
     del.q = q - dx.q;
