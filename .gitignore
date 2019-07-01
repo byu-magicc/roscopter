@@ -7,3 +7,4 @@
 *.autosave
 *.pdf
 roscopter/logs/*
+*.pyc

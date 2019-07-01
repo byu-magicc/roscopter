@@ -10,7 +10,8 @@ namespace ekf
 {
 
 EKF::EKF() :
-  xbuf_(100)
+  xbuf_(100),
+  I_Big_(dxMat::Identity())
 {
 
 }
@@ -91,7 +92,6 @@ void EKF::propagate(const double &t, const Vector6d &imu, const Matrix6d &R)
   xbuf_.next().x = x() + dx_ * dt;
   xbuf_.next().x.t = t;
   xbuf_.next().x.imu = imu;
-  xbuf_.next().x.x_e2I = x().x_e2I;
 
   // discretize jacobians (first order)
   A_ = I_Big_ + A_*dt;
@@ -146,7 +146,7 @@ void EKF::update(const meas::Base* m)
     const meas::Imu* z = dynamic_cast<const meas::Imu*>(m);
     propagate(z->t, z->z, z->R);
   }
-  else
+  else if (!std::isnan(x().t))
   {
     propagate(m->t, x().imu, Qu_);
     switch(m->type)
@@ -266,11 +266,11 @@ void EKF::gnssUpdate(const meas::Gnss &z)
   Vector3d gps_vel_I = x().q.rota(gps_vel_b);
 
   Vector6d zhat;
-  zhat << x().x_e2I.transforma(gps_pos_I),
-      x().x_e2I.rota(gps_vel_I);
+  zhat << x_e2I_.transforma(gps_pos_I),
+          x_e2I_.rota(gps_vel_I);
   Vector6d r = z.z - zhat; // residual
 
-  Matrix3d R_I2e = x().x_e2I.q().R().T;
+  Matrix3d R_I2e = x_e2I_.q().R().T;
   Matrix3d R_b2I = x().q.R().T;
   Matrix3d R_e2b = R_I2e * R_b2I;
 
@@ -285,7 +285,8 @@ void EKF::gnssUpdate(const meas::Gnss &z)
   H.block<3,3>(3, E::DBG) = R_e2b * skew(p_b2g_);
 
   /// TODO: Saturate r
-  measUpdate(r, z.R, H);
+  if (use_gnss_)
+    measUpdate(r, z.R, H);
 
   if (enable_log_)
   {
@@ -306,7 +307,8 @@ void EKF::mocapUpdate(const meas::Mocap &z)
   H.block<3,3>(3, E::DQ) = I_3x3; // Check this, it's probably wrong
 
   /// TODO: Saturate r
-  measUpdate(r, z.R, H);
+  if (use_truth_)
+    measUpdate(r, z.R, H);
 
   if (enable_log_)
   {

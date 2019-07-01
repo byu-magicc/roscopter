@@ -82,7 +82,6 @@ public:
   };
   Eigen::Matrix<double, SIZE, 1> arr;
 
-  xform::Xformd x_e2I; // transform from ecef to inertial frame
   Eigen::Map<Vector6d> imu; // IMU measurement at current time
   Eigen::Map<Eigen::Vector3d> a;
   Eigen::Map<Eigen::Vector3d> w;

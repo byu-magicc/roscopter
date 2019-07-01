@@ -89,6 +89,10 @@ void ROSbagParser::parseBag()
             ekf_.odomCallback(m.instantiate<nav_msgs::Odometry>());
         else if (m.isType<rosflight_msgs::GNSS>())
           ekf_.gnssCallback(m.instantiate<rosflight_msgs::GNSS>());
+#ifdef INERTIAL_SENSE
+        else if (m.isType<inertial_sense::GPS>())
+          ekf_.gnssCallbackInertialSense(m.instantiate<inertial_sense::GPS>());
+#endif
     }
     prog.finished();
     cout << endl;

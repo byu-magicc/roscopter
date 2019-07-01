@@ -49,6 +49,10 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <std_msgs/Bool.h>
 
+#ifdef INERTIAL_SENSE
+#include "inertial_sense/GPS.h"
+#endif
+
 namespace roscopter::ekf
 {
 class EKF_ROS
@@ -66,6 +70,10 @@ public:
   void gnssCallback(const rosflight_msgs::GNSSConstPtr& msg);
   void mocapCallback(const ros::Time& time, const xform::Xformd &z);
   void statusCallback(const rosflight_msgs::StatusConstPtr& msg);
+
+#ifdef INERTIAL_SENSE
+  void gnssCallbackInertialSense(const inertial_sense::GPSConstPtr& msg);
+#endif
 
   
 private:
@@ -86,6 +94,10 @@ private:
   ros::Publisher bias_pub_;
   ros::Publisher is_flying_pub_;
   nav_msgs::Odometry odom_msg_;
+
+#ifdef INERTIAL_SENSE
+  ros::Subscriber is_gnss_sub_;
+#endif
 
   std::mutex ekf_mtx_;
 

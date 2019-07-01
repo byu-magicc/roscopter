@@ -1,0 +1,46 @@
+## Post-Process Information
+bag_name: "/home/superjax/rosbag/roscopter_carry/carry1.bag"
+imu_topic: "/rf/imu"
+start_time: 10
+duration: 100000
+
+
+## Logging
+log_prefix: "/tmp/roscopter/ekf/"
+enable_log: true
+
+## Measurement Processing
+enable_out_of_order: false
+use_truth: false
+use_gnss: true
+use_alt: true
+
+## Initial Uncertainty
+P0: [10., 10.0, 10.0,
+     0.1, 0.1, 2.0,
+     0.001, 0.001, 0.001,
+     0.3, 0.3, 0.3,
+     0.1, 0.1, 0.1]
+
+## Additive Process Noise
+Qx: [0.000, 0.000, 0.000,       # pos
+     0.001, 0.001, 0.001,       # att
+     0.001, 0.001, 0.001,       # vel
+     0.001, 0.001, 0.001,       # accel bias
+     0.0001, 0.0001, 0.0001]    # gyro bias
+
+# Constant Parameeters
+p_b2g: [0, 0, 0]
+
+# Initial State
+ref_lla: [40.24632, -111.646882, 1415.0]
+ref_heading: 90.0
+x0: [0, 0, 0,       # pos
+     1, 0, 0, 0]    # att
+
+## Sensor Noise
+accel_noise_stdev: 0.5
+gyro_noise_stdev: 0.02
+position_noise_stdev: 0.01
+attitude_noise_stdev: 0.01
+alt_noise_stdev: 0.1

@@ -56,6 +56,10 @@ void EKF_ROS::initROS()
   odom_sub_ = nh_.subscribe("reference", 10, &EKF_ROS::odomCallback, this);
   gnss_sub_ = nh_.subscribe("gnss", 10, &EKF_ROS::gnssCallback, this);
 
+#ifdef INERTIAL_SENSE
+  is_gnss_sub_ = nh_.subscribe("is_gnss", 10, &EKF_ROS::gnssCallbackInertialSense, this);
+#endif
+
   init(parameter_filename);
 }
 
@@ -167,6 +171,24 @@ void EKF_ROS::gnssCallback(const rosflight_msgs::GNSSConstPtr &msg)
   double t = (msg->header.stamp - start_time_).toSec();
   ekf_.gnssCallback(t, z, Sigma_ecef);
 }
+
+#ifdef INERTIAL_SENSE
+void EKF_ROS::gnssCallbackInertialSense(const inertial_sense::GPSConstPtr &msg)
+{
+  rosflight_msgs::GNSS rf_msg;
+  rf_msg.header.stamp = msg->header.stamp;
+  rf_msg.position[0] = msg->posEcef.x;
+  rf_msg.position[1] = msg->posEcef.y;
+  rf_msg.position[2] = msg->posEcef.z;
+  rf_msg.velocity[0] = msg->velEcef.x;
+  rf_msg.velocity[1] = msg->velEcef.y;
+  rf_msg.velocity[2] = msg->velEcef.z;
+  rf_msg.horizontal_accuracy = msg->hAcc;
+  rf_msg.vertical_accuracy = msg->vAcc;
+  rf_msg.speed_accuracy = 0.3;
+  gnssCallback(boost::make_shared<rosflight_msgs::GNSS>(rf_msg));
+}
+#endif
 
 
 
