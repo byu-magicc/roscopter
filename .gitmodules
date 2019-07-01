@@ -1,3 +1,0 @@
-[submodule "roscopter/lib/geometry"]
-	path = roscopter/lib/geometry
-	url = https://github.com/superjax/geometry

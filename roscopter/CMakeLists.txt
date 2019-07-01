@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   dynamic_reconfigure
   rosflight_msgs
   rosflight_utils
+  roscopter_utils
   std_msgs
   nav_msgs
   sensor_msgs

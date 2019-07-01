@@ -127,6 +127,8 @@ void EKF::imuCallback(const double &t, const Vector6d &z, const Matrix6d &R)
     ///TODO: make thread-safe (wrap in mutex)
     imu_meas_buf_.push_back(meas::Imu(t, z, R));
     meas_.insert(meas_.end(), &imu_meas_buf_.back());
+
+    run(); // For now, run on the IMU heartbeat (could be made multi-threaded)
 }
 
 void EKF::gnssCallback(const double &t, const Vector6d &z, const Matrix6d &R)

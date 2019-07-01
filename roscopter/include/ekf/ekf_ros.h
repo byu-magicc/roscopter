@@ -61,10 +61,10 @@ public:
   void initROS();
 
   void imuCallback(const sensor_msgs::ImuConstPtr& msg);
-  void poseTruthCallback(const geometry_msgs::PoseStampedConstPtr &msg);
-  void transformTruthCallback(const geometry_msgs::TransformStampedConstPtr &msg);
+  void poseCallback(const geometry_msgs::PoseStampedConstPtr &msg);
+  void transformCallback(const geometry_msgs::TransformStampedConstPtr &msg);
   void gnssCallback(const rosflight_msgs::GNSSConstPtr& msg);
-  void truthCallback(const ros::Time& time, const xform::Xformd &z);
+  void mocapCallback(const ros::Time& time, const xform::Xformd &z);
   void statusCallback(const rosflight_msgs::StatusConstPtr& msg);
 
   
@@ -94,10 +94,6 @@ private:
   
   bool is_flying_ = false;
   bool armed_ = false;
-  bool use_truth_;
-  bool use_acc_;
-  bool use_imu_att_;
-  bool use_alt_;
   ros::Time time_took_off_;
   ros::Time start_time_;
 
