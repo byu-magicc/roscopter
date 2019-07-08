@@ -46,6 +46,7 @@ include_directories(include
   ${EIGEN3_INCLUDE_DIRS} 
   ${catkin_INCLUDE_DIRS}
   )
+message (STATUS "catkin include dirs" ${catkin_INCLUDE_DIRS})
 
 ## Declare cpp executables
 add_executable(controller
@@ -63,7 +64,7 @@ add_library(ekf
   src/ekf/meas.cpp
   src/ekf/log.cpp
 )
-target_include_directories(ekf PUBLIC lib/geometry/include)
+target_include_directories(ekf PUBLIC include ${catkin_INCLUDE_DIRS})
 target_link_libraries(ekf ${YAML_CPP_LIBRARIES} stdc++fs)
 
 add_library(ekf_ros src/ekf/ekf_ros.cpp)

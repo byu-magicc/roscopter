@@ -3,9 +3,10 @@ project(roscopter_utils)
 
 find_package(catkin REQUIRED COMPONENTS
     rospy
+    roscpp
 )
 catkin_package(
-  INCLUDE_DIRS include lib
+  INCLUDE_DIRS include lib/geometry/include
 )
 
-include_directories(lib include)
+include_directories(lib/geometry/include include)
