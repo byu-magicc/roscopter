@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import rospy
-import time, tf
+import time
 import numpy as np
 import pyqtgraph as pg
 from std_msgs.msg import Float64
@@ -242,19 +242,17 @@ class Plotter:
         self.w_t= msg.twist.twist.linear.z
 
         # orientation in quaternion form
-        quaternion = (
-            msg.pose.pose.orientation.x,
-            msg.pose.pose.orientation.y,
-            msg.pose.pose.orientation.z,
-            msg.pose.pose.orientation.w)
+        qw = msg.pose.pose.orientation.w
+        qx = msg.pose.pose.orientation.x
+        qy = msg.pose.pose.orientation.y
+        qz = msg.pose.pose.orientation.z
 
-        # Use ROS tf to convert to Euler angles from quaternion
-        euler = tf.transformations.euler_from_quaternion(quaternion)
+        # Convert to Euler angles from quaternion
+        self.phi_t = np.arctan2(2*(qw*qx + qy*qz), (qw**2 + qz**2 - qx**2 - qy**2))
+        self.theta_t = np.arcsin(2*(qw*qy - qx*qz))
+        self.psi_t = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
 
-        # unpack angles and angular velocities
-        self.phi_t = euler[0]
-        self.theta_t = euler[1]
-        self.psi_t = euler[2]
+        # unpack angular velocities
         self.p_t = msg.twist.twist.angular.x
         self.q_t = msg.twist.twist.angular.y
         self.r_t = msg.twist.twist.angular.z
@@ -276,19 +274,17 @@ class Plotter:
         self.w_e = msg.twist.twist.linear.z
 
         # orientation in quaternion form
-        quaternion = (
-            msg.pose.pose.orientation.x,
-            msg.pose.pose.orientation.y,
-            msg.pose.pose.orientation.z,
-            msg.pose.pose.orientation.w)
+        qw = msg.pose.pose.orientation.w
+        qx = msg.pose.pose.orientation.x
+        qy = msg.pose.pose.orientation.y
+        qz = msg.pose.pose.orientation.z
 
-        # Use ROS tf to convert to Euler angles from quaternion
-        euler = tf.transformations.euler_from_quaternion(quaternion)
+        # Convert to Euler angles from quaternion
+        self.phi_t = np.arctan2(2*(qw*qx + qy*qz), (qw**2 + qz**2 - qx**2 - qy**2))
+        self.theta_t = np.arcsin(2*(qw*qy - qx*qz))
+        self.psi_t = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
 
-        # unpack angles and angular velocities
-        self.phi_e = euler[0]
-        self.theta_e = euler[1]
-        self.psi_e = euler[2]
+        # unpack angular velocities
         self.p_e = msg.twist.twist.angular.x
         self.q_e = msg.twist.twist.angular.y
         self.r_e = msg.twist.twist.angular.z
@@ -347,7 +343,7 @@ def main():
             # let it rest a bit
             time.sleep(0.001)
         except rospy.ROSInterruptException:
-            print "exiting...."
+            print("exiting....")
             return
 
 if __name__ == '__main__':

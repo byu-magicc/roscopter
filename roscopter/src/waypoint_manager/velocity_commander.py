@@ -1,18 +1,13 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Python controller for landing a multirotor using relative estimates
 
 import rospy
 from math import *
 import numpy as np
 import time
-# from dynamic_reconfigure.server import Server
-#from boat_landing.cfg import LandingControllerConfig
 from rosflight_msgs.msg import Command
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Pose
-# from simple_pid import PID
-import tf
-
 
 class VelocityCommander:
 
@@ -43,7 +38,7 @@ class VelocityCommander:
 
         # send just x command
         # pack up the command
-        print 'sending velocity command 1'
+        print('sending velocity command 1')
         self.relative_cmd.mode = Command.MODE_XVEL_YVEL_YAWRATE_ALTITUDE
         self.relative_cmd.x = self.x_vel
         self.relative_cmd.y = 0.0
@@ -57,7 +52,7 @@ class VelocityCommander:
 
         # send just y command
         # pack up the command
-        print 'sending velocity command 2'
+        print('sending velocity command 2')
         self.relative_cmd.mode = Command.MODE_XVEL_YVEL_YAWRATE_ALTITUDE
         self.relative_cmd.x = 0.0
         self.relative_cmd.y = self.y_vel
@@ -71,7 +66,7 @@ class VelocityCommander:
 
         # send x and y command
         # pack up the command
-        print 'sending velocity command 3'
+        print('sending velocity command 3')
         self.relative_cmd.mode = Command.MODE_XVEL_YVEL_YAWRATE_ALTITUDE
         self.relative_cmd.x = -self.x_vel
         self.relative_cmd.y = -self.y_vel
@@ -85,7 +80,7 @@ class VelocityCommander:
 
         # tell it to stop
         # pack up the command
-        print 'sending velocity command 4'
+        print('sending velocity command 4')
         self.relative_cmd.mode = Command.MODE_XVEL_YVEL_YAWRATE_ALTITUDE
         self.relative_cmd.x = 0.0
         self.relative_cmd.y = 0.0
@@ -94,7 +89,7 @@ class VelocityCommander:
 
         self.high_lvl_commands_pub.publish(self.relative_cmd)
 
-        print "done"
+        print("done")
 
 
 
