@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import numpy as np
 
-import rospy, tf
+import rospy
 
 from nav_msgs.msg import Odometry
 from rosflight_msgs.msg import Command
@@ -77,15 +77,25 @@ class WaypointManager():
     def odometryCallback(self, msg):
         # Get error between waypoint and current state
         current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
-        (r, p, y) = tf.transformations.euler_from_quaternion([msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w])
         current_position = np.array([msg.pose.pose.position.x,
                                      msg.pose.pose.position.y,
                                      msg.pose.pose.position.z])
 
+        # orientation in quaternion form
+        qw = msg.pose.pose.orientation.w
+        qx = msg.pose.pose.orientation.x
+        qy = msg.pose.pose.orientation.y
+        qz = msg.pose.pose.orientation.z
+
+        # yaw from quaternion
+        y = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
+
         error = current_position - current_waypoint[0:3]
 
-        i_to_b = tf.transformations.quaternion_matrix([msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w])
-        print "i_to_b", i_to_b
+        # replace next line with rotation matrix
+        # i_to_b = quaternion_matrix([msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w])
+        i_to_b = np.eye(3)
+        print("i_to_b needs to be fixed ---- currently set to be identity", i_to_b)
         error_b = i_to_b*error
 
         if np.linalg.norm(error) < self.threshold:
