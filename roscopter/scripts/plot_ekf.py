@@ -39,7 +39,7 @@ def plotIMU():
     plt.plot(data.imu['t'], scipy.linalg.norm(data.imu['a'], axis=1))
     pw.addPlot("IMU", f)
 
-def plotPosition(): 
+def plotPosition():
     f = plt.figure()
     plt.suptitle('Position')
     for i in range(3):
@@ -54,7 +54,7 @@ def plotPosition():
             plt.legend()
     pw.addPlot("Position", f)
 
-def plotVelocity(): 
+def plotVelocity():
     f = plt.figure()
     plt.suptitle('Velocity')
     for i in range(3):
@@ -68,7 +68,7 @@ def plotVelocity():
             plt.legend()
     pw.addPlot("Velocity", f)
 
-def plotAttitude(): 
+def plotAttitude():
     f = plt.figure()
     plt.suptitle('Attitude')
     for i in range(4):
@@ -83,7 +83,7 @@ def plotAttitude():
             plt.legend()
     pw.addPlot("Attitude", f)
 
-def plotEuler(): 
+def plotEuler():
     f = plt.figure()
     plt.suptitle('Euler')
     rad2deg = 180.0/np.pi
@@ -109,13 +109,13 @@ def plotImuBias():
             if j == 0:
                 plt.plot(data.x['t'], data.x['ba'][:, i])
                 if plotCov:
-                    plt.plot(data.x['t'], data.x['ba'][:, i] + 2.0*np.sqrt(data.cov['P'][:,i+9, i+9]), '-k', alpha=0.3)                
-                    plt.plot(data.x['t'], data.x['ba'][:, i] - 2.0*np.sqrt(data.cov['P'][:,i+9, i+9]), '-k', alpha=0.3)                
+                    plt.plot(data.x['t'], data.x['ba'][:, i] + 2.0*np.sqrt(data.cov['P'][:,i+9, i+9]), '-k', alpha=0.3)
+                    plt.plot(data.x['t'], data.x['ba'][:, i] - 2.0*np.sqrt(data.cov['P'][:,i+9, i+9]), '-k', alpha=0.3)
             else:
-                plt.plot(data.x['t'], data.x['bg'][:, i])                
+                plt.plot(data.x['t'], data.x['bg'][:, i])
                 if plotCov:
-                    plt.plot(data.x['t'], data.x['bg'][:, i] + 2.0*np.sqrt(data.cov['P'][:,i+12, i+12]), '-k', alpha=0.3)                
-                    plt.plot(data.x['t'], data.x['bg'][:, i] - 2.0*np.sqrt(data.cov['P'][:,i+12, i+12]), '-k', alpha=0.3)                
+                    plt.plot(data.x['t'], data.x['bg'][:, i] + 2.0*np.sqrt(data.cov['P'][:,i+12, i+12]), '-k', alpha=0.3)
+                    plt.plot(data.x['t'], data.x['bg'][:, i] - 2.0*np.sqrt(data.cov['P'][:,i+12, i+12]), '-k', alpha=0.3)
             plt.title(imu_titles[j * 3 + i])
         if i == 0:
             plt.legend()
@@ -137,7 +137,7 @@ def plotGnssRes():
     for i in range(3):
         for j in range(2):
             plt.subplot(3, 2, i * 2 + j + 1)
-            plt.plot(data.gnssRes['t'], data.gnssRes['r'][:,j*3+i])                          
+            plt.plot(data.gnssRes['t'], data.gnssRes['r'][:,j*3+i])
         if i == 0:
             plt.legend()
     pw.addPlot("Gnss Res", f)

@@ -2,7 +2,6 @@
 
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
-#include <rosbag/view.h>
 
 #include "ekf/ekf_ros.h"
 
@@ -59,4 +58,3 @@ private:
 };
 
 }
-

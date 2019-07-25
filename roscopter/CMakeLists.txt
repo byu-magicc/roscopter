@@ -17,12 +17,20 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(Eigen3 REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(inertial_sense QUIET)
+find_package(f9p_gnss QUIET)
 
 if (${inertial_sense_FOUND})
-    message(WARNING "found inertial sense library")
+    message(STATUS "found inertial sense library")
     add_definitions(-DINERTIAL_SENSE)
 else()
-    message(WARNING "Did NOT find inertial sense library")
+    message(STATUS "Did NOT find inertial sense library")
+endif()
+
+if (${f9p_gnss_FOUND})
+    message(STATUS "found f9p gnss library")
+    add_definitions(-DF9P_GNSS)
+else()
+    message(STATUS "Did NOT find f9p gnss library")
 endif()
 
 generate_dynamic_reconfigure_options(
@@ -42,8 +50,8 @@ add_definitions(-DROSCOPTER_DIR="${CMAKE_CURRENT_LIST_DIR}")
 ## Build ##
 ###########
 
-include_directories(include 
-  ${EIGEN3_INCLUDE_DIRS} 
+include_directories(include
+  ${EIGEN3_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
   )
 message (STATUS "catkin include dirs" ${catkin_INCLUDE_DIRS})

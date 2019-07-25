@@ -93,6 +93,10 @@ void ROSbagParser::parseBag()
         else if (m.isType<inertial_sense::GPS>())
           ekf_.gnssCallbackInertialSense(m.instantiate<inertial_sense::GPS>());
 #endif
+#ifdef F9P_GNSS
+        else if (m.isType<f9p_gnss::GPS>())
+          ekf_.gnssCallbackF9P(m.instantiate<f9p_gnss::GPS>());
+#endif
     }
     prog.finished();
     cout << endl;

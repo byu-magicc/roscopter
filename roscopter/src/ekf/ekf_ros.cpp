@@ -60,6 +60,10 @@ void EKF_ROS::initROS()
   is_gnss_sub_ = nh_.subscribe("is_gnss", 10, &EKF_ROS::gnssCallbackInertialSense, this);
 #endif
 
+#ifdef F9P_GNSS
+  f9p_gnss_sub_ = nh_.subscribe("f9p_gnss", 10, &EKF_ROS::gnssCallbackF9P, this);
+#endif
+
   init(parameter_filename);
 }
 
@@ -190,6 +194,23 @@ void EKF_ROS::gnssCallbackInertialSense(const inertial_sense::GPSConstPtr &msg)
 }
 #endif
 
+#ifdef F9P_GNSS
+void EKF_ROS::gnssCallbackF9P(const f9p_gnss::GPSConstPtr &msg)
+{
+  rosflight_msgs::GNSS rf_msg;
+  rf_msg.header.stamp = msg->header.stamp;
+  rf_msg.position[0] = msg->posEcef.x;
+  rf_msg.position[1] = msg->posEcef.y;
+  rf_msg.position[2] = msg->posEcef.z;
+  rf_msg.velocity[0] = msg->velEcef.x;
+  rf_msg.velocity[1] = msg->velEcef.y;
+  rf_msg.velocity[2] = msg->velEcef.z;
+  rf_msg.horizontal_accuracy = msg->hAcc;
+  rf_msg.vertical_accuracy = msg->vAcc;
+  rf_msg.speed_accuracy = 0.3;
+  gnssCallback(boost::make_shared<rosflight_msgs::GNSS>(rf_msg));
+}
+#endif
 
 
 

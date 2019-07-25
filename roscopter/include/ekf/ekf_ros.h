@@ -53,6 +53,10 @@
 #include "inertial_sense/GPS.h"
 #endif
 
+#ifdef F9P_GNSS
+#include "blah"
+#endif
+
 namespace roscopter::ekf
 {
 class EKF_ROS
@@ -75,7 +79,11 @@ public:
   void gnssCallbackInertialSense(const inertial_sense::GPSConstPtr& msg);
 #endif
 
-  
+#ifdef F9P_GNSS
+  void gnssCallbackF9P(const f9p_gnss::GPSConstPtr& msg);
+#endif
+
+
 private:
   EKF ekf_;
 
@@ -106,21 +114,17 @@ private:
 
   bool use_odom_;
   bool use_pose_;
-  
+
   bool is_flying_ = false;
   bool armed_ = false;
   ros::Time time_took_off_;
   ros::Time start_time_;
 
   Vector6d imu_;
-  
+
   Matrix6d imu_R_;
   Matrix6d mocap_R_;
   Eigen::Matrix<double, 1, 1> alt_R_;
 };
 
 }
-
-
-
-
