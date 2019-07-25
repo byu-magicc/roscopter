@@ -17,7 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(Eigen3 REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(inertial_sense QUIET)
-find_package(f9p_gnss QUIET)
+find_package(ublox QUIET)
 
 if (${inertial_sense_FOUND})
     message(STATUS "found inertial sense library")
@@ -26,11 +26,11 @@ else()
     message(STATUS "Did NOT find inertial sense library")
 endif()
 
-if (${f9p_gnss_FOUND})
-    message(STATUS "found f9p gnss library")
-    add_definitions(-DF9P_GNSS)
+if (${ublox_FOUND})
+    message(STATUS "found ublox parsing library")
+    add_definitions(-DUBLOX)
 else()
-    message(STATUS "Did NOT find f9p gnss library")
+    message(STATUS "Did NOT find ublox parsing library")
 endif()
 
 generate_dynamic_reconfigure_options(
@@ -54,7 +54,6 @@ include_directories(include
   ${EIGEN3_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
   )
-message (STATUS "catkin include dirs" ${catkin_INCLUDE_DIRS})
 
 ## Declare cpp executables
 add_executable(controller
@@ -76,6 +75,7 @@ target_include_directories(ekf PUBLIC include ${catkin_INCLUDE_DIRS})
 target_link_libraries(ekf ${YAML_CPP_LIBRARIES} stdc++fs)
 
 add_library(ekf_ros src/ekf/ekf_ros.cpp)
+target_include_directories(ekf_ros PUBLIC include ${catkin_LIBRARIES})
 target_link_libraries(ekf_ros ekf ${catkin_LIBRARIES})
 add_dependencies(ekf_ros ${catkin_EXPORTED_TARGETS})
 
@@ -83,5 +83,6 @@ add_dependencies(ekf_ros ${catkin_EXPORTED_TARGETS})
 #target_link_libraries(ekf_node ekf_ros ${catkin_LIBRARIES})
 
 add_executable(ekf_rosbag src/ekf/ekf_rosbag.cpp)
+target_include_directories(ekf_rosbag PUBLIC include ${catkin_LIBRARIES})
 target_link_libraries(ekf_rosbag ekf_ros ${catkin_LIBRARIES})
 add_dependencies(ekf_rosbag ${catkin_EXPORTED_TARGETS})

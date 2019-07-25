@@ -1,8 +1,8 @@
 ## Post-Process Information
-bag_name: "/home/brady/bags/roscop/walk_gps_mounted_05.bag"
+bag_name: "/home/superjax/rosbag/walk_gps_mounted_06.bag"
 # bag_name: "/home/superjax/rosbag/roscopter_carry/carry2.bag"
 # bag_name: "/home/superjax/rosbag/roscopter_carry/carry3.bag"
-imu_topic: "/rf/imu"
+imu_topic: "/imu/data"
 start_time: 10
 duration: 100000
 

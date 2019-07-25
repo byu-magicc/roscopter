@@ -51,10 +51,11 @@
 
 #ifdef INERTIAL_SENSE
 #include "inertial_sense/GPS.h"
+#include "inertial_sense/FirmwareUpdateRequest.h"
 #endif
 
-#ifdef F9P_GNSS
-#include "blah"
+#ifdef UBLOX
+#include "ublox/GNSS.h"
 #endif
 
 namespace roscopter::ekf
@@ -79,8 +80,8 @@ public:
   void gnssCallbackInertialSense(const inertial_sense::GPSConstPtr& msg);
 #endif
 
-#ifdef F9P_GNSS
-  void gnssCallbackF9P(const f9p_gnss::GPSConstPtr& msg);
+#ifdef UBLOX
+  void gnssCallbackUBLOX(const ublox::GNSSConstPtr& msg);
 #endif
 
 
@@ -105,6 +106,9 @@ private:
 
 #ifdef INERTIAL_SENSE
   ros::Subscriber is_gnss_sub_;
+#endif
+#ifdef UBLOX
+  ros::Subscriber ublox_gnss_sub_;
 #endif
 
   std::mutex ekf_mtx_;
