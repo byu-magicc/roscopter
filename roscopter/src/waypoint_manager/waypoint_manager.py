@@ -3,6 +3,7 @@
 import numpy as np
 import rospy
 
+import std_msgs.msg
 from nav_msgs.msg import Odometry
 from rosflight_msgs.msg import Command
 from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
@@ -40,6 +41,7 @@ class WaypointManager():
         command_msg = Command()
         current_waypoint = np.array(self.waypoint_list[0])
 
+        command_msg.header.stamp = rospy.Time.now()
         command_msg.x = current_waypoint[0]
         command_msg.y = current_waypoint[1]
         command_msg.F = current_waypoint[2]
@@ -94,6 +96,7 @@ class WaypointManager():
                     self.current_waypoint_index -=1
             next_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
             command_msg = Command()
+            command_msg.header.stamp = rospy.Time.now()
             command_msg.x = next_waypoint[0]
             command_msg.y = next_waypoint[1]
             command_msg.F = next_waypoint[2]
