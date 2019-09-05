@@ -34,25 +34,26 @@ class WaypointManager():
 
         # Set Up Publishers and Subscribers
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
-        self.waypoint_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
+        # self.waypoint_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
+        self.waypoint_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5)
 
         self.current_waypoint_index = 0
 
-        command_msg = Command()
+        self.cmd_msg = Command()
         current_waypoint = np.array(self.waypoint_list[0])
 
-        command_msg.header.stamp = rospy.Time.now()
-        command_msg.x = current_waypoint[0]
-        command_msg.y = current_waypoint[1]
-        command_msg.F = current_waypoint[2]
+        self.cmd_msg.header.stamp = rospy.Time.now()
+        self.cmd_msg.x = current_waypoint[0]
+        self.cmd_msg.y = current_waypoint[1]
+        self.cmd_msg.F = current_waypoint[2]
         if len(current_waypoint) > 3:
-            command_msg.z = current_waypoint[3]
+            self.cmd_msg.z = current_waypoint[3]
         else:
             next_point = self.waypoint_list[(self.current_waypoint_index + 1) % len(self.waypoint_list)]
             delta = next_point - current_waypoint
-            command_msg.z = np.atan2(delta[1], delta[0])
-        command_msg.mode = Command.MODE_XPOS_YPOS_YAW_ALTITUDE
-        self.waypoint_pub_.publish(command_msg)
+            self.cmd_msg.z = np.atan2(delta[1], delta[0])
+        self.cmd_msg.mode = Command.MODE_XPOS_YPOS_YAW_ALTITUDE
+        self.waypoint_pub_.publish(self.cmd_msg)
 
         while not rospy.is_shutdown():
             # wait for new messages and call the callback when they arrive
@@ -86,6 +87,7 @@ class WaypointManager():
 
         error = np.linalg.norm(current_position - current_waypoint[0:3])
 
+        self.cmd_msg.header.stamp = rospy.Time.now()
         if error < self.threshold:
             # Get new waypoint index
             self.current_waypoint_index += 1
@@ -95,19 +97,17 @@ class WaypointManager():
                 if self.current_waypoint_index > len(self.waypoint_list):
                     self.current_waypoint_index -=1
             next_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
-            command_msg = Command()
-            command_msg.header.stamp = rospy.Time.now()
-            command_msg.x = next_waypoint[0]
-            command_msg.y = next_waypoint[1]
-            command_msg.F = next_waypoint[2]
+            self.cmd_msg.x = next_waypoint[0]
+            self.cmd_msg.y = next_waypoint[1]
+            self.cmd_msg.F = next_waypoint[2]
             if len(current_waypoint) > 3:
-                command_msg.z = current_waypoint[3]
+                self.cmd_msg.z = current_waypoint[3]
             else:
                 next_point = self.waypoint_list[(self.current_waypoint_index + 1) % len(self.waypoint_list)]
                 delta = next_point - current_waypoint
-                command_msg.z = np.atan2(delta[1], delta[0])
-            command_msg.mode = Command.MODE_XPOS_YPOS_YAW_ALTITUDE
-            self.waypoint_pub_.publish(command_msg)
+                self.cmd_msg.z = np.atan2(delta[1], delta[0])
+            self.cmd_msg.mode = Command.MODE_XPOS_YPOS_YAW_ALTITUDE
+        self.waypoint_pub_.publish(self.cmd_msg)
 
 if __name__ == '__main__':
     rospy.init_node('waypoint_manager', anonymous=True)

@@ -137,6 +137,7 @@ void Controller::cmdCallback(const rosflight_msgs::CommandConstPtr &msg)
                 msg->mode);
       break;
   }
+  resetIntegrators();
 }
 
 void Controller::reconfigure_callback(roscopter::ControllerConfig& config,
