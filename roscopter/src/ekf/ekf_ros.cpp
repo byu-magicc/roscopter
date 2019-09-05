@@ -34,6 +34,7 @@
 #include "roscopter_utils/yaml.h"
 #include "roscopter_utils/gnss.h"
 
+
 using namespace Eigen;
 
 namespace roscopter::ekf
@@ -141,7 +142,7 @@ void EKF_ROS::mocapCallback(const ros::Time &time, const xform::Xformd &z)
   ekf_.mocapCallback(t, z, mocap_R_);
 }
 
-void EKF_ROS::gnssCallback(const rosflight_msgs::GNSSConstPtr &msg)
+void EKF_ROS::gnssCallback(const ublox::PosVelEcefPtr &msg)
 {
   if (start_time_.sec == 0)
     return;
@@ -154,21 +155,34 @@ void EKF_ROS::gnssCallback(const rosflight_msgs::GNSSConstPtr &msg)
        msg->velocity[1],
        msg->velocity[2];
 
+  z /= 100;
+
   // rotate covariance into the ECEF frame
-  Vector6d Sigma_diag_NED;
-  Sigma_diag_NED << msg->horizontal_accuracy,
+  // Vector6d Sigma_diag_NED;
+  // Sigma_diag_NED << msg->horizontal_accuracy,
+  //               msg->horizontal_accuracy,
+  //               msg->vertical_accuracy,
+  //               msg->speed_accuracy,
+  //               msg->speed_accuracy,
+  //               msg->speed_accuracy;
+  // Sigma_diag_NED = Sigma_diag_NED.cwiseProduct(Sigma_diag_NED);
+  // Matrix3d R_e2n = q_e2n(ecef2lla(z.head<3>())).R();
+  // Matrix6d Sigma_ecef;
+  // Sigma_ecef << R_e2n.transpose() * Sigma_diag_NED.head<3>().asDiagonal() * R_e2n, Matrix3d::Zero(),
+  //               Matrix3d::Zero(), R_e2n.transpose() *  Sigma_diag_NED.tail<3>().asDiagonal() * R_e2n;
+
+  double t = (msg->header.stamp - start_time_).toSec();
+
+  Vector6d Sigma_diag_ecef;
+  Sigma_diag_ecef << msg->horizontal_accuracy,
                 msg->horizontal_accuracy,
                 msg->vertical_accuracy,
                 msg->speed_accuracy,
                 msg->speed_accuracy,
                 msg->speed_accuracy;
-  Sigma_diag_NED = Sigma_diag_NED.cwiseProduct(Sigma_diag_NED);
-  Matrix3d R_e2n = q_e2n(ecef2lla(z.head<3>())).R();
-  Matrix6d Sigma_ecef;
-  Sigma_ecef << R_e2n.transpose() * Sigma_diag_NED.head<3>().asDiagonal() * R_e2n, Matrix3d::Zero(),
-                Matrix3d::Zero(), R_e2n.transpose() *  Sigma_diag_NED.tail<3>().asDiagonal() * R_e2n;
+  Sigma_diag_ecef /= 100;
+  Matrix6d Sigma_ecef = Sigma_diag_ecef.asDiagonal();
 
-  double t = (msg->header.stamp - start_time_).toSec();
   ekf_.gnssCallback(t, z, Sigma_ecef);
 }
 

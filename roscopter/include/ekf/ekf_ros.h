@@ -49,6 +49,9 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <std_msgs/Bool.h>
 
+#include "ublox/PosVelEcef.h"
+
+
 #ifdef INERTIAL_SENSE
 #include "inertial_sense/GPS.h"
 #endif
@@ -67,7 +70,7 @@ public:
   void imuCallback(const sensor_msgs::ImuConstPtr& msg);
   void poseCallback(const geometry_msgs::PoseStampedConstPtr &msg);
   void odomCallback(const nav_msgs::OdometryConstPtr &msg);
-  void gnssCallback(const rosflight_msgs::GNSSConstPtr& msg);
+  void gnssCallback(const ublox::PosVelEcefPtr &msg);
   void mocapCallback(const ros::Time& time, const xform::Xformd &z);
   void statusCallback(const rosflight_msgs::StatusConstPtr& msg);
 
@@ -75,7 +78,7 @@ public:
   void gnssCallbackInertialSense(const inertial_sense::GPSConstPtr& msg);
 #endif
 
-  
+
 private:
   EKF ekf_;
 
@@ -106,21 +109,17 @@ private:
 
   bool use_odom_;
   bool use_pose_;
-  
+
   bool is_flying_ = false;
   bool armed_ = false;
   ros::Time time_took_off_;
   ros::Time start_time_;
 
   Vector6d imu_;
-  
+
   Matrix6d imu_R_;
   Matrix6d mocap_R_;
   Eigen::Matrix<double, 1, 1> alt_R_;
 };
 
 }
-
-
-
-

@@ -1,4 +1,5 @@
 #include "ekf/ekf_rosbag.h"
+#include "ublox/PosVelEcef.h"
 
 using namespace Eigen;
 using namespace std;
@@ -79,16 +80,29 @@ void ROSbagParser::parseBag()
         if (m.getTime() > bag_end_)
             break;
 
+        // if(m.getTopic().compare("/rover/PosVelEcef") == 0)
+        // {
+        //   std::cout << m.getDataType() << std::endl;
+        //   std::cout << m.getTopic() << std::endl << std::endl;
+        //
+        // }
+
+
         prog.print(i++, (m.getTime() - bag_start_).toSec());
 
         if (m.isType<sensor_msgs::Imu>() && m.getTopic().compare(imu_topic_) == 0)
-            ekf_.imuCallback(m.instantiate<sensor_msgs::Imu>());
+        {
+          ekf_.imuCallback(m.instantiate<sensor_msgs::Imu>());
+        }
         else if (m.isType<geometry_msgs::PoseStamped>())
             ekf_.poseCallback(m.instantiate<geometry_msgs::PoseStamped>());
         else if (m.isType<nav_msgs::Odometry>())
             ekf_.odomCallback(m.instantiate<nav_msgs::Odometry>());
-        else if (m.isType<rosflight_msgs::GNSS>())
-          ekf_.gnssCallback(m.instantiate<rosflight_msgs::GNSS>());
+        else if (m.isType<ublox::PosVelEcef>())
+        {
+          // std::cout << "gnss: \n";
+          ekf_.gnssCallback(m.instantiate<ublox::PosVelEcef>());
+        }
 #ifdef INERTIAL_SENSE
         else if (m.isType<inertial_sense::GPS>())
           ekf_.gnssCallbackInertialSense(m.instantiate<inertial_sense::GPS>());

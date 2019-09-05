@@ -1,8 +1,8 @@
 ## Post-Process Information
-bag_name: "/home/superjax/rosbag/roscopter_carry/carry1.bag"
+bag_name: "/home/jaron/Documents/byu-magicc/roscop_ws/bags/aug1_utc_walk_02.bag"
 # bag_name: "/home/superjax/rosbag/roscopter_carry/carry2.bag"
 # bag_name: "/home/superjax/rosbag/roscopter_carry/carry3.bag"
-imu_topic: "/rf/imu"
+imu_topic: "/imu/data"
 start_time: 10
 duration: 100000
 
