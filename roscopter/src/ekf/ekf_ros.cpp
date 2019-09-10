@@ -92,23 +92,23 @@ void EKF_ROS::init(const std::string &param_file)
   start_time_.fromSec(0.0);
 }
 
-void EKF_ROS::publishEstimates(const sensor_msgs::ImuConstPtr &msg);
+void EKF_ROS::publishEstimates(const sensor_msgs::ImuConstPtr &msg)
 {
   odom_msg_.header = msg->header;
 
   const State state_est = ekf_.x();
-  odom_msg_.pose.pose.position.x = state_est.p.x;
-  odom_msg_.pose.pose.position.y = state_est.p.y;
-  odom_msg_.pose.pose.position.z = state_est.p.z;
+  odom_msg_.pose.pose.position.x = state_est.p(0);
+  odom_msg_.pose.pose.position.y = state_est.p(1);
+  odom_msg_.pose.pose.position.z = state_est.p(2);
 
   odom_msg_.pose.pose.orientation.w = state_est.q.w();
   odom_msg_.pose.pose.orientation.x = state_est.q.x();
   odom_msg_.pose.pose.orientation.y = state_est.q.y();
   odom_msg_.pose.pose.orientation.z = state_est.q.z();
 
-  odom_msg_.twist.twist.linear.x = state_est.v.x;
-  odom_msg_.twist.twist.linear.y = state_est.v.y;
-  odom_msg_.twist.twist.linear.z = state_est.v.z;
+  odom_msg_.twist.twist.linear.x = state_est.v(0);
+  odom_msg_.twist.twist.linear.y = state_est.v(1);
+  odom_msg_.twist.twist.linear.z = state_est.v(2);
 
   odometry_pub_.publish(odom_msg_);
 }
@@ -129,7 +129,7 @@ void EKF_ROS::imuCallback(const sensor_msgs::ImuConstPtr &msg)
   double t = (msg->header.stamp - start_time_).toSec();
   ekf_.imuCallback(t, z, imu_R_);
 
-  publishEstimates();
+  publishEstimates(msg);
 }
 
 void EKF_ROS::poseCallback(const geometry_msgs::PoseStampedConstPtr &msg)
