@@ -91,8 +91,8 @@ private:
   ros::Subscriber status_sub_;
 
   ros::Publisher odometry_pub_;
-  ros::Publisher bias_pub_;
-  ros::Publisher is_flying_pub_;
+  //ros::Publisher bias_pub_;
+  //ros::Publisher is_flying_pub_;
   nav_msgs::Odometry odom_msg_;
 
 #ifdef INERTIAL_SENSE
@@ -117,6 +117,8 @@ private:
   Matrix6d imu_R_;
   Matrix6d mocap_R_;
   Eigen::Matrix<double, 1, 1> alt_R_;
+
+  void publishEstimates(const sensor_msgs::ImuConstPtr &msg);
 };
 
 }
