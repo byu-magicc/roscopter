@@ -52,6 +52,8 @@ void EKF_ROS::initROS()
   std::string roscopter_path = ros::package::getPath("roscopter");
   std::string parameter_filename = nh_private_.param<std::string>("param_filename", roscopter_path + "/params/ekf.yaml");
 
+  init(parameter_filename);
+
   odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odom", 1);
   //bias_pub_ = nh_.advertise<>("bias", 1);
   //is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1);
@@ -64,8 +66,6 @@ void EKF_ROS::initROS()
 #ifdef INERTIAL_SENSE
   is_gnss_sub_ = nh_.subscribe("is_gnss", 10, &EKF_ROS::gnssCallbackInertialSense, this);
 #endif
-
-  init(parameter_filename);
 }
 
 void EKF_ROS::init(const std::string &param_file)

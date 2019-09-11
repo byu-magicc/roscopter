@@ -7,6 +7,8 @@ int main(int argc, char** argv)
 
   roscopter::ekf::EKF_ROS estimator;
 
+  estimator.initROS();
+  
   ros::spin();
 
   return 0;
