@@ -34,8 +34,7 @@ class WaypointManager():
 
         # Set Up Publishers and Subscribers
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
-        # self.waypoint_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
-        self.waypoint_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5)
+        self.waypoint_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
 
         self.current_waypoint_index = 0
 
@@ -96,10 +95,10 @@ class WaypointManager():
             else:
                 if self.current_waypoint_index > len(self.waypoint_list):
                     self.current_waypoint_index -=1
-            next_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
-            self.cmd_msg.x = next_waypoint[0]
-            self.cmd_msg.y = next_waypoint[1]
-            self.cmd_msg.F = next_waypoint[2]
+            current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
+            self.cmd_msg.x = current_waypoint[0]
+            self.cmd_msg.y = current_waypoint[1]
+            self.cmd_msg.F = current_waypoint[2]
             if len(current_waypoint) > 3:
                 self.cmd_msg.z = current_waypoint[3]
             else:
@@ -107,7 +106,7 @@ class WaypointManager():
                 delta = next_point - current_waypoint
                 self.cmd_msg.z = np.atan2(delta[1], delta[0])
             self.cmd_msg.mode = Command.MODE_XPOS_YPOS_YAW_ALTITUDE
-        self.waypoint_pub_.publish(self.cmd_msg)
+            self.waypoint_pub_.publish(self.cmd_msg)
 
 if __name__ == '__main__':
     rospy.init_node('waypoint_manager', anonymous=True)
