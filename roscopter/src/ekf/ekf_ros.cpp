@@ -116,7 +116,10 @@ void EKF_ROS::publishEstimates(const sensor_msgs::ImuConstPtr &msg)
 void EKF_ROS::imuCallback(const sensor_msgs::ImuConstPtr &msg)
 {
   if (start_time_.sec == 0)
+  {
     start_time_ = msg->header.stamp;
+    return;
+  }
 
   Vector6d z;
   z << msg->linear_acceleration.x,

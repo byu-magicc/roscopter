@@ -41,16 +41,26 @@
 
     <!-- PID Position Controller -->
     <node name="controller" pkg="roscopter" type="controller" output="screen">
-      <remap from="estimate" to="ground_truth/odometry/NED"/> 
-      <!--<remap from="estimate" to="estimate"/>-->
+      <!--<remap from="estimate" to="ground_truth/odometry/NED"/> -->
+      <remap from="estimate" to="odom"/>
     </node>
 
     <!-- Waypoint Manager -->
     <node name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
       <remap from="waypoint" to="high_level_command"/>
-      <remap from="state" to="ground_truth/odometry/NED"/> 
-      <!--<remap from="state" to="estimate"/>-->
+      <!--<remap from="state" to="ground_truth/odometry/NED"/> -->
+      <remap from="state" to="odom"/>
     </node>
+
+    <!--Estimator-->
+    <node name="estimator" pkg="roscopter" type="ekf_node" output="screen">
+      <param name="param_filename" value="$(find roscopter)/params/ekf.yaml"/>
+      <remap from="imu" to="imu/data"/>
+      <!--<remap from="pose" to="pose"/>-->
+      <remap from="reference" to="ground_truth/odometry/NED_throttled"/>
+      <!--<remap from="gnss" to="gnss"/>-->
+    </node>
+
 
     <!-- plot states -->
     <!--<node pkg="roscopter" type="states_plotter.py" name="states_plotter" output="screen">
@@ -58,5 +68,7 @@
     </node>-->
 
   </group>
+
+  <node name="truth_throttler" type="throttle" pkg="topic_tools" args="messages /multirotor/ground_truth/odometry/NED 100 /multirotor/ground_truth/odometry/NED_throttled" />
 
 </launch>
