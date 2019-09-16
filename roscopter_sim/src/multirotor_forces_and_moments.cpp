@@ -146,10 +146,15 @@ void MultiRotorForcesAndMoments::Load(physics::ModelPtr _model, sdf::ElementPtr 
 // This gets called by the world update event.
 void MultiRotorForcesAndMoments::OnUpdate(const common::UpdateInfo& _info) {
 
-  sampling_time_ = _info.simTime.Double() - prev_sim_time_;
+  if (!cmd_valid_)
+    return;
+
+  if (prev_sim_time_ > 0.)
+    sampling_time_ = _info.simTime.Double() - prev_sim_time_;
+    UpdateForcesAndMoments();
+    SendForces();
+
   prev_sim_time_ = _info.simTime.Double();
-  UpdateForcesAndMoments();
-  SendForces();
 }
 
 void MultiRotorForcesAndMoments::WindCallback(const geometry_msgs::Vector3 &wind){
@@ -161,10 +166,15 @@ void MultiRotorForcesAndMoments::WindCallback(const geometry_msgs::Vector3 &wind
 void MultiRotorForcesAndMoments::CommandCallback(const rosflight_msgs::Command msg)
 {
   command_ = msg;
+
+  if (!cmd_valid_)
+    cmd_valid_ = true;
 }
 
 void MultiRotorForcesAndMoments::Reset()
 {
+  cmd_valid_ = false;
+
   // Re-Initialize Memory Variables
   applied_forces_.Fx = 0;
   applied_forces_.Fy = 0;

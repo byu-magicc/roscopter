@@ -21,6 +21,7 @@ Controller::Controller() :
   max_accel_xy_ = sin(acos(throttle_eq_)) / throttle_eq_ / sqrt(2.);
 
   is_flying_ = false;
+  received_cmd_ = false;
 
   nh_private_.getParam("max_roll", max_.roll);
   nh_private_.getParam("max_pitch", max_.pitch);
@@ -82,7 +83,7 @@ void Controller::stateCallback(const nav_msgs::OdometryConstPtr &msg)
   xhat_.q = msg->twist.twist.angular.y;
   xhat_.r = msg->twist.twist.angular.z;
 
-  if(is_flying_ && armed_)
+  if(is_flying_ && armed_ && received_cmd_)
   {
     ROS_WARN_ONCE("CONTROLLER ACTIVE");
     computeControl(dt);
@@ -137,6 +138,9 @@ void Controller::cmdCallback(const rosflight_msgs::CommandConstPtr &msg)
                 msg->mode);
       break;
   }
+
+  if (!received_cmd_)
+    received_cmd_ = true;
 }
 
 void Controller::reconfigure_callback(roscopter::ControllerConfig& config,
