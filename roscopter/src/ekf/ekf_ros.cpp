@@ -55,8 +55,8 @@ void EKF_ROS::initROS()
   init(parameter_filename);
 
   odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odom", 1);
-  //bias_pub_ = nh_.advertise<>("bias", 1);
-  //is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1);
+  imu_bias_pub_ = nh_.advertise<sensor_msgs::Imu>("imu_bias", 1);
+  is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1);
 
   imu_sub_ = nh_.subscribe("imu", 100, &EKF_ROS::imuCallback, this);
   pose_sub_ = nh_.subscribe("pose", 10, &EKF_ROS::poseCallback, this);
@@ -94,6 +94,7 @@ void EKF_ROS::init(const std::string &param_file)
 
 void EKF_ROS::publishEstimates(const sensor_msgs::ImuConstPtr &msg)
 {
+  // Pub Odom
   odom_msg_.header = msg->header;
 
   const State state_est = ekf_.x();
@@ -111,12 +112,39 @@ void EKF_ROS::publishEstimates(const sensor_msgs::ImuConstPtr &msg)
   odom_msg_.twist.twist.linear.z = state_est.v(2);
 
   odometry_pub_.publish(odom_msg_);
+
+  // Pub Imu Bias estimate
+  imu_bias_msg_.header = msg->header;
+
+  imu_bias_msg_.angular_velocity.x = state_est.bg(0);
+  imu_bias_msg_.angular_velocity.y = state_est.bg(1);
+  imu_bias_msg_.angular_velocity.z = state_est.bg(2);
+
+  imu_bias_msg_.linear_acceleration.x = state_est.ba(0);
+  imu_bias_msg_.linear_acceleration.y = state_est.ba(1);
+  imu_bias_msg_.linear_acceleration.z = state_est.ba(2);
+
+  imu_bias_pub_.publish(imu_bias_msg_);
+
+  // Only publish is_flying is true once
+  if (!is_flying_)
+  {
+    is_flying_ = ekf_.is_flying_;
+    if (is_flying_)
+    {
+      is_flying_msg_.data = is_flying_;
+      is_flying_pub_.publish(is_flying_msg_);
+    }
+  }
 }
 
 void EKF_ROS::imuCallback(const sensor_msgs::ImuConstPtr &msg)
 {
   if (start_time_.sec == 0)
+  {
     start_time_ = msg->header.stamp;
+    return;
+  }
 
   Vector6d z;
   z << msg->linear_acceleration.x,

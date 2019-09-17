@@ -124,6 +124,7 @@ private:
   // Time Counters
   double sampling_time_;
   double prev_sim_time_;
+  bool cmd_valid_;
 
   ros::NodeHandle* nh_;
   ros::NodeHandle nh_private_;

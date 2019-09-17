@@ -114,10 +114,10 @@ State::State() :
     a(arr.data()+1+NX),
     w(arr.data()+1+NX+3)
 {
-#ifndef NDEBUG
+//#ifndef NDEBUG
     // to help with tracking down uninitialized memory, in debug mode fill with nans
     arr.setConstant(NAN);
-#endif
+//#endif
 }
 
 State::State(const State &other) :
@@ -194,14 +194,14 @@ StateBuf::StateBuf(int _size) :
     head(0),
     tail(0)
 {
-#ifndef NDEBUG
+//#ifndef NDEBUG
     // to help with tracking down uninitialized memory, in debug mode fill with nans
     for (int i = 0; i < buf.size(); i++)
     {
         buf[i].x.arr.setConstant(NAN);
         buf[i].P.setConstant(NAN);
     }
-#endif
+//#endif
 }
 
 State& StateBuf::x()

@@ -91,9 +91,12 @@ private:
   ros::Subscriber status_sub_;
 
   ros::Publisher odometry_pub_;
-  //ros::Publisher bias_pub_;
-  //ros::Publisher is_flying_pub_;
+  ros::Publisher imu_bias_pub_;
+  ros::Publisher is_flying_pub_;
+
+  sensor_msgs::Imu imu_bias_msg_;
   nav_msgs::Odometry odom_msg_;
+  std_msgs::Bool is_flying_msg_;
 
 #ifdef INERTIAL_SENSE
   ros::Subscriber is_gnss_sub_;

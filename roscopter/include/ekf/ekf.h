@@ -34,6 +34,9 @@ namespace roscopter
   throw std::runtime_error(#mat " Has NaNs" + std::to_string(__LINE__));\
 }
 
+#define PRINTMAT(mat) std::cout << #mat << std::endl << mat << std::endl;
+using namespace std;
+
 namespace ekf
 {
 
