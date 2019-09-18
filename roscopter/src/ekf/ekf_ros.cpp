@@ -63,6 +63,8 @@ void EKF_ROS::initROS()
   odom_sub_ = nh_.subscribe("reference", 10, &EKF_ROS::odomCallback, this);
   gnss_sub_ = nh_.subscribe("gnss", 10, &EKF_ROS::gnssCallback, this);
 
+  ros_initialized_ = true;
+
 #ifdef INERTIAL_SENSE
   is_gnss_sub_ = nh_.subscribe("is_gnss", 10, &EKF_ROS::gnssCallbackInertialSense, this);
 #endif
@@ -157,7 +159,8 @@ void EKF_ROS::imuCallback(const sensor_msgs::ImuConstPtr &msg)
   double t = (msg->header.stamp - start_time_).toSec();
   ekf_.imuCallback(t, z, imu_R_);
 
-  publishEstimates(msg);
+  if(ros_initialized_)
+    publishEstimates(msg);
 }
 
 void EKF_ROS::poseCallback(const geometry_msgs::PoseStampedConstPtr &msg)

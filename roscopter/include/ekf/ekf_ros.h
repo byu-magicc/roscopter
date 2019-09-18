@@ -109,6 +109,8 @@ private:
 
   bool use_odom_;
   bool use_pose_;
+
+  bool ros_initialized_ = false;
   
   bool is_flying_ = false;
   bool armed_ = false;

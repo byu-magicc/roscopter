@@ -1,8 +1,13 @@
 ## Post-Process Information
-bag_name: "/home/superjax/rosbag/roscopter_carry/carry1.bag"
+bag_name: "/home/matthew/data/testing.bag"
 # bag_name: "/home/superjax/rosbag/roscopter_carry/carry2.bag"
 # bag_name: "/home/superjax/rosbag/roscopter_carry/carry3.bag"
-imu_topic: "/rf/imu"
+imu_topic: "/multirotor/imu/data"
+pose_topic: ""
+odom_topic: "/multirotor/ground_truth/odometry/NED_throttled"
+gnss_topic: ""
+inertial_sense_topic: ""
+
 start_time: 10
 duration: 100000
 
@@ -12,7 +17,7 @@ is_flying_threshold: 10.5 # if accel measurement exceed this magnitude, set is_f
 
 ## Logging
 log_prefix: "/tmp/roscopter/ekf/"
-enable_log: false
+enable_log: true
 
 ## Measurement Processing
 enable_out_of_order: false
