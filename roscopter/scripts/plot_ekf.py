@@ -89,7 +89,7 @@ def plotEuler():
     rad2deg = 180.0/np.pi
     for i in range(3):
         plt.subplot(3, 1, i+1)
-        plt.title(vtitles[i])
+        plt.title(etitles[i])
         plt.plot(data.ref['t'], data.ref['euler'][:,i] * rad2deg, label='ref')
         plt.plot(data.x['t'], data.x['euler'][:,i] * rad2deg, label=r"$\hat{x}$")
         if plotCov:
@@ -148,9 +148,10 @@ def plotResults(directory):
     plt.rc('text', usetex=True)
     plt.rc('font', family='serif')
 
-    global xtitles, vtitles, imu_titles, colors, data, pw, plotCov
+    global xtitles, vtitles, etitles, imu_titles, colors, data, pw, plotCov
     xtitles = ['$p_x$', '$p_y$', '$p_z$', '$q_w$', '$q_x$', '$q_y$', '$q_z$']
     vtitles = ['$v_x$', '$v_y$', '$v_z$']
+    etitles = ['$\phi$', r'$\theta$', '$\psi$']
     imu_titles = [r"$acc_x$", r"$acc_y$", r"$acc_z$", r"$\omega_x$", r"$\omega_y$", r"$\omega_z$"]
     colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
 

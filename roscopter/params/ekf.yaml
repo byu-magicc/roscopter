@@ -1,7 +1,5 @@
 ## Post-Process Information
-bag_name: "/home/matthew/data/testing.bag"
-# bag_name: "/home/superjax/rosbag/roscopter_carry/carry2.bag"
-# bag_name: "/home/superjax/rosbag/roscopter_carry/carry3.bag"
+bag_name: "/home/mmmfarrell/test.bag"
 imu_topic: "/multirotor/imu/data"
 pose_topic: ""
 odom_topic: "/multirotor/ground_truth/odometry/NED_throttled"
