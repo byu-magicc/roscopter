@@ -23,6 +23,10 @@ void ROSbagParser::loadParams()
 {
   get_yaml_node("bag_name", param_filename_, bag_filename_);
   get_yaml_node("imu_topic", param_filename_, imu_topic_);
+  get_yaml_node("pose_topic", param_filename_, pose_topic_);
+  get_yaml_node("odom_topic", param_filename_, odom_topic_);
+  get_yaml_node("gnss_topic", param_filename_, gnss_topic_);
+  get_yaml_node("inertial_sense_topic", param_filename_, inertial_sense_topic_);
   get_yaml_node("start_time", param_filename_, start_);
   get_yaml_node("duration", param_filename_, duration_);
 }
@@ -83,14 +87,14 @@ void ROSbagParser::parseBag()
 
         if (m.isType<sensor_msgs::Imu>() && m.getTopic().compare(imu_topic_) == 0)
             ekf_.imuCallback(m.instantiate<sensor_msgs::Imu>());
-        else if (m.isType<geometry_msgs::PoseStamped>())
+        else if (m.isType<geometry_msgs::PoseStamped>() && m.getTopic().compare(pose_topic_) == 0)
             ekf_.poseCallback(m.instantiate<geometry_msgs::PoseStamped>());
-        else if (m.isType<nav_msgs::Odometry>())
+        else if (m.isType<nav_msgs::Odometry>() && m.getTopic().compare(odom_topic_) == 0)
             ekf_.odomCallback(m.instantiate<nav_msgs::Odometry>());
-        else if (m.isType<rosflight_msgs::GNSS>())
+        else if (m.isType<rosflight_msgs::GNSS>() && m.getTopic().compare(gnss_topic_) == 0)
           ekf_.gnssCallback(m.instantiate<rosflight_msgs::GNSS>());
 #ifdef INERTIAL_SENSE
-        else if (m.isType<inertial_sense::GPS>())
+        else if (m.isType<inertial_sense::GPS>() && m.getTopic().compare(inertial_sense_topic_) == 0)
           ekf_.gnssCallbackInertialSense(m.instantiate<inertial_sense::GPS>());
 #endif
     }

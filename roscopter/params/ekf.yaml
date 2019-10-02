@@ -1,8 +1,11 @@
 ## Post-Process Information
-bag_name: "/home/superjax/rosbag/roscopter_carry/carry1.bag"
-# bag_name: "/home/superjax/rosbag/roscopter_carry/carry2.bag"
-# bag_name: "/home/superjax/rosbag/roscopter_carry/carry3.bag"
-imu_topic: "/rf/imu"
+bag_name: "/home/mmmfarrell/test.bag"
+imu_topic: "/multirotor/imu/data"
+pose_topic: ""
+odom_topic: "/multirotor/ground_truth/odometry/NED_throttled"
+gnss_topic: ""
+inertial_sense_topic: ""
+
 start_time: 10
 duration: 100000
 
@@ -16,7 +19,7 @@ enable_log: true
 
 ## Measurement Processing
 enable_out_of_order: false
-use_truth: false
+use_truth: true # Whether or not to use mocap measurements
 use_gnss: true
 use_alt: true
 use_zero_vel: true

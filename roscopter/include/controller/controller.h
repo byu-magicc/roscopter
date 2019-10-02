@@ -98,6 +98,7 @@ private:
   double drag_constant_;
   bool is_flying_;
   bool armed_;
+  bool received_cmd_;
 
   // PID Controllers
   controller::SimplePID PID_x_dot_;

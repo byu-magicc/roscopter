@@ -91,9 +91,12 @@ private:
   ros::Subscriber status_sub_;
 
   ros::Publisher odometry_pub_;
-  ros::Publisher bias_pub_;
+  ros::Publisher imu_bias_pub_;
   ros::Publisher is_flying_pub_;
+
+  sensor_msgs::Imu imu_bias_msg_;
   nav_msgs::Odometry odom_msg_;
+  std_msgs::Bool is_flying_msg_;
 
 #ifdef INERTIAL_SENSE
   ros::Subscriber is_gnss_sub_;
@@ -106,6 +109,8 @@ private:
 
   bool use_odom_;
   bool use_pose_;
+
+  bool ros_initialized_ = false;
   
   bool is_flying_ = false;
   bool armed_ = false;
@@ -117,6 +122,8 @@ private:
   Matrix6d imu_R_;
   Matrix6d mocap_R_;
   Eigen::Matrix<double, 1, 1> alt_R_;
+
+  void publishEstimates(const sensor_msgs::ImuConstPtr &msg);
 };
 
 }

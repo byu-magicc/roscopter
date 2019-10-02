@@ -232,8 +232,6 @@ void EKF::imuCallback(const double &t, const Vector6d &z, const Matrix6d &R)
       zeroVelUpdate(t);
   }
 
-  if (!is_flying_)
-
   if (enable_log_)
   {
     logs_[LOG_IMU]->log(t);
@@ -319,7 +317,14 @@ void EKF::gnssUpdate(const meas::Gnss &z)
 void EKF::mocapUpdate(const meas::Mocap &z)
 {
   xform::Xformd zhat = x().x;
-  Vector6d r = zhat - z.z;
+
+  // TODO Do we need to fix "-" operator for Xformd?
+  // Right now using piecewise subtraction
+  // on position and attitude separately. This may be correct though because
+  // our state is represented as R^3 x S^3 (position, quaterion) not SE3
+  Vector6d r;
+  r.segment<3>(0) = z.z.t_ - zhat.t_;
+  r.segment<3>(3) = z.z.q_ - zhat.q_;
 
   typedef ErrorState E;
   Matrix<double, 6, E::NDX> H;
@@ -329,7 +334,9 @@ void EKF::mocapUpdate(const meas::Mocap &z)
 
   /// TODO: Saturate r
   if (use_truth_)
+  {
     measUpdate(r, z.R, H);
+  }
 
   if (enable_log_)
   {
