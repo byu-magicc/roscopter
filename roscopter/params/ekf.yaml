@@ -1,5 +1,6 @@
 ## Post-Process Information
 bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/groot_sensors_stationary.bag"
+status_topic: "/status"
 imu_topic: "/imu/data"
 pose_topic: ""
 odom_topic: ""

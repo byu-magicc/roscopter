@@ -131,7 +131,7 @@ void EKF_ROS::publishEstimates(const sensor_msgs::ImuConstPtr &msg)
   // Only publish is_flying is true once
   if (!is_flying_)
   {
-    is_flying_ = ekf_.is_flying_;
+    is_flying_ = ekf_.isFlying();
     if (is_flying_)
     {
       is_flying_msg_.data = is_flying_;
@@ -198,6 +198,18 @@ void EKF_ROS::mocapCallback(const ros::Time &time, const xform::Xformd &z)
 
   double t = (time - start_time_).toSec();
   ekf_.mocapCallback(t, z, mocap_R_);
+}
+
+void EKF_ROS::statusCallback(const rosflight_msgs::StatusConstPtr &msg)
+{
+  if (msg->armed)
+  {
+    ekf_.setArmed();
+  }
+  else
+  {
+    ekf_.setDisarmed();
+  }
 }
 
 void EKF_ROS::gnssCallback(const rosflight_msgs::GNSSConstPtr &msg)

@@ -47,6 +47,7 @@ private:
 
     EKF_ROS ekf_;
 
+    std::string status_topic_;
     std::string imu_topic_;
     std::string pose_topic_;
     std::string odom_topic_;
