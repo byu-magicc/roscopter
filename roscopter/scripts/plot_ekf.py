@@ -59,7 +59,8 @@ def plotPosition():
 def plotPosition2d(): 
     f = plt.figure()
     plt.suptitle('Position 2d')
-    plt.plot(data.ref['x']['p'][:,1], data.ref['x']['p'][:,0], label='ref')
+    plt.plot(data.ref['x']['p'][:,1] - data.ref['x']['p'][0,1],
+            data.ref['x']['p'][:,0] - data.ref['x']['p'][0,0], label='ref')
     plt.plot(data.x['x']['p'][:,1], data.x['x']['p'][:,0], label=r"$\hat{x}$")
     plt.ylabel("North (m)")
     plt.xlabel("East (m)")
@@ -142,6 +143,18 @@ def plotZVRes():
             plt.legend()
     pw.addPlot("ZeroVel", f)
 
+def plotRangeRes():
+    f = plt.figure()
+    plt.suptitle('Range Res')
+    plt.subplot(2, 1, 1)
+    plt.plot(data.rangeRes['t'], data.rangeRes['z'][:], label=r'$z$')                          
+    plt.plot(data.rangeRes['t'], data.rangeRes['zhat'][:], label=r'$\hat{z}$')                          
+    plt.legend()
+    plt.subplot(2, 1, 2)
+    plt.plot(data.rangeRes['t'], data.rangeRes['r'][:], label="r")                          
+    plt.legend()
+    pw.addPlot("Range Res", f)
+
 def plotGnssRes():
     f = plt.figure()
     plt.suptitle('Gnss Res')
@@ -181,6 +194,7 @@ def plotResults(directory):
     plotImuBias()
 
     plotZVRes()
+    plotRangeRes()
     plotGnssRes()
 
     pw.show()

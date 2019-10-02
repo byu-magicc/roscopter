@@ -1,7 +1,8 @@
 ## Post-Process Information
 # bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/groot_sensors_stationary.bag"
 # bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/groot_sensors_triangle.bag"
-bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_walkpath.bag"
+# bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_walkpath.bag"
+bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_updown.bag"
 status_topic: "/status"
 imu_topic: "/imu/data"
 range_topic: "/serial/laser"
@@ -11,7 +12,7 @@ gnss_topic: ""
 ublox_gnss_topic: ""
 inertial_sense_gnss_topic: "/ins/gps"
 
-start_time: 0
+start_time: 10
 duration: 186
 
 ## Is_flying checks

@@ -316,7 +316,9 @@ void EKF::rangeUpdate(const meas::Range &z)
   using Vector1d = Eigen::Matrix<double, 1, 1>;
 
   const double altitude = -x().p(2);
-  const Vector1d zhat(altitude); // TODO roll/ pitch of drone
+  const double roll = x().q.roll();
+  const double pitch = x().q.pitch();
+  const Vector1d zhat(altitude / cos(roll) / cos(pitch)); // TODO roll/ pitch of drone
   Vector1d r = z.z - zhat; // residual
 
   std::cout << "range update:" << std::endl;
