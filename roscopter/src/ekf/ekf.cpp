@@ -86,6 +86,7 @@ void EKF::initialize(double t)
   x().v.setZero();
   x().ba.setZero();
   x().bg.setZero();
+  x().ref = 0;
   x().a = -gravity;
   x().w.setZero();
   is_flying_ = false;

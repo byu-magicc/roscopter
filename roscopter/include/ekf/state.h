@@ -20,8 +20,9 @@ public:
         DV = 6,
         DBA = 9,
         DBG = 12,
-        NDX = 15,
-        SIZE = 15
+        DREF = 15,
+        NDX = 16,
+        SIZE = 16
     };
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     Eigen::Matrix<double, SIZE, 1> arr;
@@ -31,6 +32,7 @@ public:
     Eigen::Map<Eigen::Vector3d> v;
     Eigen::Map<Eigen::Vector3d> ba;
     Eigen::Map<Eigen::Vector3d> bg;
+    double& ref; // reference global altitude of NED frame
 
     ErrorState();
     ErrorState(const ErrorState& obj);
@@ -75,9 +77,10 @@ public:
       V = 8,
       BA = 11,
       BG = 14,
-      A = 17,
-      W = 20,
-      NX = 16, // number of states
+      REF = 17,
+      A = 18,
+      W = 21,
+      NX = 17, // number of states
       SIZE = 1 + NX + 6
   };
   Eigen::Matrix<double, SIZE, 1> arr;
@@ -93,6 +96,7 @@ public:
   Eigen::Map<Eigen::Vector3d> v;
   Eigen::Map<Eigen::Vector3d> ba;
   Eigen::Map<Eigen::Vector3d> bg;
+  double& ref; // reference global altitude of NED frame
 
   State();
   State(const State& other);
