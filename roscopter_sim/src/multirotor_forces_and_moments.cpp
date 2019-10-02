@@ -150,9 +150,11 @@ void MultiRotorForcesAndMoments::OnUpdate(const common::UpdateInfo& _info) {
     return;
 
   if (prev_sim_time_ > 0.)
+  {
     sampling_time_ = _info.simTime.Double() - prev_sim_time_;
     UpdateForcesAndMoments();
     SendForces();
+  }
 
   prev_sim_time_ = _info.simTime.Double();
 }
