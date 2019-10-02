@@ -24,6 +24,7 @@ void ROSbagParser::loadParams()
   get_yaml_node("bag_name", param_filename_, bag_filename_);
   get_yaml_node("status_topic", param_filename_, status_topic_);
   get_yaml_node("imu_topic", param_filename_, imu_topic_);
+  get_yaml_node("range_topic", param_filename_, range_topic_);
   get_yaml_node("pose_topic", param_filename_, pose_topic_);
   get_yaml_node("odom_topic", param_filename_, odom_topic_);
   get_yaml_node("gnss_topic", param_filename_, gnss_topic_);
@@ -89,8 +90,10 @@ void ROSbagParser::parseBag()
 
         if (m.isType<sensor_msgs::Imu>() && m.getTopic().compare(imu_topic_) == 0)
             ekf_.imuCallback(m.instantiate<sensor_msgs::Imu>());
-        if (m.isType<rosflight_msgs::Status>() && m.getTopic().compare(status_topic_) == 0)
+        else if (m.isType<rosflight_msgs::Status>() && m.getTopic().compare(status_topic_) == 0)
             ekf_.statusCallback(m.instantiate<rosflight_msgs::Status>());
+        else if (m.isType<sensor_msgs::Range>() && m.getTopic().compare(range_topic_) == 0)
+            ekf_.rangeCallback(m.instantiate<sensor_msgs::Range>());
         else if (m.isType<geometry_msgs::PoseStamped>() && m.getTopic().compare(pose_topic_) == 0)
             ekf_.poseCallback(m.instantiate<geometry_msgs::PoseStamped>());
         else if (m.isType<nav_msgs::Odometry>() && m.getTopic().compare(odom_topic_) == 0)

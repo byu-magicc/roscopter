@@ -88,9 +88,10 @@ void EKF_ROS::init(const std::string &param_file)
   mocap_R_ << pos_stdev * pos_stdev * I_3x3,   Matrix3d::Zero(),
       Matrix3d::Zero(),   att_stdev * att_stdev * I_3x3;
 
-  double alt_stdev;
-  get_yaml_node("alt_noise_stdev", param_file, alt_stdev);
-  alt_R_ << alt_stdev*alt_stdev;
+  double range_stdev;
+  get_yaml_node("range_noise_stdev", param_file, range_stdev);
+  range_R_ = range_stdev * range_stdev;
+
   start_time_.fromSec(0.0);
 }
 
@@ -161,6 +162,19 @@ void EKF_ROS::imuCallback(const sensor_msgs::ImuConstPtr &msg)
 
   if(ros_initialized_)
     publishEstimates(msg);
+}
+
+void EKF_ROS::rangeCallback(const sensor_msgs::RangeConstPtr& msg)
+{
+  if (start_time_.sec == 0)
+    return;
+
+  const double range_meas = msg->range;
+  if (range_meas < msg->max_range && range_meas > msg->min_range)
+  {
+    const double t = (msg->header.stamp - start_time_).toSec();
+    ekf_.rangeCallback(t, range_meas, range_R_);
+  }
 }
 
 void EKF_ROS::poseCallback(const geometry_msgs::PoseStampedConstPtr &msg)

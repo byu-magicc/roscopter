@@ -1,16 +1,18 @@
 ## Post-Process Information
 # bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/groot_sensors_stationary.bag"
-bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/groot_sensors_triangle.bag"
+# bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/groot_sensors_triangle.bag"
+bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_walkpath.bag"
 status_topic: "/status"
 imu_topic: "/imu/data"
+range_topic: "/serial/laser"
 pose_topic: ""
-odom_topic: ""
+odom_topic: "/ins/ins"
 gnss_topic: ""
-ublox_gnss_topic: "/PosVelEcef"
+ublox_gnss_topic: ""
 inertial_sense_gnss_topic: "/ins/gps"
 
-start_time: 10
-duration: 75
+start_time: 0
+duration: 186
 
 ## Is_flying checks
 enable_arm_check: false # require armed before checking for is_flying
@@ -22,9 +24,9 @@ enable_log: true
 
 ## Measurement Processing
 enable_out_of_order: false
-use_truth: true # Whether or not to use mocap measurements
+use_truth: false # Whether or not to use mocap measurements
 use_gnss: true
-use_alt: true
+use_range: true
 use_zero_vel: true
 
 R_zero_vel: [0.001, 0.001, 0.001, # vel
@@ -62,4 +64,4 @@ accel_noise_stdev: 0.5
 gyro_noise_stdev: 0.02
 position_noise_stdev: 0.01
 attitude_noise_stdev: 0.01
-alt_noise_stdev: 0.1
+range_noise_stdev: 0.05

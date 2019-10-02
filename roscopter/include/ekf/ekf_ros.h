@@ -69,6 +69,7 @@ public:
   void initROS();
 
   void imuCallback(const sensor_msgs::ImuConstPtr& msg);
+  void rangeCallback(const sensor_msgs::RangeConstPtr& msg);
   void poseCallback(const geometry_msgs::PoseStampedConstPtr &msg);
   void odomCallback(const nav_msgs::OdometryConstPtr &msg);
   void gnssCallback(const rosflight_msgs::GNSSConstPtr& msg);
@@ -129,7 +130,7 @@ private:
   
   Matrix6d imu_R_;
   Matrix6d mocap_R_;
-  Eigen::Matrix<double, 1, 1> alt_R_;
+  double range_R_;
 
   void publishEstimates(const sensor_msgs::ImuConstPtr &msg);
 };

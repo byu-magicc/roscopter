@@ -35,7 +35,7 @@ void EKF::load(const std::string &filename)
   get_yaml_node("enable_out_of_order", filename, enable_out_of_order_);
   get_yaml_node("use_truth", filename, use_truth_);
   get_yaml_node("use_gnss", filename, use_gnss_);
-  get_yaml_node("use_alt", filename, use_alt_);
+  get_yaml_node("use_range", filename, use_range_);
   get_yaml_node("use_zero_vel", filename, use_zero_vel_);
 
   // Armed Check
@@ -254,6 +254,16 @@ void EKF::imuCallback(const double &t, const Vector6d &z, const Matrix6d &R)
 
 }
 
+void EKF::rangeCallback(const double& t, const double& z, const double& R)
+{
+  if (enable_out_of_order_)
+  {
+    std::cout << "ERROR OUT OF ORDER RANGE NOT IMPLEMENTED" << std::endl;
+  }
+  else
+    rangeUpdate(meas::Range(t, z, R));
+}
+
 void EKF::gnssCallback(const double &t, const Vector6d &z, const Matrix6d &R)
 {
   if (!ref_lla_set_)
@@ -294,6 +304,42 @@ void EKF::mocapCallback(const double& t, const xform::Xformd& z, const Matrix6d&
   }
 }
 
+
+void EKF::rangeUpdate(const meas::Range &z)
+{
+  // Assume that the earth is flat and that the range sensor is rigidly attached
+  // to the UAV, so distance is dependent on the attitude of the UAV.
+  // TODO assuming that the laser is positioned at 0,0,0 in the body frame of the UAV
+  // Vector6d zhat;
+  // zhat << x_e2I_.transforma(gps_pos_I),
+          // x_e2I_.rota(gps_vel_I);
+  using Vector1d = Eigen::Matrix<double, 1, 1>;
+
+  const double altitude = -x().p(2);
+  const Vector1d zhat(altitude); // TODO roll/ pitch of drone
+  Vector1d r = z.z - zhat; // residual
+
+  std::cout << "range update:" << std::endl;
+  std::cout << "z.z: " << z.z.transpose() << std::endl;
+  std::cout << "zhat: " << zhat.transpose() << std::endl;
+
+  typedef ErrorState E;
+
+  Matrix<double, 1, E::NDX> H;
+  H.setZero();
+  H(0, E::DP + 2) = -1.;
+
+  /// TODO: Saturate r
+  if (use_range_)
+    measUpdate(r, z.R, H);
+
+  if (enable_log_)
+  {
+    logs_[LOG_RANGE_RES]->log(z.t);
+    logs_[LOG_RANGE_RES]->logVectors(r, z.z, zhat);
+  }
+
+}
 
 void EKF::gnssUpdate(const meas::Gnss &z)
 {

@@ -47,7 +47,7 @@ def plotPosition():
     for i in range(3):
         plt.subplot(3, 1, i+1)
         plt.title(xtitles[i])
-        plt.plot(data.ref['t'], data.ref['x']['p'][:,i], label='ref')
+        plt.plot(data.ref['t'], data.ref['x']['p'][:,i] - data.ref['x']['p'][0, i], label='ref')
         plt.plot(data.x['t'], data.x['x']['p'][:,i], label=r"$\hat{x}$")
         if plotCov:
             plt.plot(data.cov['t'], data.x['x']['p'][:,i] + 2.0*np.sqrt(data.cov['P'][:, i,i]), '-k', alpha=0.3)

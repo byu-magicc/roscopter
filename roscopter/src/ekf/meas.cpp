@@ -22,6 +22,9 @@ std::string Base::Type() const
     case IMU:
         return "Imu";
         break;
+    case RANGE:
+        return "Range";
+        break;
     case MOCAP:
         return "Mocap";
         break;
@@ -44,6 +47,14 @@ Imu::Imu(double _t, const Vector6d &_z, const Matrix6d &_R)
     z = _z;
     R = _R;
     type = IMU;
+}
+
+Range::Range(double _t, const double &_z, const double &_R)
+{
+    t = _t;
+    z(0) = _z;
+    R(0) = _R;
+    type = RANGE;
 }
 
 Gnss::Gnss(double _t, const Vector6d& _z, const Matrix6d& _R) :

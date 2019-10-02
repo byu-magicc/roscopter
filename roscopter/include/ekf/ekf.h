@@ -78,9 +78,11 @@ public:
 
   meas::MeasSet::iterator getOldestNewMeas();
   void imuCallback(const double& t, const Vector6d& z, const Matrix6d& R);
+  void rangeCallback(const double& t, const double& z, const double& R);
   void gnssCallback(const double& t, const Vector6d& z, const Matrix6d& R);
   void mocapCallback(const double& t, const xform::Xformd& z, const Matrix6d& R);
 
+  void rangeUpdate(const meas::Range &z);
   void gnssUpdate(const meas::Gnss &z);
   void mocapUpdate(const meas::Mocap &z);
   void zeroVelUpdate(double t);
@@ -98,6 +100,7 @@ public:
     LOG_GNSS_RES,
     LOG_MOCAP_RES,
     LOG_ZERO_VEL_RES,
+    LOG_RANGE_RES,
     LOG_IMU,
     LOG_LLA,
     LOG_REF,
@@ -109,6 +112,7 @@ public:
     "gnss_res",
     "mocap_res",
     "zero_vel_res",
+    "range_res",
     "imu",
     "lla",
     "ref"
@@ -142,7 +146,7 @@ public:
 
   // Measurement Buffers
   bool use_truth_;
-  bool use_alt_;
+  bool use_range_;
   bool use_gnss_;
   bool use_zero_vel_;
   bool enable_out_of_order_;
