@@ -1,8 +1,8 @@
 ## Post-Process Information
-bag_name: "/home/mmmfarrell/test.bag"
-imu_topic: "/multirotor/imu/data"
+bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/groot_sensors_stationary.bag"
+imu_topic: "/imu/data"
 pose_topic: ""
-odom_topic: "/multirotor/ground_truth/odometry/NED_throttled"
+odom_topic: ""
 gnss_topic: ""
 inertial_sense_topic: ""
 

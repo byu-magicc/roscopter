@@ -348,15 +348,11 @@ void EKF::mocapUpdate(const meas::Mocap &z)
 void EKF::zeroVelUpdate(double t)
 {
   typedef ErrorState E;
-  Matrix<double, 4, E::NDX> H;
+  Matrix<double, 3, E::NDX> H;
   H.setZero();
   H.block<3,3>(0, E::DV) = I_3x3;
-  H(3, E::DQ+2) = 0.5; // Check this, it's probably wrong (dyaw/dq)
 
-  Vector4d r;
-  r << -x().v,
-//        0.0;
-       -x().q.yaw();
+  Vector3d r = -x().v;
 
   if (use_zero_vel_)
     measUpdate(r, R_zero_vel_, H);
