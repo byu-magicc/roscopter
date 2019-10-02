@@ -34,6 +34,8 @@ namespace roscopter
   throw std::runtime_error(#mat " Has NaNs" + std::to_string(__LINE__));\
 }
 
+#define PRINTMAT(mat) std::cout << #mat << std::endl << mat << std::endl;
+
 namespace ekf
 {
 
@@ -123,7 +125,7 @@ public:
   xform::Xformd x0_;
   Eigen::Vector3d p_b2g_;
   xform::Xformd x_e2I_;
-  Eigen::Matrix4d R_zero_vel_;
+  Eigen::Matrix3d R_zero_vel_;
 
   // Matrix Workspace
   dxMat A_;

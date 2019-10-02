@@ -49,6 +49,10 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <std_msgs/Bool.h>
 
+#ifdef UBLOX
+#include "ublox/PosVelEcef.h"
+#endif
+
 #ifdef INERTIAL_SENSE
 #include "inertial_sense/GPS.h"
 #endif
@@ -70,6 +74,10 @@ public:
   void gnssCallback(const rosflight_msgs::GNSSConstPtr& msg);
   void mocapCallback(const ros::Time& time, const xform::Xformd &z);
   void statusCallback(const rosflight_msgs::StatusConstPtr& msg);
+
+#ifdef UBLOX
+  void gnssCallbackUblox(const ublox::PosVelEcefConstPtr& msg);
+#endif
 
 #ifdef INERTIAL_SENSE
   void gnssCallbackInertialSense(const inertial_sense::GPSConstPtr& msg);

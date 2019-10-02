@@ -52,7 +52,8 @@ private:
     std::string pose_topic_;
     std::string odom_topic_;
     std::string gnss_topic_;
-    std::string inertial_sense_topic_;
+    std::string ublox_gnss_topic_;
+    std::string inertial_sense_gnss_topic_;
 
     Matrix6d imu_R_;
     Matrix6d mocap_R_;

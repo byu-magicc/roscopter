@@ -54,6 +54,15 @@ def plotPosition():
             plt.legend()
     pw.addPlot("Position", f)
 
+def plotPosition2d(): 
+    f = plt.figure()
+    plt.suptitle('Position 2d')
+    plt.plot(data.ref['x']['p'][:,1], data.ref['x']['p'][:,0], label='ref')
+    plt.plot(data.x['x']['p'][:,1], data.x['x']['p'][:,0], label=r"$\hat{x}$")
+    plt.ylabel("North (m)")
+    plt.xlabel("East (m)")
+    pw.addPlot("Position 2d", f)
+
 def plotVelocity(): 
     f = plt.figure()
     plt.suptitle('Velocity')
@@ -161,6 +170,7 @@ def plotResults(directory):
     pw = plotWindow()
 
     plotPosition()
+    plotPosition2d()
     plotVelocity()
     plotAttitude()
     plotEuler()

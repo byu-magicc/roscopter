@@ -243,21 +243,51 @@ void EKF_ROS::gnssCallback(const rosflight_msgs::GNSSConstPtr &msg)
   ekf_.gnssCallback(t, z, Sigma_ecef);
 }
 
+#ifdef UBLOX
+void EKF_ROS::gnssCallbackUblox(const ublox::PosVelEcefConstPtr &msg)
+{
+  if (msg->fix == ublox::PosVelEcef::FIX_TYPE_2D
+      || msg->fix == ublox::PosVelEcef::FIX_TYPE_3D)
+  {
+    rosflight_msgs::GNSS rf_msg;
+    rf_msg.header.stamp = msg->header.stamp;
+    rf_msg.position = msg->position;
+    rf_msg.velocity = msg->velocity;
+    rf_msg.horizontal_accuracy = msg->horizontal_accuracy;
+    rf_msg.vertical_accuracy = msg->vertical_accuracy;
+    rf_msg.speed_accuracy = msg->speed_accuracy;
+    gnssCallback(boost::make_shared<rosflight_msgs::GNSS>(rf_msg));
+  }
+  else
+  {
+    ROS_WARN_THROTTLE(1., "Ublox GPS not in fix");
+  }
+}
+#endif
+
 #ifdef INERTIAL_SENSE
 void EKF_ROS::gnssCallbackInertialSense(const inertial_sense::GPSConstPtr &msg)
 {
-  rosflight_msgs::GNSS rf_msg;
-  rf_msg.header.stamp = msg->header.stamp;
-  rf_msg.position[0] = msg->posEcef.x;
-  rf_msg.position[1] = msg->posEcef.y;
-  rf_msg.position[2] = msg->posEcef.z;
-  rf_msg.velocity[0] = msg->velEcef.x;
-  rf_msg.velocity[1] = msg->velEcef.y;
-  rf_msg.velocity[2] = msg->velEcef.z;
-  rf_msg.horizontal_accuracy = msg->hAcc;
-  rf_msg.vertical_accuracy = msg->vAcc;
-  rf_msg.speed_accuracy = 0.3;
-  gnssCallback(boost::make_shared<rosflight_msgs::GNSS>(rf_msg));
+  if (msg->fix_type == inertial_sense::GPS::GPS_STATUS_FIX_TYPE_2D_FIX
+      || msg->fix_type == inertial_sense::GPS::GPS_STATUS_FIX_TYPE_3D_FIX)
+  {
+    rosflight_msgs::GNSS rf_msg;
+    rf_msg.header.stamp = msg->header.stamp;
+    rf_msg.position[0] = msg->posEcef.x;
+    rf_msg.position[1] = msg->posEcef.y;
+    rf_msg.position[2] = msg->posEcef.z;
+    rf_msg.velocity[0] = msg->velEcef.x;
+    rf_msg.velocity[1] = msg->velEcef.y;
+    rf_msg.velocity[2] = msg->velEcef.z;
+    rf_msg.horizontal_accuracy = msg->hAcc;
+    rf_msg.vertical_accuracy = msg->vAcc;
+    rf_msg.speed_accuracy = 0.3;
+    gnssCallback(boost::make_shared<rosflight_msgs::GNSS>(rf_msg));
+  }
+  else
+  {
+    ROS_WARN_THROTTLE(1., "Inertial Sense GPS not in fix");
+  }
 }
 #endif
 

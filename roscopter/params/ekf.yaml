@@ -1,11 +1,13 @@
 ## Post-Process Information
 bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/groot_sensors_stationary.bag"
+# bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/groot_sensors_triangle.bag"
 status_topic: "/status"
 imu_topic: "/imu/data"
 pose_topic: ""
 odom_topic: ""
 gnss_topic: ""
-inertial_sense_topic: ""
+ublox_gnss_topic: "/PosVelEcef"
+inertial_sense_gnss_topic: "/ins/gps"
 
 start_time: 10
 duration: 100000
@@ -25,8 +27,7 @@ use_gnss: true
 use_alt: true
 use_zero_vel: true
 
-R_zero_vel: [0.001, 0.001, 0.001,  # vel
-             0.01]                 # yaw
+R_zero_vel: [0.001, 0.001, 0.001]
 
 ## Initial Uncertainty
 P0: [10., 10.0, 10.0,

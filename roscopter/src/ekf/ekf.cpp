@@ -289,6 +289,10 @@ void EKF::gnssUpdate(const meas::Gnss &z)
           x_e2I_.rota(gps_vel_I);
   Vector6d r = z.z - zhat; // residual
 
+  std::cout << "gnss update:" << std::endl;
+  std::cout << "z.z: " << z.z.transpose() << std::endl;
+  std::cout << "zhat: " << zhat.transpose() << std::endl;
+
   Matrix3d R_I2e = x_e2I_.q().R().T;
   Matrix3d R_b2I = x().q.R().T;
   Matrix3d R_e2b = R_I2e * R_b2I;
@@ -353,6 +357,7 @@ void EKF::zeroVelUpdate(double t)
   H.block<3,3>(0, E::DV) = I_3x3;
 
   Vector3d r = -x().v;
+  std::cout << "zero vel update" << std::endl;
 
   if (use_zero_vel_)
     measUpdate(r, R_zero_vel_, H);
