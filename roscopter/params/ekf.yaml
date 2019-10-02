@@ -47,7 +47,7 @@ Qx: [0.000, 0.000, 0.000,       # pos
      0.0001]                    # reference altitude
 
 # Constant Parameeters
-p_b2g: [0, 0, 0]
+p_b2g: [0, 0, 0] # position from body frame to gps frame
 
 # Initial State
 manual_ref_lla: false # Use manual ref_lla or use first lla from gps

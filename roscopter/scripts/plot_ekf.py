@@ -11,7 +11,7 @@ def plotLla():
     f = plt.figure()
     plt.suptitle("lla")
     for i in range(3):
-        plt.subplot(3, 2,2*i+1)
+        plt.subplot(3, 2, 2*i+1)
         if i == 2:
             plt.plot(data.lla['t'], data.lla['hat'][:,i], label=r"$\hat{z}$")
             plt.plot(data.lla['t'], data.lla['bar'][:,i], label=r"$\bar{z}$")
@@ -20,9 +20,11 @@ def plotLla():
             plt.plot(data.lla['t'], data.lla['bar'][:,i]*180.0/np.pi, label=r"$\bar{z}$")
         if i == 0:
             plt.legend()
-    plt.subplot(1,2,2)
+    plt.subplot(2,2,2)
     plt.plot(data.lla['hat'][:,1]*180/np.pi, data.lla['hat'][:,0]*180.0/np.pi, label=r"$\hat{z}$")
     plt.plot(data.lla['bar'][:,1]*180/np.pi, data.lla['bar'][:,0]*180.0/np.pi, label=r"$\bar{z}$")
+    plt.subplot(2,2,4)
+    plt.plot(data.lla['t'], data.lla['ref'], label=r"$\hat{z}$")
     pw.addPlot("lla", f);
 
 def plotIMU():

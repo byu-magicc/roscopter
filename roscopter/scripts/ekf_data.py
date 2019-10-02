@@ -36,7 +36,8 @@ RefType = np.dtype([
 LlaType = np.dtype([
 	('t', f64),
 	('hat', Vec3),
-	('bar', Vec3)
+	('bar', Vec3),
+        ('ref', f64)
 ])
 
 GnssResType = np.dtype([

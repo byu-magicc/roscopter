@@ -59,6 +59,9 @@ void EKF::load(const std::string &filename)
     x_e2I_.t() = x_e2n.t();
     x_e2I_.q() = x_e2n.q() * q_n2I_;
 
+    // initialize the estimated ref altitude state
+    x().ref = ref_lla(2);
+
     ref_lla_set_ = true;
   }
 
@@ -269,6 +272,7 @@ void EKF::gnssCallback(const double &t, const Vector6d &z, const Matrix6d &R)
     logs_[LOG_LLA]->log(t);
     logs_[LOG_LLA]->logVectors(ecef2lla((x_e2I_ * x().x).t()));
     logs_[LOG_LLA]->logVectors(ecef2lla(z.head<3>()));
+    logs_[LOG_LLA]->log(x().ref);
   }
 }
 
@@ -317,6 +321,7 @@ void EKF::gnssUpdate(const meas::Gnss &z)
   H.setZero();
   H.block<3,3>(0, E::DP) = R_I2e; // dpE/dpI
   H.block<3,3>(0, E::DQ) = -R_e2b * skew(p_b2g_);
+  // H(2, E::DREF) = sin(latitude);
   H.block<3,3>(3, E::DQ) = -R_e2b * skew(gps_vel_b); // dvE/dQI
   H.block<3,3>(3, E::DV) = R_e2b;
   H.block<3,3>(3, E::DBG) = R_e2b * skew(p_b2g_);
@@ -396,6 +401,9 @@ void EKF::setRefLla(Vector3d ref_lla)
   xform::Xformd x_e2n = x_ecef2ned(lla2ecef(ref_lla));
   x_e2I_.t() = x_e2n.t();
   x_e2I_.q() = x_e2n.q() * q_n2I_;
+
+  // initialize the estimated ref altitude state
+  x().ref = ref_lla(2);
 
   ref_lla_set_ = true;
 
