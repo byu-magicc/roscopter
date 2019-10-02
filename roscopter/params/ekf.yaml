@@ -47,8 +47,10 @@ Qx: [0.000, 0.000, 0.000,       # pos
 p_b2g: [0, 0, 0]
 
 # Initial State
+manual_ref_lla: false # Use manual ref_lla or use first lla from gps
 ref_lla: [40.24632, -111.646882, 1415.0]
-ref_heading: 0.0
+ref_heading: 0.0 # reference heading for inertial frame (from north)
+
 x0: [0, 0, 0,       # pos
      1, 0, 0, 0]    # att
 

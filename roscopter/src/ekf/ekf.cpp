@@ -43,15 +43,25 @@ void EKF::load(const std::string &filename)
   get_yaml_node("is_flying_threshold", filename, is_flying_threshold_);
 
   // load initial state
-  Vector3d ref_lla;
   double ref_heading;
-  get_yaml_eigen("ref_lla", filename, ref_lla);
   get_yaml_node("ref_heading", filename, ref_heading);
-  ref_lla.head<2>() *= M_PI/180.0; // convert to rad
-  quat::Quatd q_n2I = quat::Quatd::from_euler(0, 0, M_PI/180.0 * ref_heading);
-  xform::Xformd x_e2n = x_ecef2ned(lla2ecef(ref_lla));
-  x_e2I_.t() = x_e2n.t();
-  x_e2I_.q() = x_e2n.q() * q_n2I;
+  q_n2I_ = quat::Quatd::from_euler(0, 0, M_PI/180.0 * ref_heading);
+
+  ref_lla_set_ = false;
+  bool manual_ref_lla;
+  get_yaml_node("manual_ref_lla", filename, manual_ref_lla);
+  if (manual_ref_lla)
+  {
+    Vector3d ref_lla;
+    get_yaml_eigen("ref_lla", filename, ref_lla);
+    ref_lla.head<2>() *= M_PI/180.0; // convert to rad
+    xform::Xformd x_e2n = x_ecef2ned(lla2ecef(ref_lla));
+    x_e2I_.t() = x_e2n.t();
+    x_e2I_.q() = x_e2n.q() * q_n2I_;
+
+    ref_lla_set_ = true;
+  }
+
   get_yaml_eigen("x0", filename, x0_.arr());
 
   initLog(filename);
@@ -242,6 +252,9 @@ void EKF::imuCallback(const double &t, const Vector6d &z, const Matrix6d &R)
 
 void EKF::gnssCallback(const double &t, const Vector6d &z, const Matrix6d &R)
 {
+  if (!ref_lla_set_)
+    return;
+
   if (enable_out_of_order_)
   {
     gnss_meas_buf_.push_back(meas::Gnss(t, z, R));
@@ -367,6 +380,20 @@ void EKF::zeroVelUpdate(double t)
     logs_[LOG_ZERO_VEL_RES]->log(t);
     logs_[LOG_ZERO_VEL_RES]->logVectors(r);
   }
+}
+
+void EKF::setRefLla(Vector3d ref_lla)
+{
+  if (ref_lla_set_)
+    return;
+
+  ref_lla.head<2>() *= M_PI/180.0; // convert to rad
+  xform::Xformd x_e2n = x_ecef2ned(lla2ecef(ref_lla));
+  x_e2I_.t() = x_e2n.t();
+  x_e2I_.q() = x_e2n.q() * q_n2I_;
+
+  ref_lla_set_ = true;
+
 }
 
 void EKF::cleanUpMeasurementBuffers()

@@ -249,6 +249,16 @@ void EKF_ROS::gnssCallbackUblox(const ublox::PosVelEcefConstPtr &msg)
   if (msg->fix == ublox::PosVelEcef::FIX_TYPE_2D
       || msg->fix == ublox::PosVelEcef::FIX_TYPE_3D)
   {
+    if (!ekf_.refLlaSet())
+    {
+      // set ref lla to first gps position
+      Eigen::Vector3d ref_lla;
+      ref_lla(0) = msg->lla[0];
+      ref_lla(1) = msg->lla[1];
+      ref_lla(2) = msg->lla[2];
+      ekf_.setRefLla(ref_lla);
+    }
+
     rosflight_msgs::GNSS rf_msg;
     rf_msg.header.stamp = msg->header.stamp;
     rf_msg.position = msg->position;
@@ -271,6 +281,16 @@ void EKF_ROS::gnssCallbackInertialSense(const inertial_sense::GPSConstPtr &msg)
   if (msg->fix_type == inertial_sense::GPS::GPS_STATUS_FIX_TYPE_2D_FIX
       || msg->fix_type == inertial_sense::GPS::GPS_STATUS_FIX_TYPE_3D_FIX)
   {
+    if (!ekf_.refLlaSet())
+    {
+      // set ref lla to first gps position
+      Eigen::Vector3d ref_lla;
+      ref_lla(0) = msg->latitude;
+      ref_lla(1) = msg->longitude;
+      ref_lla(2) = msg->altitude;
+      ekf_.setRefLla(ref_lla);
+    }
+
     rosflight_msgs::GNSS rf_msg;
     rf_msg.header.stamp = msg->header.stamp;
     rf_msg.position[0] = msg->posEcef.x;

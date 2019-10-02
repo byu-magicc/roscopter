@@ -66,6 +66,7 @@ public:
 
   void setArmed() { armed_ = true; }
   void setDisarmed() { armed_ = false; }
+  bool refLlaSet() { return ref_lla_set_; }
   bool isFlying() { return is_flying_; }
   void checkIsFlying();
 
@@ -83,6 +84,8 @@ public:
   void gnssUpdate(const meas::Gnss &z);
   void mocapUpdate(const meas::Mocap &z);
   void zeroVelUpdate(double t);
+
+  void setRefLla(Eigen::Vector3d ref_lla);
 
 
   void cleanUpMeasurementBuffers();
@@ -125,6 +128,7 @@ public:
   xform::Xformd x0_;
   Eigen::Vector3d p_b2g_;
   xform::Xformd x_e2I_;
+  quat::Quatd q_n2I_;
   Eigen::Matrix3d R_zero_vel_;
 
   // Matrix Workspace
@@ -144,6 +148,7 @@ public:
   bool use_gnss_;
   bool use_zero_vel_;
   bool enable_out_of_order_;
+  bool ref_lla_set_;
   meas::MeasSet meas_;
   std::deque<meas::Imu, Eigen::aligned_allocator<meas::Imu>> imu_meas_buf_;
   std::deque<meas::Mocap, Eigen::aligned_allocator<meas::Mocap>> mocap_meas_buf_;
