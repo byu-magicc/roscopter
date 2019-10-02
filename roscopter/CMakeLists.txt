@@ -25,6 +25,15 @@ else()
     message(WARNING "Did NOT find inertial sense library")
 endif()
 
+find_package(ublox QUIET)
+
+if (${ublox_FOUND})
+    message(WARNING "found ublox library")
+    add_definitions(-DUBLOX)
+else()
+    message(WARNING "Did NOT find ublox library")
+endif()
+
 generate_dynamic_reconfigure_options(
   cfg/Controller.cfg
 )
