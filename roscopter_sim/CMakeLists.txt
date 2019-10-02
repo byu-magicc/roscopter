@@ -1,9 +1,10 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(roscopter_sim)
 
-find_package(gazebo REQUIRED)
-IF(gazebo_FOUND)
-
+find_package(gazebo QUIET)
+IF(NOT gazebo_FOUND)
+  message(STATUS "Gazebo not found. Not building roscopter_sim.")
+ELSE()
 set(CMAKE_CXX_STANDARD 11)
 if (NOT CMAKE_BUILD_TYPE)
     # Options: Debug, Release, MinSizeRel, RelWithDebInfo
