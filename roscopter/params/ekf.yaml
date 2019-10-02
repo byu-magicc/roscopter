@@ -1,6 +1,6 @@
 ## Post-Process Information
-bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/groot_sensors_stationary.bag"
-# bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/groot_sensors_triangle.bag"
+# bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/groot_sensors_stationary.bag"
+bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/groot_sensors_triangle.bag"
 status_topic: "/status"
 imu_topic: "/imu/data"
 pose_topic: ""
@@ -10,7 +10,7 @@ ublox_gnss_topic: "/PosVelEcef"
 inertial_sense_gnss_topic: "/ins/gps"
 
 start_time: 10
-duration: 100000
+duration: 75
 
 ## Is_flying checks
 enable_arm_check: false # require armed before checking for is_flying
@@ -27,7 +27,8 @@ use_gnss: true
 use_alt: true
 use_zero_vel: true
 
-R_zero_vel: [0.001, 0.001, 0.001]
+R_zero_vel: [0.001, 0.001, 0.001, # vel
+              0.001] # Altitude
 
 ## Initial Uncertainty
 P0: [10., 10.0, 10.0,

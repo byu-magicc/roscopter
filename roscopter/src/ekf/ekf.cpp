@@ -364,12 +364,16 @@ void EKF::mocapUpdate(const meas::Mocap &z)
 
 void EKF::zeroVelUpdate(double t)
 {
+  // Update Zero velocity and zero altitude
   typedef ErrorState E;
-  Matrix<double, 3, E::NDX> H;
+  Matrix<double, 4, E::NDX> H;
   H.setZero();
   H.block<3,3>(0, E::DV) = I_3x3;
+  H(3, E::DP + 2) = 1.;
 
-  Vector3d r = -x().v;
+  Vector4d r;
+  r.head<3>() = -x().v;
+  r(3) = -x().p(2);
   std::cout << "zero vel update" << std::endl;
 
   if (use_zero_vel_)

@@ -87,9 +87,7 @@ public:
 
   void setRefLla(Eigen::Vector3d ref_lla);
 
-
   void cleanUpMeasurementBuffers();
-
 
   void initLog();
   void logState();
@@ -129,7 +127,7 @@ public:
   Eigen::Vector3d p_b2g_;
   xform::Xformd x_e2I_;
   quat::Quatd q_n2I_;
-  Eigen::Matrix3d R_zero_vel_;
+  Eigen::Matrix4d R_zero_vel_;
 
   // Matrix Workspace
   dxMat A_;
