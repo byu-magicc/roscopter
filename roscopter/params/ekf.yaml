@@ -2,10 +2,12 @@
 # bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/groot_sensors_stationary.bag"
 # bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/groot_sensors_triangle.bag"
 # bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_walkpath.bag"
-bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_updown.bag"
+bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_north_eastfirst.bag"
+# bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_updown.bag"
 status_topic: "/status"
 imu_topic: "/imu/data"
-range_topic: "/serial/laser"
+baro_topic: "/serial/baro"
+range_topic: ""
 pose_topic: ""
 odom_topic: "/ins/ins"
 gnss_topic: ""
@@ -27,7 +29,8 @@ enable_log: true
 enable_out_of_order: false
 use_truth: false # Whether or not to use mocap measurements
 use_gnss: true
-use_range: true
+use_baro: true
+use_range: false
 use_zero_vel: true
 
 R_zero_vel: [0.001, 0.001, 0.001, # vel
@@ -39,6 +42,7 @@ P0: [10., 10.0, 10.0, # pos
      0.001, 0.001, 0.001, # vel
      0.3, 0.3, 0.3, # accel bias
      0.1, 0.1, 0.1, # gyro bias
+     100000.0,           # baro bias
      100.0] # reference altitude
 
 ## Additive Process Noise
@@ -47,6 +51,7 @@ Qx: [0.000, 0.000, 0.000,       # pos
      0.001, 0.001, 0.001,       # vel
      0.001, 0.001, 0.001,       # accel bias
      0.0001, 0.0001, 0.0001,    # gyro bias
+     0.0001,                    # baro bias
      0.0001]                    # reference altitude
 
 # Constant Parameeters
@@ -65,4 +70,5 @@ accel_noise_stdev: 0.5
 gyro_noise_stdev: 0.02
 position_noise_stdev: 0.01
 attitude_noise_stdev: 0.01
+baro_pressure_noise_stdev: 1.0
 range_noise_stdev: 0.05

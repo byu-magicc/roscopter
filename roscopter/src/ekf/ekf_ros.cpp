@@ -88,6 +88,10 @@ void EKF_ROS::init(const std::string &param_file)
   mocap_R_ << pos_stdev * pos_stdev * I_3x3,   Matrix3d::Zero(),
       Matrix3d::Zero(),   att_stdev * att_stdev * I_3x3;
 
+  double baro_pressure_stdev;
+  get_yaml_node("baro_pressure_noise_stdev", param_file, baro_pressure_stdev);
+  baro_R_ = baro_pressure_stdev * baro_pressure_stdev;
+
   double range_stdev;
   get_yaml_node("range_noise_stdev", param_file, range_stdev);
   range_R_ = range_stdev * range_stdev;
@@ -146,7 +150,6 @@ void EKF_ROS::imuCallback(const sensor_msgs::ImuConstPtr &msg)
   if (start_time_.sec == 0)
   {
     start_time_ = msg->header.stamp;
-    return;
   }
 
   Vector6d z;
@@ -162,6 +165,25 @@ void EKF_ROS::imuCallback(const sensor_msgs::ImuConstPtr &msg)
 
   if(ros_initialized_)
     publishEstimates(msg);
+}
+
+void EKF_ROS::baroCallback(const rosflight_msgs::BarometerConstPtr& msg)
+{
+  if (start_time_.sec == 0)
+    return;
+
+  const double pressure_meas = msg->pressure;
+
+  if (!ekf_.groundTempPressSet())
+  {
+    std::cout << "Set ground pressure and temp" << std::endl;
+    std::cout << "press: " << pressure_meas << std::endl;
+    const double temperature_meas = msg->temperature;
+    ekf_.setGroundTempPressure(temperature_meas, pressure_meas);
+  }
+
+  const double t = (msg->header.stamp - start_time_).toSec();
+  ekf_.baroCallback(t, pressure_meas, baro_R_);
 }
 
 void EKF_ROS::rangeCallback(const sensor_msgs::RangeConstPtr& msg)

@@ -25,6 +25,7 @@ struct Base
         BASE,
         GNSS,
         IMU,
+        BARO,
         RANGE,
         MOCAP,
         ZERO_VEL
@@ -59,6 +60,14 @@ struct Imu : public Base
     Imu(double _t, const Vector6d& _z, const Matrix6d& _R);
     Vector6d z;
     Matrix6d R;
+};
+
+struct Baro : public Base
+{
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    Baro(double _t, const double& _z, const double& _R);
+    Eigen::Matrix<double, 1, 1> z;
+    Eigen::Matrix<double, 1, 1> R;
 };
 
 struct Range : public Base

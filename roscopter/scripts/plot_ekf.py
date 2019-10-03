@@ -144,6 +144,18 @@ def plotZVRes():
             plt.legend()
     pw.addPlot("ZeroVel", f)
 
+def plotBaroRes():
+    f = plt.figure()
+    plt.suptitle('Baro Res')
+    plt.subplot(2, 1, 1)
+    plt.plot(data.baroRes['t'], data.baroRes['z'][:], label=r'$z$')                          
+    plt.plot(data.baroRes['t'], data.baroRes['zhat'][:], label=r'$\hat{z}$')                          
+    plt.legend()
+    plt.subplot(2, 1, 2)
+    plt.plot(data.baroRes['t'], data.baroRes['r'][:], label="r")                          
+    plt.legend()
+    pw.addPlot("Baro Res", f)
+
 def plotRangeRes():
     f = plt.figure()
     plt.suptitle('Range Res')
@@ -195,6 +207,7 @@ def plotResults(directory):
     plotImuBias()
 
     plotZVRes()
+    plotBaroRes()
     plotRangeRes()
     plotGnssRes()
 

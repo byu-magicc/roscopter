@@ -31,6 +31,7 @@ namespace roscopter
 #define CHECK_NAN(mat) \
   if ((mat.array() != mat.array()).any())\
 {\
+  std::cout << #mat << std::endl << mat << std::endl;\
   throw std::runtime_error(#mat " Has NaNs" + std::to_string(__LINE__));\
 }
 
@@ -66,7 +67,12 @@ public:
 
   void setArmed() { armed_ = true; }
   void setDisarmed() { armed_ = false; }
+
   bool refLlaSet() { return ref_lla_set_; }
+
+  void setGroundTempPressure(const double& temp, const double& press);
+  bool groundTempPressSet() { return (ground_pressure_ != 0) && (ground_temperature_ != 0); }
+
   bool isFlying() { return is_flying_; }
   void checkIsFlying();
 
@@ -78,10 +84,12 @@ public:
 
   meas::MeasSet::iterator getOldestNewMeas();
   void imuCallback(const double& t, const Vector6d& z, const Matrix6d& R);
+  void baroCallback(const double& t, const double& z, const double& R);
   void rangeCallback(const double& t, const double& z, const double& R);
   void gnssCallback(const double& t, const Vector6d& z, const Matrix6d& R);
   void mocapCallback(const double& t, const xform::Xformd& z, const Matrix6d& R);
 
+  void baroUpdate(const meas::Baro &z);
   void rangeUpdate(const meas::Range &z);
   void gnssUpdate(const meas::Gnss &z);
   void mocapUpdate(const meas::Mocap &z);
@@ -100,6 +108,7 @@ public:
     LOG_GNSS_RES,
     LOG_MOCAP_RES,
     LOG_ZERO_VEL_RES,
+    LOG_BARO_RES,
     LOG_RANGE_RES,
     LOG_IMU,
     LOG_LLA,
@@ -112,6 +121,7 @@ public:
     "gnss_res",
     "mocap_res",
     "zero_vel_res",
+    "baro_res",
     "range_res",
     "imu",
     "lla",
@@ -136,6 +146,8 @@ public:
   bool ref_lla_set_;
   double ref_lat_radians_;
   double ref_lon_radians_;
+  double ground_pressure_;
+  double ground_temperature_;
 
   // Matrix Workspace
   dxMat A_;
@@ -150,6 +162,7 @@ public:
 
   // Measurement Buffers
   bool use_truth_;
+  bool use_baro_;
   bool use_range_;
   bool use_gnss_;
   bool use_zero_vel_;

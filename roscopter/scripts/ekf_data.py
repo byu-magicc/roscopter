@@ -16,6 +16,7 @@ StateType = np.dtype([
 	('v', Vec3),
 	('ba', Vec3),
 	('bg', Vec3),
+	('bb', f64),
 	('ref', f64),
 	('a', Vec3),
 	('w', Vec3),
@@ -24,7 +25,7 @@ StateType = np.dtype([
 
 CovType = np.dtype([
 	('t', f64),
-	('P', (f64, (16, 16)))
+	('P', (f64, (17, 17)))
 ])
 
 RefType = np.dtype([
@@ -72,6 +73,13 @@ RangeResType = np.dtype([
 	('zhat', f64)
 ])
 
+BaroResType = np.dtype([
+	('t', f64),
+	('r', f64),
+	('z', f64),
+	('zhat', f64)
+])
+
 class Log:
 	def __init__(self, prefix):
 		self.prefix = prefix
@@ -83,6 +91,8 @@ class Log:
 		setattr(self, "gnssRes", np.fromfile(os.path.join(prefix, "gnss_res.bin"), dtype=GnssResType))
 		setattr(self, "mocapRes", np.fromfile(os.path.join(prefix, "mocap_res.bin"), dtype=MocapResType))
 		setattr(self, "zvRes", np.fromfile(os.path.join(prefix, "zero_vel_res.bin"), dtype=ZVResType))
+		setattr(self, "baroRes", np.fromfile(os.path.join(prefix,
+                    "baro_res.bin"), dtype=BaroResType))
 		setattr(self, "rangeRes", np.fromfile(os.path.join(prefix, "range_res.bin"), dtype=RangeResType))
 		setattr(self, "imu", np.fromfile(os.path.join(prefix, "imu.bin"), dtype=ImuType))
 		setattr(self, "lla", np.fromfile(os.path.join(prefix, "lla.bin"), dtype=LlaType))

@@ -20,6 +20,7 @@ void EKF::dynamics(const State &x, const Vector6d& u, ErrorState &dx, bool calc_
     dx.v = accel + x.q.rotp(gravity) - omega.cross(x.v);
     dx.ba.setZero();
     dx.bg.setZero();
+    dx.bb = 0.;
     dx.ref = 0.;
 
     CHECK_NAN(dx.arr);

@@ -35,6 +35,7 @@ void EKF::load(const std::string &filename)
   get_yaml_node("enable_out_of_order", filename, enable_out_of_order_);
   get_yaml_node("use_truth", filename, use_truth_);
   get_yaml_node("use_gnss", filename, use_gnss_);
+  get_yaml_node("use_baro", filename, use_baro_);
   get_yaml_node("use_range", filename, use_range_);
   get_yaml_node("use_zero_vel", filename, use_zero_vel_);
 
@@ -67,6 +68,8 @@ void EKF::load(const std::string &filename)
     ref_lla_set_ = true;
   }
 
+  ground_pressure_ = 0.;
+
   get_yaml_eigen("x0", filename, x0_.arr());
 
   initLog(filename);
@@ -91,7 +94,8 @@ void EKF::initialize(double t)
   x().v.setZero();
   x().ba.setZero();
   x().bg.setZero();
-  x().ref = 0;
+  x().bb = 0.;
+  x().ref = 0.;
   x().a = -gravity;
   x().w.setZero();
   is_flying_ = false;
@@ -256,6 +260,19 @@ void EKF::imuCallback(const double &t, const Vector6d &z, const Matrix6d &R)
 
 }
 
+void EKF::baroCallback(const double& t, const double& z, const double& R)
+{
+  if (!ref_lla_set_)
+    return;
+
+  if (enable_out_of_order_)
+  {
+    std::cout << "ERROR OUT OF ORDER BARO NOT IMPLEMENTED" << std::endl;
+  }
+  else
+    baroUpdate(meas::Baro(t, z, R));
+}
+
 void EKF::rangeCallback(const double& t, const double& z, const double& R)
 {
   if (enable_out_of_order_)
@@ -306,6 +323,70 @@ void EKF::mocapCallback(const double& t, const xform::Xformd& z, const Matrix6d&
   }
 }
 
+void EKF::baroUpdate(const meas::Baro &z)
+{
+  if (!this->groundTempPressSet())
+  {
+    return;
+  }
+
+  using Vector1d = Eigen::Matrix<double, 1, 1>;
+
+  // // From "Small Unmanned Aircraft: Theory and Practice" eq 7.8
+  // const double P0 = 101325;
+  // const double T0 = 288.15;
+  // const double L0 = -0.0065;
+  const double g = 9.80665;
+  const double R = 8.31432;
+  const double M = 0.0289644;
+
+  const double altitude = -x().p(2);
+  const double baro_bias = x().bb;
+  // const double ref_altitude = x().ref;
+
+  // const double c1 = L0 / T0;
+  // const double c2 = -g * M / R / L0;
+  // const double press_hat = P0 * pow((1. + c1 * (altitude + ref_altitude)), c2) + baro_bias;
+
+  // From "Small Unmanned Aircraft: Theory and Practice" eq 7.9
+  const double rho = M * ground_pressure_ / R / ground_temperature_;
+
+  const double pressure_meas = ground_pressure_ - z.z(0);
+  const double press_hat = rho * g * altitude + baro_bias;
+
+  const Vector1d zz(pressure_meas);
+  const Vector1d zhat(press_hat);
+  // Vector1d r = z.z - zhat;
+  Vector1d r = zz - zhat;
+  // const Vector1d r(pressure_meas - press_hat);
+
+  std::cout << "baro update:" << std::endl;
+  std::cout << "ground_pressure: " << ground_pressure_ << std::endl;
+  std::cout << "alt: " << altitude << std::endl;
+  std::cout << "bias: " << baro_bias << std::endl;
+  std::cout << "z.z: " << zz.transpose() << std::endl;
+  std::cout << "zhat: " << zhat << std::endl;
+
+  typedef ErrorState E;
+
+  Matrix<double, 1, E::NDX> H;
+  H.setZero();
+  H(0, E::DP + 2) = -rho * g;
+  // H(0, E::DP + 2) = P0 * c1 * c2 * pow((1. + c1 * (altitude + ref_altitude)), c2 - 1.);
+  // H(0, E::DREF) = P0 * c1 * c2 * pow((1. + c1 * (altitude + ref_altitude)), c2 - 1.);
+  H(0, E::DBB) = 1.;
+
+  /// TODO: Saturate r
+  if (use_baro_)
+    measUpdate(r, z.R, H);
+
+  if (enable_log_)
+  {
+    logs_[LOG_BARO_RES]->log(z.t);
+    logs_[LOG_BARO_RES]->logVectors(r, zz, zhat);
+  }
+
+}
 
 void EKF::rangeUpdate(const meas::Range &z)
 {
@@ -478,6 +559,12 @@ void EKF::cleanUpMeasurementBuffers()
     mocap_meas_buf_.pop_front();
   while (gnss_meas_buf_.front().t < xbuf_.begin().x.t)
     gnss_meas_buf_.pop_front();
+}
+
+void EKF::setGroundTempPressure(const double& temp, const double& press)
+{
+  ground_temperature_ = temp;
+  ground_pressure_ = press;
 }
 
 void EKF::checkIsFlying()
