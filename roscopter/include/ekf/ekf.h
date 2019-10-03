@@ -133,6 +133,10 @@ public:
   quat::Quatd q_n2I_;
   Eigen::Matrix4d R_zero_vel_;
 
+  bool ref_lla_set_;
+  double ref_lat_radians_;
+  double ref_lon_radians_;
+
   // Matrix Workspace
   dxMat A_;
   dxMat Qx_;
@@ -150,7 +154,6 @@ public:
   bool use_gnss_;
   bool use_zero_vel_;
   bool enable_out_of_order_;
-  bool ref_lla_set_;
   meas::MeasSet meas_;
   std::deque<meas::Imu, Eigen::aligned_allocator<meas::Imu>> imu_meas_buf_;
   std::deque<meas::Mocap, Eigen::aligned_allocator<meas::Mocap>> mocap_meas_buf_;

@@ -25,6 +25,7 @@ def plotLla():
     plt.plot(data.lla['bar'][:,1]*180/np.pi, data.lla['bar'][:,0]*180.0/np.pi, label=r"$\bar{z}$")
     plt.subplot(2,2,4)
     plt.plot(data.lla['t'], data.lla['ref'], label=r"$\hat{z}$")
+    plt.ylabel("Refernce Altitude (m)")
     pw.addPlot("lla", f);
 
 def plotIMU():

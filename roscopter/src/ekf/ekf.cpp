@@ -61,6 +61,8 @@ void EKF::load(const std::string &filename)
 
     // initialize the estimated ref altitude state
     x().ref = ref_lla(2);
+    ref_lat_radians_ = ref_lla(0);
+    ref_lon_radians_ = ref_lla(1);
 
     ref_lla_set_ = true;
   }
@@ -345,23 +347,29 @@ void EKF::rangeUpdate(const meas::Range &z)
 
 void EKF::gnssUpdate(const meas::Gnss &z)
 {
-  Vector3d w = x().w - x().bg;
-  Vector3d gps_pos_I = x().p + x().q.rota(p_b2g_);
-  Vector3d gps_vel_b = x().v + w.cross(p_b2g_);
-  Vector3d gps_vel_I = x().q.rota(gps_vel_b);
+  const Vector3d w = x().w - x().bg;
+  const Vector3d gps_pos_I = x().p + x().q.rota(p_b2g_);
+  const Vector3d gps_vel_b = x().v + w.cross(p_b2g_);
+  const Vector3d gps_vel_I = x().q.rota(gps_vel_b);
 
   Vector6d zhat;
   zhat << x_e2I_.transforma(gps_pos_I),
           x_e2I_.rota(gps_vel_I);
-  Vector6d r = z.z - zhat; // residual
+  const Vector6d r = z.z - zhat; // residual
 
   std::cout << "gnss update:" << std::endl;
   std::cout << "z.z: " << z.z.transpose() << std::endl;
   std::cout << "zhat: " << zhat.transpose() << std::endl;
 
-  Matrix3d R_I2e = x_e2I_.q().R().T;
-  Matrix3d R_b2I = x().q.R().T;
-  Matrix3d R_e2b = R_I2e * R_b2I;
+  const Matrix3d R_I2e = x_e2I_.q().R().T;
+  const Matrix3d R_b2I = x().q.R().T;
+  const Matrix3d R_e2b = R_I2e * R_b2I;
+
+  const double sin_lat = sin(ref_lat_radians_);
+  const double cos_lat = cos(ref_lat_radians_);
+  const double sin_lon = sin(ref_lon_radians_);
+  const double cos_lon = cos(ref_lon_radians_);
+  const Vector3d dpEdRefAlt(cos_lat * cos_lon, cos_lat * sin_lon, sin_lon);
 
   typedef ErrorState E;
 
@@ -369,7 +377,7 @@ void EKF::gnssUpdate(const meas::Gnss &z)
   H.setZero();
   H.block<3,3>(0, E::DP) = R_I2e; // dpE/dpI
   H.block<3,3>(0, E::DQ) = -R_e2b * skew(p_b2g_);
-  // H(2, E::DREF) = sin(latitude);
+  H.block<3, 1>(0, E::DREF) = dpEdRefAlt;
   H.block<3,3>(3, E::DQ) = -R_e2b * skew(gps_vel_b); // dvE/dQI
   H.block<3,3>(3, E::DV) = R_e2b;
   H.block<3,3>(3, E::DBG) = R_e2b * skew(p_b2g_);
@@ -452,6 +460,8 @@ void EKF::setRefLla(Vector3d ref_lla)
 
   // initialize the estimated ref altitude state
   x().ref = ref_lla(2);
+  ref_lat_radians_ = ref_lla(0);
+  ref_lon_radians_ = ref_lla(1);
 
   ref_lla_set_ = true;
 
