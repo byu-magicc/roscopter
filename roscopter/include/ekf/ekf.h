@@ -146,6 +146,7 @@ public:
   bool ref_lla_set_;
   double ref_lat_radians_;
   double ref_lon_radians_;
+  double P0_yaw_;
   double ground_pressure_;
   double ground_temperature_;
 

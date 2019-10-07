@@ -24,7 +24,10 @@ def plotLla():
     plt.plot(data.lla['hat'][:,1]*180/np.pi, data.lla['hat'][:,0]*180.0/np.pi, label=r"$\hat{z}$")
     plt.plot(data.lla['bar'][:,1]*180/np.pi, data.lla['bar'][:,0]*180.0/np.pi, label=r"$\bar{z}$")
     plt.subplot(2,2,4)
-    plt.plot(data.lla['t'], data.lla['ref'], label=r"$\hat{z}$")
+    plt.plot(data.x['t'], data.x['ref'], label=r"$\hat{z}$")
+    if plotCov:
+        plt.plot(data.x['t'], data.x['ref'][:,] + 2.0*np.sqrt(data.cov['P'][:,16, 16]), '-k', alpha=0.3)
+        plt.plot(data.x['t'], data.x['ref'][:,] - 2.0*np.sqrt(data.cov['P'][:,16, 16]), '-k', alpha=0.3)
     plt.ylabel("Refernce Altitude (m)")
     pw.addPlot("lla", f);
 
@@ -48,7 +51,7 @@ def plotPosition():
     for i in range(3):
         plt.subplot(3, 1, i+1)
         plt.title(xtitles[i])
-        plt.plot(data.ref['t'], data.ref['x']['p'][:,i] - data.ref['x']['p'][0, i], label='ref')
+        #  plt.plot(data.ref['t'], data.ref['x']['p'][:,i] - data.ref['x']['p'][0, i], label='ref')
         plt.plot(data.x['t'], data.x['x']['p'][:,i], label=r"$\hat{x}$")
         if plotCov:
             plt.plot(data.cov['t'], data.x['x']['p'][:,i] + 2.0*np.sqrt(data.cov['P'][:, i,i]), '-k', alpha=0.3)
@@ -60,8 +63,8 @@ def plotPosition():
 def plotPosition2d(): 
     f = plt.figure()
     plt.suptitle('Position 2d')
-    plt.plot(data.ref['x']['p'][:,1] - data.ref['x']['p'][0,1],
-            data.ref['x']['p'][:,0] - data.ref['x']['p'][0,0], label='ref')
+    #  plt.plot(data.ref['x']['p'][:,1] - data.ref['x']['p'][0,1],
+            #  data.ref['x']['p'][:,0] - data.ref['x']['p'][0,0], label='ref')
     plt.plot(data.x['x']['p'][:,1], data.x['x']['p'][:,0], label=r"$\hat{x}$")
     plt.ylabel("North (m)")
     plt.xlabel("East (m)")
@@ -87,7 +90,7 @@ def plotAttitude():
     for i in range(4):
         plt.subplot(4, 1, i+1)
         plt.title(xtitles[i+3])
-        plt.plot(data.ref['t'], data.ref['x']['q'][:,i], label='ref')
+        #  plt.plot(data.ref['t'], data.ref['x']['q'][:,i], label='ref')
         plt.plot(data.x['t'], data.x['x']['q'][:,i], label=r"$\hat{x}$")
         if plotCov and i > 0:
             plt.plot(data.cov['t'], data.x['x']['q'][:,i] + 2.0*np.sqrt(data.cov['P'][:, i+3,i+3]), '-k', alpha=0.3)
@@ -103,7 +106,7 @@ def plotEuler():
     for i in range(3):
         plt.subplot(3, 1, i+1)
         plt.title(etitles[i])
-        plt.plot(data.ref['t'], data.ref['euler'][:,i] * rad2deg, label='ref')
+        #  plt.plot(data.ref['t'], data.ref['euler'][:,i] * rad2deg, label='ref')
         plt.plot(data.x['t'], data.x['euler'][:,i] * rad2deg, label=r"$\hat{x}$")
         if plotCov:
             plt.plot(data.cov['t'], rad2deg * (data.x['euler'][:,i] + 2.0*np.sqrt(data.cov['P'][:, i+3,i+3])), '-k', alpha=0.3)
@@ -147,12 +150,18 @@ def plotZVRes():
 def plotBaroRes():
     f = plt.figure()
     plt.suptitle('Baro Res')
-    plt.subplot(2, 1, 1)
+    plt.subplot(3, 1, 1)
     plt.plot(data.baroRes['t'], data.baroRes['z'][:], label=r'$z$')                          
     plt.plot(data.baroRes['t'], data.baroRes['zhat'][:], label=r'$\hat{z}$')                          
     plt.legend()
-    plt.subplot(2, 1, 2)
+    plt.subplot(3, 1, 2)
     plt.plot(data.baroRes['t'], data.baroRes['r'][:], label="r")                          
+    plt.legend()
+    plt.subplot(3, 1, 3)
+    plt.plot(data.x['t'], data.x['bb'][:], label="bias")                          
+    if plotCov:
+        plt.plot(data.x['t'], data.x['bb'][:, ] + 2.0*np.sqrt(data.cov['P'][:,15, 15]), '-k', alpha=0.3)                
+        plt.plot(data.x['t'], data.x['bb'][:, ] - 2.0*np.sqrt(data.cov['P'][:,15, 15]), '-k', alpha=0.3)                
     plt.legend()
     pw.addPlot("Baro Res", f)
 

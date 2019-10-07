@@ -3,6 +3,7 @@
 # bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/groot_sensors_triangle.bag"
 # bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_walkpath.bag"
 bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_north_eastfirst.bag"
+bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_parkinglot_south_eastfirst.bag"
 # bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_updown.bag"
 status_topic: "/status"
 imu_topic: "/imu/data"
@@ -14,11 +15,11 @@ gnss_topic: ""
 ublox_gnss_topic: ""
 inertial_sense_gnss_topic: "/ins/gps"
 
-start_time: 10
+start_time: 0
 duration: 186
 
 ## Is_flying checks
-enable_arm_check: false # require armed before checking for is_flying
+enable_arm_check: true # require armed before checking for is_flying
 is_flying_threshold: 10.5 # if accel measurement exceed this magnitude, set is_flying
 
 ## Logging
@@ -43,24 +44,24 @@ P0: [10., 10.0, 10.0, # pos
      0.001, 0.001, 0.001, # vel
      0.3, 0.3, 0.3, # accel bias
      0.1, 0.1, 0.1, # gyro bias
-     100.0,           # baro bias
+     9.0,           # baro bias
      100.0] # reference altitude
 
 ## Additive Process Noise
 Qx: [0.000, 0.000, 0.000,       # pos
-     0.001, 0.001, 0.001,       # att
-     0.001, 0.001, 0.001,       # vel
+     0.000, 0.000, 0.000,       # att
+     0.00001, 0.00001, 0.00001,       # vel
      0.001, 0.001, 0.001,       # accel bias
      0.0001, 0.0001, 0.0001,    # gyro bias
      0.0001,                    # baro bias
-     0.0001]                    # reference altitude
+     1.0]                       # reference altitude
 
 ## Lambda (Partial Update)
 lambda: [1.0, 1.0, 1.0,       # pos
          1.0, 1.0, 1.0,       # att
          1.0, 1.0, 1.0,       # vel
-         0.1, 0.1, 0.1,       # accel bias
-         0.1, 0.1, 0.1,       # gyro bias
+         0.25, 0.25, 0.25,    # accel bias
+         0.25, 0.25, 0.25,    # gyro bias
          0.3,                 # baro bias
          0.3]                 # reference altitude
 
@@ -80,5 +81,5 @@ accel_noise_stdev: 0.5
 gyro_noise_stdev: 0.02
 position_noise_stdev: 0.01
 attitude_noise_stdev: 0.01
-baro_pressure_noise_stdev: 1.0
+baro_pressure_noise_stdev: 5.0
 range_noise_stdev: 0.05
