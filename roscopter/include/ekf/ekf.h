@@ -157,6 +157,10 @@ public:
   dxuMat K_;
   ErrorState dx_;
 
+  // Partial Update
+  dxVec lambda_vec_;
+  dxMat lambda_mat_;
+
   // State buffer
   StateBuf xbuf_;
 
@@ -167,6 +171,7 @@ public:
   bool use_gnss_;
   bool use_zero_vel_;
   bool enable_out_of_order_;
+  bool enable_partial_update_;
   meas::MeasSet meas_;
   std::deque<meas::Imu, Eigen::aligned_allocator<meas::Imu>> imu_meas_buf_;
   std::deque<meas::Mocap, Eigen::aligned_allocator<meas::Mocap>> mocap_meas_buf_;

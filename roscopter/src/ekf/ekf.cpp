@@ -31,7 +31,14 @@ void EKF::load(const std::string &filename)
   get_yaml_diag("P0", filename, P());
   get_yaml_diag("R_zero_vel", filename, R_zero_vel_);
 
+  // Partial Update
+  get_yaml_eigen("lambda", filename, lambda_vec_);
+  const dxVec ones = dxVec::Constant(1.0);
+  lambda_mat_ = ones * lambda_vec_.transpose() + lambda_vec_ * ones.transpose() -
+                lambda_vec_ * lambda_vec_.transpose();
+
   // Measurement Flags
+  get_yaml_node("enable_partial_update", filename, enable_partial_update_);
   get_yaml_node("enable_out_of_order", filename, enable_out_of_order_);
   get_yaml_node("use_truth", filename, use_truth_);
   get_yaml_node("use_gnss", filename, use_gnss_);
@@ -224,13 +231,24 @@ bool EKF::measUpdate(const VectorXd &res, const MatrixXd &R, const MatrixXd &H)
   K = P() * H.T * innov;
   CHECK_NAN(K);
 
-  ///TODO: Partial Update
-  x() += K * res;
-  dxMat ImKH = I_BIG - K*H;
-  P() = ImKH*P()*ImKH.T + K*R*K.T;
+  if (enable_partial_update_)
+  {
+    // Apply Fixed Gain Partial update per
+    // "Partial-Update Schmidt-Kalman Filter" by Brink
+    // Modified to operate inline and on the manifold
+    x() += lambda_vec_.asDiagonal() * K * res;
+    dxMat ImKH = I_BIG - K*H;
+    P() += lambda_mat_.cwiseProduct(ImKH*P()*ImKH.T + K*R*K.T - P());
+  }
+  else
+  {
+    x() += K * res;
+    dxMat ImKH = I_BIG - K*H;
+    P() = ImKH*P()*ImKH.T + K*R*K.T;
+  }
 
   CHECK_NAN(P());
-  return false;
+  return true;
 }
 
 void EKF::imuCallback(const double &t, const Vector6d &z, const Matrix6d &R)

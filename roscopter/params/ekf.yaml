@@ -26,6 +26,7 @@ log_prefix: "/tmp/roscopter/ekf/"
 enable_log: true
 
 ## Measurement Processing
+enable_partial_update: true
 enable_out_of_order: false
 use_truth: false # Whether or not to use mocap measurements
 use_gnss: true
@@ -38,11 +39,11 @@ R_zero_vel: [0.001, 0.001, 0.001, # vel
 
 ## Initial Uncertainty
 P0: [10., 10.0, 10.0, # pos
-     0.1, 0.1, 2.0, # att
+     0.01, 0.01, 0.01, # att
      0.001, 0.001, 0.001, # vel
      0.3, 0.3, 0.3, # accel bias
      0.1, 0.1, 0.1, # gyro bias
-     100000.0,           # baro bias
+     100.0,           # baro bias
      100.0] # reference altitude
 
 ## Additive Process Noise
@@ -53,6 +54,15 @@ Qx: [0.000, 0.000, 0.000,       # pos
      0.0001, 0.0001, 0.0001,    # gyro bias
      0.0001,                    # baro bias
      0.0001]                    # reference altitude
+
+## Lambda (Partial Update)
+lambda: [1.0, 1.0, 1.0,       # pos
+         1.0, 1.0, 1.0,       # att
+         1.0, 1.0, 1.0,       # vel
+         0.1, 0.1, 0.1,       # accel bias
+         0.1, 0.1, 0.1,       # gyro bias
+         0.3,                 # baro bias
+         0.3]                 # reference altitude
 
 # Constant Parameeters
 p_b2g: [0, 0, 0] # position from body frame to gps frame
