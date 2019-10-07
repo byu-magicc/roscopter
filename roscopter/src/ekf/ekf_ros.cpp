@@ -100,6 +100,14 @@ void EKF_ROS::init(const std::string &param_file)
   get_yaml_node("range_noise_stdev", param_file, range_stdev);
   range_R_ = range_stdev * range_stdev;
 
+  get_yaml_node("manual_gps_noise", param_file, manual_gps_noise_);
+  if (manual_gps_noise_)
+  {
+    get_yaml_node("gps_horizontal_stdev", param_file, gps_horizontal_stdev_);
+    get_yaml_node("gps_vertical_stdev", param_file, gps_vertical_stdev_);
+    get_yaml_node("gps_speed_stdev", param_file, gps_speed_stdev_);
+  }
+
   start_time_.fromSec(0.0);
 }
 
@@ -267,17 +275,40 @@ void EKF_ROS::gnssCallback(const rosflight_msgs::GNSSConstPtr &msg)
 
   // rotate covariance into the ECEF frame
   Vector6d Sigma_diag_NED;
-  Sigma_diag_NED << msg->horizontal_accuracy,
-                msg->horizontal_accuracy,
-                msg->vertical_accuracy,
-                msg->speed_accuracy,
-                msg->speed_accuracy,
-                msg->speed_accuracy;
+  if (manual_gps_noise_)
+  {
+    Sigma_diag_NED << gps_horizontal_stdev_,
+                      gps_horizontal_stdev_,
+                      gps_vertical_stdev_,
+                      gps_speed_stdev_,
+                      gps_speed_stdev_,
+                      gps_speed_stdev_;
+  }
+  else
+  {
+    Sigma_diag_NED << msg->horizontal_accuracy,
+                  msg->horizontal_accuracy,
+                  msg->vertical_accuracy,
+                  msg->speed_accuracy,
+                  msg->speed_accuracy,
+                  msg->speed_accuracy;
+  }
+
   Sigma_diag_NED = Sigma_diag_NED.cwiseProduct(Sigma_diag_NED);
   Matrix3d R_e2n = q_e2n(ecef2lla(z.head<3>())).R();
+
   Matrix6d Sigma_ecef;
   Sigma_ecef << R_e2n.transpose() * Sigma_diag_NED.head<3>().asDiagonal() * R_e2n, Matrix3d::Zero(),
                 Matrix3d::Zero(), R_e2n.transpose() *  Sigma_diag_NED.tail<3>().asDiagonal() * R_e2n;
+
+  if (!ekf_.refLlaSet())
+  {
+    // set ref lla to first gps position
+    Eigen::Vector3d ref_lla = ecef2lla(z.head<3>());
+    // Convert radians to degrees
+    ref_lla.head<2>() *= 180. / M_PI;
+    ekf_.setRefLla(ref_lla);
+  }
 
   double t = (msg->header.stamp - start_time_).toSec();
   ekf_.gnssCallback(t, z, Sigma_ecef);
@@ -289,16 +320,6 @@ void EKF_ROS::gnssCallbackUblox(const ublox::PosVelEcefConstPtr &msg)
   if (msg->fix == ublox::PosVelEcef::FIX_TYPE_2D
       || msg->fix == ublox::PosVelEcef::FIX_TYPE_3D)
   {
-    if (!ekf_.refLlaSet())
-    {
-      // set ref lla to first gps position
-      Eigen::Vector3d ref_lla;
-      ref_lla(0) = msg->lla[0];
-      ref_lla(1) = msg->lla[1];
-      ref_lla(2) = msg->lla[2];
-      ekf_.setRefLla(ref_lla);
-    }
-
     rosflight_msgs::GNSS rf_msg;
     rf_msg.header.stamp = msg->header.stamp;
     rf_msg.position = msg->position;
@@ -321,16 +342,6 @@ void EKF_ROS::gnssCallbackInertialSense(const inertial_sense::GPSConstPtr &msg)
   if (msg->fix_type == inertial_sense::GPS::GPS_STATUS_FIX_TYPE_2D_FIX
       || msg->fix_type == inertial_sense::GPS::GPS_STATUS_FIX_TYPE_3D_FIX)
   {
-    if (!ekf_.refLlaSet())
-    {
-      // set ref lla to first gps position
-      Eigen::Vector3d ref_lla;
-      ref_lla(0) = msg->latitude;
-      ref_lla(1) = msg->longitude;
-      ref_lla(2) = msg->altitude;
-      ekf_.setRefLla(ref_lla);
-    }
-
     rosflight_msgs::GNSS rf_msg;
     rf_msg.header.stamp = msg->header.stamp;
     rf_msg.position[0] = msg->posEcef.x;

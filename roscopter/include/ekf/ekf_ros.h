@@ -140,6 +140,11 @@ private:
   double baro_R_;
   double range_R_;
 
+  bool manual_gps_noise_;
+  double gps_horizontal_stdev_;
+  double gps_vertical_stdev_;
+  double gps_speed_stdev_;
+
   void publishEstimates(const sensor_msgs::ImuConstPtr &msg);
 };
 

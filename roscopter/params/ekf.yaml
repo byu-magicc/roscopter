@@ -10,7 +10,7 @@ imu_topic: "/imu/data"
 baro_topic: "/serial/baro"
 range_topic: ""
 pose_topic: ""
-odom_topic: "/ins/ins"
+odom_topic: ""
 gnss_topic: ""
 ublox_gnss_topic: ""
 inertial_sense_gnss_topic: "/ins/gps"
@@ -28,8 +28,8 @@ enable_log: true
 
 ## Measurement Processing
 enable_partial_update: true
-enable_out_of_order: false
-use_mocap: true
+enable_out_of_order: false # TODO this isnt fully implemented
+use_mocap: false
 use_gnss: true
 use_baro: true
 use_range: false
@@ -54,14 +54,14 @@ Qx: [0.000, 0.000, 0.000,       # pos
      0.001, 0.001, 0.001,       # accel bias
      0.0001, 0.0001, 0.0001,    # gyro bias
      0.0001,                    # baro bias
-     1.0]                       # reference altitude
+     0.0001]                       # reference altitude
 
 ## Lambda (Partial Update)
 lambda: [1.0, 1.0, 1.0,       # pos
          1.0, 1.0, 1.0,       # att
          1.0, 1.0, 1.0,       # vel
-         0.25, 0.25, 0.25,    # accel bias
-         0.25, 0.25, 0.25,    # gyro bias
+         0.1, 0.1, 0.1,    # accel bias
+         0.1, 0.1, 0.25,    # gyro bias
          0.3,                 # baro bias
          0.3]                 # reference altitude
 
@@ -69,8 +69,8 @@ lambda: [1.0, 1.0, 1.0,       # pos
 p_b2g: [0, 0, 0] # position from body frame to gps frame
 
 # Initial State
-manual_ref_lla: false # Use manual ref_lla or use first lla from gps
-ref_lla: [40.24632, -111.646882, 1415.0]
+manual_ref_lla: true # Use manual ref_lla or use first lla from gps
+ref_lla: [40.267320, -111.635629, 1387.0]
 ref_heading: 0.0 # reference heading for inertial frame (from north)
 
 x0: [0, 0, 0,       # pos
@@ -79,7 +79,12 @@ x0: [0, 0, 0,       # pos
 ## Sensor Noise
 accel_noise_stdev: 0.5
 gyro_noise_stdev: 0.02
-position_noise_stdev: 0.01
-attitude_noise_stdev: 0.01
+position_noise_stdev: 0.01 # Mocap
+attitude_noise_stdev: 0.01 # Mocap
 baro_pressure_noise_stdev: 5.0
 range_noise_stdev: 0.05
+
+manual_gps_noise: true # choose noise params for GPS or use the values reported from the message topic
+gps_horizontal_stdev: 1.021
+gps_vertical_stdev: 3.04
+gps_speed_stdev: 1.02
