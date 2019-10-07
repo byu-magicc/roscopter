@@ -96,6 +96,7 @@ private:
   ros::NodeHandle nh_private_;
 
   ros::Subscriber imu_sub_;
+  ros::Subscriber baro_sub_;
   ros::Subscriber pose_sub_;
   ros::Subscriber odom_sub_;
   ros::Subscriber gnss_sub_;
@@ -108,6 +109,10 @@ private:
   sensor_msgs::Imu imu_bias_msg_;
   nav_msgs::Odometry odom_msg_;
   std_msgs::Bool is_flying_msg_;
+
+#ifdef UBLOX
+  ros::Subscriber ublox_gnss_sub_;
+#endif
 
 #ifdef INERTIAL_SENSE
   ros::Subscriber is_gnss_sub_;

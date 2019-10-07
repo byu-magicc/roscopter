@@ -59,15 +59,19 @@ void EKF_ROS::initROS()
   is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1);
 
   imu_sub_ = nh_.subscribe("imu", 100, &EKF_ROS::imuCallback, this);
+  baro_sub_ = nh_.subscribe("baro", 100, &EKF_ROS::baroCallback, this);
   pose_sub_ = nh_.subscribe("pose", 10, &EKF_ROS::poseCallback, this);
   odom_sub_ = nh_.subscribe("reference", 10, &EKF_ROS::odomCallback, this);
   gnss_sub_ = nh_.subscribe("gnss", 10, &EKF_ROS::gnssCallback, this);
 
-  ros_initialized_ = true;
-
+#ifdef UBLOX
+  ublox_gnss_sub_ = nh_.subscribe("ublox_gnss", 10, &EKF_ROS::gnssCallbackUblox, this);
+#endif
 #ifdef INERTIAL_SENSE
   is_gnss_sub_ = nh_.subscribe("is_gnss", 10, &EKF_ROS::gnssCallbackInertialSense, this);
 #endif
+
+  ros_initialized_ = true;
 }
 
 void EKF_ROS::init(const std::string &param_file)

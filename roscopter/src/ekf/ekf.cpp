@@ -41,7 +41,7 @@ void EKF::load(const std::string &filename)
   // Measurement Flags
   get_yaml_node("enable_partial_update", filename, enable_partial_update_);
   get_yaml_node("enable_out_of_order", filename, enable_out_of_order_);
-  get_yaml_node("use_truth", filename, use_truth_);
+  get_yaml_node("use_mocap", filename, use_mocap_);
   get_yaml_node("use_gnss", filename, use_gnss_);
   get_yaml_node("use_baro", filename, use_baro_);
   get_yaml_node("use_range", filename, use_range_);
@@ -494,7 +494,7 @@ void EKF::mocapUpdate(const meas::Mocap &z)
   H.block<3,3>(3, E::DQ) = I_3x3;
 
   /// TODO: Saturate r
-  if (use_truth_)
+  if (use_mocap_)
   {
     measUpdate(r, z.R, H);
   }

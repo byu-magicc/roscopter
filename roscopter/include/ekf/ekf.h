@@ -166,7 +166,7 @@ public:
   StateBuf xbuf_;
 
   // Measurement Buffers
-  bool use_truth_;
+  bool use_mocap_;
   bool use_baro_;
   bool use_range_;
   bool use_gnss_;

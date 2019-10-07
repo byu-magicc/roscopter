@@ -2,7 +2,7 @@
 # bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/groot_sensors_stationary.bag"
 # bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/groot_sensors_triangle.bag"
 # bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_walkpath.bag"
-bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_north_eastfirst.bag"
+# bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_north_eastfirst.bag"
 bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_parkinglot_south_eastfirst.bag"
 # bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_updown.bag"
 status_topic: "/status"
@@ -19,7 +19,7 @@ start_time: 0
 duration: 186
 
 ## Is_flying checks
-enable_arm_check: true # require armed before checking for is_flying
+enable_arm_check: false # require armed before checking for is_flying
 is_flying_threshold: 10.5 # if accel measurement exceed this magnitude, set is_flying
 
 ## Logging
@@ -29,7 +29,7 @@ enable_log: true
 ## Measurement Processing
 enable_partial_update: true
 enable_out_of_order: false
-use_truth: false # Whether or not to use mocap measurements
+use_mocap: true
 use_gnss: true
 use_baro: true
 use_range: false
