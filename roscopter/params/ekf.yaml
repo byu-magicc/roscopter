@@ -39,11 +39,11 @@ R_zero_vel: [0.001, 0.001, 0.001, # vel
               0.001] # Altitude
 
 ## Initial Uncertainty
-P0: [10., 10.0, 10.0, # pos
+P0: [10.0, 10.0, 10.0, # pos
      0.01, 0.01, 0.01, # att
      0.001, 0.001, 0.001, # vel
-     0.3, 0.3, 0.3, # accel bias
-     0.1, 0.1, 0.1, # gyro bias
+     0.01, 0.01, 0.01, # accel bias
+     0.001, 0.001, 0.001, # gyro bias
      9.0,           # baro bias
      100.0] # reference altitude
 
@@ -51,17 +51,17 @@ P0: [10., 10.0, 10.0, # pos
 Qx: [0.000, 0.000, 0.000,       # pos
      0.000, 0.000, 0.000,       # att
      0.00001, 0.00001, 0.00001,       # vel
-     0.001, 0.001, 0.001,       # accel bias
+     0.0001, 0.0001, 0.0001,       # accel bias
      0.0001, 0.0001, 0.0001,    # gyro bias
      0.0001,                    # baro bias
-     0.0001]                       # reference altitude
+     1.0]                       # reference altitude
 
 ## Lambda (Partial Update)
 lambda: [1.0, 1.0, 1.0,       # pos
          1.0, 1.0, 1.0,       # att
          1.0, 1.0, 1.0,       # vel
-         0.1, 0.1, 0.1,    # accel bias
-         0.1, 0.1, 0.25,    # gyro bias
+         0.1, 0.1, 0.1,       # accel bias
+         0.1, 0.1, 0.1,       # gyro bias
          0.3,                 # baro bias
          0.3]                 # reference altitude
 
@@ -69,7 +69,7 @@ lambda: [1.0, 1.0, 1.0,       # pos
 p_b2g: [0, 0, 0] # position from body frame to gps frame
 
 # Initial State
-manual_ref_lla: true # Use manual ref_lla or use first lla from gps
+manual_ref_lla: false # Use manual ref_lla or use first lla from gps
 ref_lla: [40.267320, -111.635629, 1387.0]
 ref_heading: 0.0 # reference heading for inertial frame (from north)
 
@@ -84,7 +84,7 @@ attitude_noise_stdev: 0.01 # Mocap
 baro_pressure_noise_stdev: 5.0
 range_noise_stdev: 0.05
 
-manual_gps_noise: true # choose noise params for GPS or use the values reported from the message topic
-gps_horizontal_stdev: 1.021
-gps_vertical_stdev: 3.04
-gps_speed_stdev: 1.02
+manual_gps_noise: false # choose noise params for GPS or use the values reported from the message topic
+gps_horizontal_stdev: 0.021
+gps_vertical_stdev: 0.04
+gps_speed_stdev: 0.2

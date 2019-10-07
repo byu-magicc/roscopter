@@ -181,9 +181,6 @@ void EKF_ROS::imuCallback(const sensor_msgs::ImuConstPtr &msg)
 
 void EKF_ROS::baroCallback(const rosflight_msgs::BarometerConstPtr& msg)
 {
-  if (start_time_.sec == 0)
-    return;
-
   const double pressure_meas = msg->pressure;
 
   if (!ekf_.groundTempPressSet())
@@ -193,6 +190,9 @@ void EKF_ROS::baroCallback(const rosflight_msgs::BarometerConstPtr& msg)
     const double temperature_meas = msg->temperature;
     ekf_.setGroundTempPressure(temperature_meas, pressure_meas);
   }
+
+  if (start_time_.sec == 0)
+    return;
 
   const double t = (msg->header.stamp - start_time_).toSec();
   ekf_.baroCallback(t, pressure_meas, baro_R_);
@@ -262,9 +262,6 @@ void EKF_ROS::statusCallback(const rosflight_msgs::StatusConstPtr &msg)
 
 void EKF_ROS::gnssCallback(const rosflight_msgs::GNSSConstPtr &msg)
 {
-  if (start_time_.sec == 0)
-    return;
-
   Vector6d z;
   z << msg->position[0],
        msg->position[1],
@@ -309,6 +306,9 @@ void EKF_ROS::gnssCallback(const rosflight_msgs::GNSSConstPtr &msg)
     ref_lla.head<2>() *= 180. / M_PI;
     ekf_.setRefLla(ref_lla);
   }
+
+  if (start_time_.sec == 0)
+    return;
 
   double t = (msg->header.stamp - start_time_).toSec();
   ekf_.gnssCallback(t, z, Sigma_ecef);
