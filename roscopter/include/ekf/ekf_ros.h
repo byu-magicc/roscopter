@@ -48,6 +48,7 @@
 #include <rosflight_msgs/GNSS.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <geometry_msgs/Vector3Stamped.h>
 #include <std_msgs/Bool.h>
 
 #ifdef UBLOX
@@ -103,11 +104,13 @@ private:
   ros::Subscriber status_sub_;
 
   ros::Publisher odometry_pub_;
+  ros::Publisher euler_pub_;
   ros::Publisher imu_bias_pub_;
   ros::Publisher is_flying_pub_;
 
   sensor_msgs::Imu imu_bias_msg_;
   nav_msgs::Odometry odom_msg_;
+  geometry_msgs::Vector3Stamped euler_msg_;
   std_msgs::Bool is_flying_msg_;
 
 #ifdef UBLOX

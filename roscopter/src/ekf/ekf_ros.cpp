@@ -55,6 +55,7 @@ void EKF_ROS::initROS()
   init(parameter_filename);
 
   odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odom", 1);
+  euler_pub_ = nh_.advertise<geometry_msgs::Vector3Stamped>("euler_degrees", 1);
   imu_bias_pub_ = nh_.advertise<sensor_msgs::Imu>("imu_bias", 1);
   is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1);
 
@@ -130,7 +131,20 @@ void EKF_ROS::publishEstimates(const sensor_msgs::ImuConstPtr &msg)
   odom_msg_.twist.twist.linear.y = state_est.v(1);
   odom_msg_.twist.twist.linear.z = state_est.v(2);
 
+  odom_msg_.twist.twist.angular.x = state_est.w(0);
+  odom_msg_.twist.twist.angular.y = state_est.w(1);
+  odom_msg_.twist.twist.angular.z = state_est.w(2);
+
   odometry_pub_.publish(odom_msg_);
+
+  // Pub Euler Attitude
+  euler_msg_.header = msg->header;
+  const Eigen::Vector3d euler_angles = state_est.q.euler() * 180. / M_PI;
+  euler_msg_.vector.x = euler_angles(0);
+  euler_msg_.vector.y = euler_angles(1);
+  euler_msg_.vector.z = euler_angles(2);
+
+  euler_pub_.publish(euler_msg_);
 
   // Pub Imu Bias estimate
   imu_bias_msg_.header = msg->header;
