@@ -115,14 +115,14 @@ void Controller::cmdCallback(const rosflight_msgs::CommandConstPtr &msg)
     case rosflight_msgs::Command::MODE_XPOS_YPOS_YAW_ALTITUDE:
       xc_.pn = msg->x;
       xc_.pe = msg->y;
-      xc_.pd = msg->F;
+      xc_.pd = -msg->F;
       xc_.psi = msg->z;
       control_mode_ = msg->mode;
       break;
     case rosflight_msgs::Command::MODE_XVEL_YVEL_YAWRATE_ALTITUDE:
       xc_.x_dot = msg->x;
       xc_.y_dot = msg->y;
-      xc_.pd = msg->F;
+      xc_.pd = -msg->F;
       xc_.r = msg->z;
       control_mode_ = msg->mode;
       break;
