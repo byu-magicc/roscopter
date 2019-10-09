@@ -156,6 +156,7 @@ topic: gps/data,
 north_stdev: 0.021,
 east_stdev: 0.021,
 alt_stdev: 0.040,
+velocity_stdev: 0.1,
 k_north: 0.0009090909, # 1/1100
 k_east: 0.0009090909, # 1/1100
 k_alt: 0.0009090909, # 1/1100
