@@ -196,12 +196,12 @@ void EKF_ROS::imuCallback(const sensor_msgs::ImuConstPtr &msg)
 void EKF_ROS::baroCallback(const rosflight_msgs::BarometerConstPtr& msg)
 {
   const double pressure_meas = msg->pressure;
+  const double temperature_meas = msg->temperature;
 
   if (!ekf_.groundTempPressSet())
   {
     std::cout << "Set ground pressure and temp" << std::endl;
     std::cout << "press: " << pressure_meas << std::endl;
-    const double temperature_meas = msg->temperature;
     ekf_.setGroundTempPressure(temperature_meas, pressure_meas);
   }
 
@@ -209,7 +209,7 @@ void EKF_ROS::baroCallback(const rosflight_msgs::BarometerConstPtr& msg)
     return;
 
   const double t = (msg->header.stamp - start_time_).toSec();
-  ekf_.baroCallback(t, pressure_meas, baro_R_);
+  ekf_.baroCallback(t, pressure_meas, baro_R_, temperature_meas);
 }
 
 void EKF_ROS::rangeCallback(const sensor_msgs::RangeConstPtr& msg)

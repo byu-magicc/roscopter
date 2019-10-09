@@ -3,12 +3,12 @@
 # bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/groot_sensors_triangle.bag"
 # bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_walkpath.bag"
 # bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_north_eastfirst.bag"
-bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_parkinglot_south_eastfirst.bag"
-# bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_updown.bag"
+# bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_parkinglot_south_eastfirst.bag"
+bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_updown.bag"
 status_topic: "/status"
 imu_topic: "/imu/data"
 baro_topic: "/serial/baro"
-range_topic: ""
+range_topic: "/serial/laser"
 pose_topic: ""
 odom_topic: ""
 gnss_topic: ""
@@ -16,11 +16,12 @@ ublox_gnss_topic: ""
 inertial_sense_gnss_topic: "/ins/gps"
 
 start_time: 0
-duration: 186
+duration: 1000
 
 ## Is_flying checks
 enable_arm_check: false # require armed before checking for is_flying
 is_flying_threshold: 10.5 # if accel measurement exceed this magnitude, set is_flying
+update_baro_velocity_threshold: 0.5
 
 ## Logging
 log_prefix: "/tmp/roscopter/ekf/"
@@ -53,7 +54,7 @@ Qx: [0.000, 0.000, 0.000,       # pos
      0.00001, 0.00001, 0.00001,       # vel
      0.0001, 0.0001, 0.0001,       # accel bias
      0.0001, 0.0001, 0.0001,    # gyro bias
-     0.0001,                    # baro bias
+     0.000001,                    # baro bias
      1.0]                       # reference altitude
 
 ## Lambda (Partial Update)
@@ -62,7 +63,7 @@ lambda: [1.0, 1.0, 1.0,       # pos
          1.0, 1.0, 1.0,       # vel
          0.1, 0.1, 0.1,       # accel bias
          0.1, 0.1, 0.1,       # gyro bias
-         0.3,                 # baro bias
+         0.5,                 # baro bias
          0.3]                 # reference altitude
 
 # Constant Parameeters
@@ -81,8 +82,8 @@ accel_noise_stdev: 0.5
 gyro_noise_stdev: 0.02
 position_noise_stdev: 0.01 # Mocap
 attitude_noise_stdev: 0.01 # Mocap
-baro_pressure_noise_stdev: 5.0
-range_noise_stdev: 0.05
+baro_pressure_noise_stdev: 2.0
+range_noise_stdev: 0.1
 
 manual_gps_noise: false # choose noise params for GPS or use the values reported from the message topic
 gps_horizontal_stdev: 0.021

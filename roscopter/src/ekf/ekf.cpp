@@ -78,6 +78,9 @@ void EKF::load(const std::string &filename)
   }
 
   ground_pressure_ = 0.;
+  ground_temperature_ = 0.;
+  update_baro_ = false;
+  get_yaml_node("update_baro_velocity_threshold", filename, update_baro_vel_thresh_);
 
   get_yaml_eigen("x0", filename, x0_.arr());
 
@@ -283,8 +286,8 @@ void EKF::imuCallback(const double &t, const Vector6d &z, const Matrix6d &R)
 
 }
 
-void EKF::baroCallback(const double& t, const double& z, const double& R)
-{
+void EKF::baroCallback(const double &t, const double &z, const double &R,
+                       const double &temp) {
   if (!ref_lla_set_)
     return;
 
@@ -293,7 +296,7 @@ void EKF::baroCallback(const double& t, const double& z, const double& R)
     std::cout << "ERROR OUT OF ORDER BARO NOT IMPLEMENTED" << std::endl;
   }
   else
-    baroUpdate(meas::Baro(t, z, R));
+    baroUpdate(meas::Baro(t, z, R, temp));
 }
 
 void EKF::rangeCallback(const double& t, const double& z, const double& R)
@@ -351,41 +354,49 @@ void EKF::baroUpdate(const meas::Baro &z)
   {
     return;
   }
-  else if (!is_flying_)
+  else if (!update_baro_ || !is_flying_)
   {
     // Take the lowest pressure while I'm not flying as ground pressure
     // This has the effect of hopefully underestimating my altitude instead of
     // over estimating.
     if (z.z(0) < ground_pressure_)
+    {
       ground_pressure_ = z.z(0);
+      std::cout << "New ground pressure: " << ground_pressure_ << std::endl;
+    }
+
+    // check if we should start updating with the baro yet based on
+    // velocity estimate
+    if (x().v.norm() > update_baro_vel_thresh_)
+      update_baro_ = true;
+
     return;
   }
 
   using Vector1d = Eigen::Matrix<double, 1, 1>;
 
   // // From "Small Unmanned Aircraft: Theory and Practice" eq 7.8
-  const double g = 9.80665;
-  const double R = 8.31432;
-  const double M = 0.0289644;
+  const double g = 9.80665; // m/(s^2) gravity 
+  const double R = 8.31432; // universal gas constant
+  const double M = 0.0289644; // kg / mol. molar mass of Earth's air
 
   const double altitude = -x().p(2);
   const double baro_bias = x().bb;
 
   // From "Small Unmanned Aircraft: Theory and Practice" eq 7.9
-  const double rho = M * ground_pressure_ / R / ground_temperature_;
+  // const double rho = M * ground_pressure_ / R / ground_temperature_;
+  const double rho = M * ground_pressure_ / R / z.temp;
 
-  const double pressure_meas = ground_pressure_ - z.z(0);
-  const double press_hat = rho * g * altitude + baro_bias;
+  const double press_hat = ground_pressure_ - rho * g * altitude + baro_bias;
 
-  const Vector1d zz(pressure_meas);
   const Vector1d zhat(press_hat);
-  Vector1d r = zz - zhat;
+  Vector1d r = z.z - zhat;
 
   typedef ErrorState E;
 
   Matrix<double, 1, E::NDX> H;
   H.setZero();
-  H(0, E::DP + 2) = -rho * g;
+  H(0, E::DP + 2) = rho * g;
   H(0, E::DBB) = 1.;
 
   /// TODO: Saturate r
@@ -395,7 +406,8 @@ void EKF::baroUpdate(const meas::Baro &z)
   if (enable_log_)
   {
     logs_[LOG_BARO_RES]->log(z.t);
-    logs_[LOG_BARO_RES]->logVectors(r, zz, zhat);
+    logs_[LOG_BARO_RES]->logVectors(r, z.z, zhat);
+    logs_[LOG_BARO_RES]->log(z.temp);
   }
 
 }
@@ -404,17 +416,29 @@ void EKF::rangeUpdate(const meas::Range &z)
 {
   // Assume that the earth is flat and that the range sensor is rigidly attached
   // to the UAV, so distance is dependent on the attitude of the UAV.
-  // TODO assuming that the laser is positioned at 0,0,0 in the body frame of the UAV
-  // Vector6d zhat;
-  // zhat << x_e2I_.transforma(gps_pos_I),
-          // x_e2I_.rota(gps_vel_I);
+  // TODO this assumes that the laser is positioned at 0,0,0 in the body frame
+  // of the UAV
+  // TODO this also only updates if the UAV is pretty close to level and the
+  // measurement model jacobian assumes that the measurement is not dependent
+  // on roll or pitch at all
   using Vector1d = Eigen::Matrix<double, 1, 1>;
 
   const double altitude = -x().p(2);
   const double roll = x().q.roll();
   const double pitch = x().q.pitch();
+
+  // const double level_threshold = 2. * M_PI / 180.; // 1 degree
+
+  // Only update if UAV is close to level
+  // if ((abs(roll) > level_threshold) || (abs(pitch) > level_threshold))
+    // return;
+
   const Vector1d zhat(altitude / cos(roll) / cos(pitch)); // TODO roll/ pitch of drone
   Vector1d r = z.z - zhat; // residual
+
+  // std::cout << "Laser Update: " << std::endl;
+  // std::cout << "Altitude meas: " << z.z(0) << std::endl;
+  // std::cout << "Altitude est: " << altitude << std::endl;
 
   typedef ErrorState E;
 
@@ -422,7 +446,15 @@ void EKF::rangeUpdate(const meas::Range &z)
   H.setZero();
   H(0, E::DP + 2) = -1.;
 
-  /// TODO: Saturate r
+  // Vector1d r_saturated
+  double r_sat = 0.1;
+  if (abs(r(0)) > r_sat)
+  {
+    double r_sign = (r(0) > 0) - (r(0) < 0);
+    r(0) = r_sat * r_sign;
+  }
+
+  // TODO: Saturate r
   if (use_range_)
     measUpdate(r, z.R, H);
 

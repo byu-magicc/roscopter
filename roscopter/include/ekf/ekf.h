@@ -84,7 +84,8 @@ public:
 
   meas::MeasSet::iterator getOldestNewMeas();
   void imuCallback(const double& t, const Vector6d& z, const Matrix6d& R);
-  void baroCallback(const double& t, const double& z, const double& R);
+  void baroCallback(const double& t, const double& z, const double& R,
+                    const double& temp);
   void rangeCallback(const double& t, const double& z, const double& R);
   void gnssCallback(const double& t, const Vector6d& z, const Matrix6d& R);
   void mocapCallback(const double& t, const xform::Xformd& z, const Matrix6d& R);
@@ -149,6 +150,8 @@ public:
   double P0_yaw_;
   double ground_pressure_;
   double ground_temperature_;
+  bool update_baro_;
+  double update_baro_vel_thresh_;
 
   // Matrix Workspace
   dxMat A_;

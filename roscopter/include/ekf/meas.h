@@ -65,9 +65,10 @@ struct Imu : public Base
 struct Baro : public Base
 {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    Baro(double _t, const double& _z, const double& _R);
+    Baro(double _t, const double& _z, const double& _R, const double& _temp);
     Eigen::Matrix<double, 1, 1> z;
     Eigen::Matrix<double, 1, 1> R;
+    double temp;
 };
 
 struct Range : public Base

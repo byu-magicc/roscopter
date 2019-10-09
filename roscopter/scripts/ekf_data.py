@@ -76,7 +76,8 @@ BaroResType = np.dtype([
 	('t', f64),
 	('r', f64),
 	('z', f64),
-	('zhat', f64)
+	('zhat', f64),
+        ('temp', f64)
 ])
 
 class Log:
