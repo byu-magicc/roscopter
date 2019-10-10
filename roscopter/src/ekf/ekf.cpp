@@ -287,10 +287,8 @@ void EKF::imuCallback(const double &t, const Vector6d &z, const Matrix6d &R)
 }
 
 void EKF::baroCallback(const double &t, const double &z, const double &R,
-                       const double &temp) {
-  if (!ref_lla_set_)
-    return;
-
+                       const double &temp)
+{
   if (enable_out_of_order_)
   {
     std::cout << "ERROR OUT OF ORDER BARO NOT IMPLEMENTED" << std::endl;
