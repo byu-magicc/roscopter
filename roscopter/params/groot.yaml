@@ -57,6 +57,9 @@ max_yaw_rate: 0.785,
 max_throttle: 0.85,
 max_n_dot: 1.5,
 max_e_dot: 1.5,
-max_d_dot: 0.5
+max_d_dot: 0.5,
+
+# Below this altitude, zero roll, pitch, yawrate will be commanded
+min_altitude: 0.5,
 
 }
