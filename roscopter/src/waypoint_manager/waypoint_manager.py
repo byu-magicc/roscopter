@@ -32,6 +32,10 @@ class WaypointManager():
         self.remove_waypoint_service = rospy.Service('remove_waypoint', RemoveWaypoint, self.addWaypointCallback)
         self.set_waypoint_from_file_service = rospy.Service('set_waypoints_from_file', SetWaypointsFromFile, self.addWaypointCallback)
 
+        # Wait a second before we publish the first waypoint
+        while (rospy.Time.now() < rospy.Time(2.)):
+            pass
+
         # Set Up Publishers and Subscribers
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
         self.waypoint_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
@@ -48,9 +52,7 @@ class WaypointManager():
         if len(current_waypoint) > 3:
             command_msg.z = current_waypoint[3]
         else:
-            next_point = self.waypoint_list[(self.current_waypoint_index + 1) % len(self.waypoint_list)]
-            delta = next_point - current_waypoint
-            command_msg.z = np.atan2(delta[1], delta[0])
+            command_msg.z = 0.
         command_msg.mode = Command.MODE_XPOS_YPOS_YAW_ALTITUDE
         self.waypoint_pub_.publish(command_msg)
 
@@ -73,7 +75,7 @@ class WaypointManager():
         current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
         current_position = np.array([msg.pose.pose.position.x,
                                      msg.pose.pose.position.y,
-                                     msg.pose.pose.position.z])
+                                     -msg.pose.pose.position.z])
                                      
         # orientation in quaternion form
         qw = msg.pose.pose.orientation.w
@@ -100,12 +102,10 @@ class WaypointManager():
             command_msg.x = next_waypoint[0]
             command_msg.y = next_waypoint[1]
             command_msg.F = next_waypoint[2]
-            if len(current_waypoint) > 3:
-                command_msg.z = current_waypoint[3]
+            if len(next_waypoint) > 3:
+                command_msg.z = next_waypoint[3]
             else:
-                next_point = self.waypoint_list[(self.current_waypoint_index + 1) % len(self.waypoint_list)]
-                delta = next_point - current_waypoint
-                command_msg.z = np.atan2(delta[1], delta[0])
+                command_msg.z = 0.
             command_msg.mode = Command.MODE_XPOS_YPOS_YAW_ALTITUDE
             self.waypoint_pub_.publish(command_msg)
 

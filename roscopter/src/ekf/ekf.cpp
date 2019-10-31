@@ -29,13 +29,22 @@ void EKF::load(const std::string &filename)
   get_yaml_eigen("p_b2g", filename, p_b2g_);
   get_yaml_diag("Qx", filename, Qx_);
   get_yaml_diag("P0", filename, P());
+  P0_yaw_ = P()(ErrorState::DQ + 2, ErrorState::DQ + 2);
   get_yaml_diag("R_zero_vel", filename, R_zero_vel_);
 
+  // Partial Update
+  get_yaml_eigen("lambda", filename, lambda_vec_);
+  const dxVec ones = dxVec::Constant(1.0);
+  lambda_mat_ = ones * lambda_vec_.transpose() + lambda_vec_ * ones.transpose() -
+                lambda_vec_ * lambda_vec_.transpose();
+
   // Measurement Flags
+  get_yaml_node("enable_partial_update", filename, enable_partial_update_);
   get_yaml_node("enable_out_of_order", filename, enable_out_of_order_);
-  get_yaml_node("use_truth", filename, use_truth_);
+  get_yaml_node("use_mocap", filename, use_mocap_);
   get_yaml_node("use_gnss", filename, use_gnss_);
-  get_yaml_node("use_alt", filename, use_alt_);
+  get_yaml_node("use_baro", filename, use_baro_);
+  get_yaml_node("use_range", filename, use_range_);
   get_yaml_node("use_zero_vel", filename, use_zero_vel_);
 
   // Armed Check
@@ -43,15 +52,36 @@ void EKF::load(const std::string &filename)
   get_yaml_node("is_flying_threshold", filename, is_flying_threshold_);
 
   // load initial state
-  Vector3d ref_lla;
   double ref_heading;
-  get_yaml_eigen("ref_lla", filename, ref_lla);
   get_yaml_node("ref_heading", filename, ref_heading);
-  ref_lla.head<2>() *= M_PI/180.0; // convert to rad
-  quat::Quatd q_n2I = quat::Quatd::from_euler(0, 0, M_PI/180.0 * ref_heading);
-  xform::Xformd x_e2n = x_ecef2ned(lla2ecef(ref_lla));
-  x_e2I_.t() = x_e2n.t();
-  x_e2I_.q() = x_e2n.q() * q_n2I;
+  q_n2I_ = quat::Quatd::from_euler(0, 0, M_PI/180.0 * ref_heading);
+
+  ref_lla_set_ = false;
+  bool manual_ref_lla;
+  get_yaml_node("manual_ref_lla", filename, manual_ref_lla);
+  if (manual_ref_lla)
+  {
+    Vector3d ref_lla;
+    get_yaml_eigen("ref_lla", filename, ref_lla);
+    std::cout << "Set ref lla: " << ref_lla.transpose() << std::endl;
+    ref_lla.head<2>() *= M_PI/180.0; // convert to rad
+    xform::Xformd x_e2n = x_ecef2ned(lla2ecef(ref_lla));
+    x_e2I_.t() = x_e2n.t();
+    x_e2I_.q() = x_e2n.q() * q_n2I_;
+
+    // initialize the estimated ref altitude state
+    x().ref = ref_lla(2);
+    ref_lat_radians_ = ref_lla(0);
+    ref_lon_radians_ = ref_lla(1);
+
+    ref_lla_set_ = true;
+  }
+
+  ground_pressure_ = 0.;
+  ground_temperature_ = 0.;
+  update_baro_ = false;
+  get_yaml_node("update_baro_velocity_threshold", filename, update_baro_vel_thresh_);
+
   get_yaml_eigen("x0", filename, x0_.arr());
 
   initLog(filename);
@@ -76,6 +106,11 @@ void EKF::initialize(double t)
   x().v.setZero();
   x().ba.setZero();
   x().bg.setZero();
+  x().bb = 0.;
+  if (ref_lla_set_)
+    x().ref = x().ref;
+  else
+    x().ref = 0.;
   x().a = -gravity;
   x().w.setZero();
   is_flying_ = false;
@@ -204,13 +239,24 @@ bool EKF::measUpdate(const VectorXd &res, const MatrixXd &R, const MatrixXd &H)
   K = P() * H.T * innov;
   CHECK_NAN(K);
 
-  ///TODO: Partial Update
-  x() += K * res;
-  dxMat ImKH = I_BIG - K*H;
-  P() = ImKH*P()*ImKH.T + K*R*K.T;
+  if (enable_partial_update_)
+  {
+    // Apply Fixed Gain Partial update per
+    // "Partial-Update Schmidt-Kalman Filter" by Brink
+    // Modified to operate inline and on the manifold
+    x() += lambda_vec_.asDiagonal() * K * res;
+    dxMat ImKH = I_BIG - K*H;
+    P() += lambda_mat_.cwiseProduct(ImKH*P()*ImKH.T + K*R*K.T - P());
+  }
+  else
+  {
+    x() += K * res;
+    dxMat ImKH = I_BIG - K*H;
+    P() = ImKH*P()*ImKH.T + K*R*K.T;
+  }
 
   CHECK_NAN(P());
-  return false;
+  return true;
 }
 
 void EKF::imuCallback(const double &t, const Vector6d &z, const Matrix6d &R)
@@ -240,8 +286,32 @@ void EKF::imuCallback(const double &t, const Vector6d &z, const Matrix6d &R)
 
 }
 
+void EKF::baroCallback(const double &t, const double &z, const double &R,
+                       const double &temp)
+{
+  if (enable_out_of_order_)
+  {
+    std::cout << "ERROR OUT OF ORDER BARO NOT IMPLEMENTED" << std::endl;
+  }
+  else
+    baroUpdate(meas::Baro(t, z, R, temp));
+}
+
+void EKF::rangeCallback(const double& t, const double& z, const double& R)
+{
+  if (enable_out_of_order_)
+  {
+    std::cout << "ERROR OUT OF ORDER RANGE NOT IMPLEMENTED" << std::endl;
+  }
+  else
+    rangeUpdate(meas::Range(t, z, R));
+}
+
 void EKF::gnssCallback(const double &t, const Vector6d &z, const Matrix6d &R)
 {
+  if (!ref_lla_set_)
+    return;
+
   if (enable_out_of_order_)
   {
     gnss_meas_buf_.push_back(meas::Gnss(t, z, R));
@@ -276,22 +346,151 @@ void EKF::mocapCallback(const double& t, const xform::Xformd& z, const Matrix6d&
   }
 }
 
+void EKF::baroUpdate(const meas::Baro &z)
+{
+  if (!this->groundTempPressSet())
+  {
+    return;
+  }
+  else if (!update_baro_ || !is_flying_)
+  {
+    // Take the lowest pressure while I'm not flying as ground pressure
+    // This has the effect of hopefully underestimating my altitude instead of
+    // over estimating.
+    if (z.z(0) < ground_pressure_)
+    {
+      ground_pressure_ = z.z(0);
+      std::cout << "New ground pressure: " << ground_pressure_ << std::endl;
+    }
+
+    // check if we should start updating with the baro yet based on
+    // velocity estimate
+    if (x().v.norm() > update_baro_vel_thresh_)
+      update_baro_ = true;
+
+    return;
+  }
+
+  using Vector1d = Eigen::Matrix<double, 1, 1>;
+
+  // // From "Small Unmanned Aircraft: Theory and Practice" eq 7.8
+  const double g = 9.80665; // m/(s^2) gravity 
+  const double R = 8.31432; // universal gas constant
+  const double M = 0.0289644; // kg / mol. molar mass of Earth's air
+
+  const double altitude = -x().p(2);
+  const double baro_bias = x().bb;
+
+  // From "Small Unmanned Aircraft: Theory and Practice" eq 7.9
+  // const double rho = M * ground_pressure_ / R / ground_temperature_;
+  const double rho = M * ground_pressure_ / R / z.temp;
+
+  const double press_hat = ground_pressure_ - rho * g * altitude + baro_bias;
+
+  const Vector1d zhat(press_hat);
+  Vector1d r = z.z - zhat;
+
+  typedef ErrorState E;
+
+  Matrix<double, 1, E::NDX> H;
+  H.setZero();
+  H(0, E::DP + 2) = rho * g;
+  H(0, E::DBB) = 1.;
+
+  /// TODO: Saturate r
+  if (use_baro_)
+    measUpdate(r, z.R, H);
+
+  if (enable_log_)
+  {
+    logs_[LOG_BARO_RES]->log(z.t);
+    logs_[LOG_BARO_RES]->logVectors(r, z.z, zhat);
+    logs_[LOG_BARO_RES]->log(z.temp);
+  }
+
+}
+
+void EKF::rangeUpdate(const meas::Range &z)
+{
+  // Assume that the earth is flat and that the range sensor is rigidly attached
+  // to the UAV, so distance is dependent on the attitude of the UAV.
+  // TODO this assumes that the laser is positioned at 0,0,0 in the body frame
+  // of the UAV
+  // TODO this also only updates if the UAV is pretty close to level and the
+  // measurement model jacobian assumes that the measurement is not dependent
+  // on roll or pitch at all
+  using Vector1d = Eigen::Matrix<double, 1, 1>;
+
+  const double altitude = -x().p(2);
+  const double roll = x().q.roll();
+  const double pitch = x().q.pitch();
+
+  // const double level_threshold = 2. * M_PI / 180.; // 1 degree
+
+  // Only update if UAV is close to level
+  // if ((abs(roll) > level_threshold) || (abs(pitch) > level_threshold))
+    // return;
+
+  const Vector1d zhat(altitude / cos(roll) / cos(pitch)); // TODO roll/ pitch of drone
+  Vector1d r = z.z - zhat; // residual
+
+  // std::cout << "Laser Update: " << std::endl;
+  // std::cout << "Altitude meas: " << z.z(0) << std::endl;
+  // std::cout << "Altitude est: " << altitude << std::endl;
+
+  typedef ErrorState E;
+
+  Matrix<double, 1, E::NDX> H;
+  H.setZero();
+  H(0, E::DP + 2) = -1.;
+
+  // Vector1d r_saturated
+  double r_sat = 0.1;
+  if (abs(r(0)) > r_sat)
+  {
+    double r_sign = (r(0) > 0) - (r(0) < 0);
+    r(0) = r_sat * r_sign;
+  }
+
+  // TODO: Saturate r
+  if (use_range_)
+    measUpdate(r, z.R, H);
+
+  if (enable_log_)
+  {
+    logs_[LOG_RANGE_RES]->log(z.t);
+    logs_[LOG_RANGE_RES]->logVectors(r, z.z, zhat);
+  }
+
+}
 
 void EKF::gnssUpdate(const meas::Gnss &z)
 {
-  Vector3d w = x().w - x().bg;
-  Vector3d gps_pos_I = x().p + x().q.rota(p_b2g_);
-  Vector3d gps_vel_b = x().v + w.cross(p_b2g_);
-  Vector3d gps_vel_I = x().q.rota(gps_vel_b);
+  const Vector3d w = x().w - x().bg;
+  const Vector3d gps_pos_I = x().p + x().q.rota(p_b2g_);
+  const Vector3d gps_vel_b = x().v + w.cross(p_b2g_);
+  const Vector3d gps_vel_I = x().q.rota(gps_vel_b);
+
+  // Update ref_lla based on current estimate
+  Vector3d ref_lla(ref_lat_radians_, ref_lon_radians_, x().ref);
+  xform::Xformd x_e2n = x_ecef2ned(lla2ecef(ref_lla));
+  x_e2I_.t() = x_e2n.t();
+  x_e2I_.q() = x_e2n.q() * q_n2I_;
 
   Vector6d zhat;
   zhat << x_e2I_.transforma(gps_pos_I),
           x_e2I_.rota(gps_vel_I);
-  Vector6d r = z.z - zhat; // residual
+  const Vector6d r = z.z - zhat; // residual
 
-  Matrix3d R_I2e = x_e2I_.q().R().T;
-  Matrix3d R_b2I = x().q.R().T;
-  Matrix3d R_e2b = R_I2e * R_b2I;
+  const Matrix3d R_I2e = x_e2I_.q().R().T;
+  const Matrix3d R_b2I = x().q.R().T;
+  const Matrix3d R_e2b = R_I2e * R_b2I;
+
+  const double sin_lat = sin(ref_lat_radians_);
+  const double cos_lat = cos(ref_lat_radians_);
+  const double sin_lon = sin(ref_lon_radians_);
+  const double cos_lon = cos(ref_lon_radians_);
+  const Vector3d dpEdRefAlt(cos_lat * cos_lon, cos_lat * sin_lon, sin_lat);
 
   typedef ErrorState E;
 
@@ -299,6 +498,7 @@ void EKF::gnssUpdate(const meas::Gnss &z)
   H.setZero();
   H.block<3,3>(0, E::DP) = R_I2e; // dpE/dpI
   H.block<3,3>(0, E::DQ) = -R_e2b * skew(p_b2g_);
+  H.block<3, 1>(0, E::DREF) = dpEdRefAlt;
   H.block<3,3>(3, E::DQ) = -R_e2b * skew(gps_vel_b); // dvE/dQI
   H.block<3,3>(3, E::DV) = R_e2b;
   H.block<3,3>(3, E::DBG) = R_e2b * skew(p_b2g_);
@@ -333,7 +533,7 @@ void EKF::mocapUpdate(const meas::Mocap &z)
   H.block<3,3>(3, E::DQ) = I_3x3;
 
   /// TODO: Saturate r
-  if (use_truth_)
+  if (use_mocap_)
   {
     measUpdate(r, z.R, H);
   }
@@ -347,25 +547,50 @@ void EKF::mocapUpdate(const meas::Mocap &z)
 
 void EKF::zeroVelUpdate(double t)
 {
+  // Update Zero velocity and zero altitude
   typedef ErrorState E;
   Matrix<double, 4, E::NDX> H;
   H.setZero();
   H.block<3,3>(0, E::DV) = I_3x3;
-  H(3, E::DQ+2) = 0.5; // Check this, it's probably wrong (dyaw/dq)
+  H(3, E::DP + 2) = 1.;
 
   Vector4d r;
-  r << -x().v,
-//        0.0;
-       -x().q.yaw();
+  r.head<3>() = -x().v;
+  r(3) = -x().p(2);
 
   if (use_zero_vel_)
     measUpdate(r, R_zero_vel_, H);
+
+  // Reset the uncertainty in yaw
+  P().block<ErrorState::SIZE, 1>(0, ErrorState::DQ + 2).setZero();
+  P().block<1, ErrorState::SIZE>(ErrorState::DQ + 2, 0).setZero();
+  P()(ErrorState::DQ + 2, ErrorState::DQ + 2) = P0_yaw_;
 
   if (enable_log_)
   {
     logs_[LOG_ZERO_VEL_RES]->log(t);
     logs_[LOG_ZERO_VEL_RES]->logVectors(r);
   }
+}
+
+void EKF::setRefLla(Vector3d ref_lla)
+{
+  if (ref_lla_set_)
+    return;
+
+  std::cout << "Set ref lla: " << ref_lla.transpose() << std::endl;
+  ref_lla.head<2>() *= M_PI/180.0; // convert to rad
+  xform::Xformd x_e2n = x_ecef2ned(lla2ecef(ref_lla));
+  x_e2I_.t() = x_e2n.t();
+  x_e2I_.q() = x_e2n.q() * q_n2I_;
+
+  // initialize the estimated ref altitude state
+  x().ref = ref_lla(2);
+  ref_lat_radians_ = ref_lla(0);
+  ref_lon_radians_ = ref_lla(1);
+
+  ref_lla_set_ = true;
+
 }
 
 void EKF::cleanUpMeasurementBuffers()
@@ -379,6 +604,12 @@ void EKF::cleanUpMeasurementBuffers()
     mocap_meas_buf_.pop_front();
   while (gnss_meas_buf_.front().t < xbuf_.begin().x.t)
     gnss_meas_buf_.pop_front();
+}
+
+void EKF::setGroundTempPressure(const double& temp, const double& press)
+{
+  ground_temperature_ = temp;
+  ground_pressure_ = press;
 }
 
 void EKF::checkIsFlying()

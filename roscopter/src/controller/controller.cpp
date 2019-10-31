@@ -31,6 +31,8 @@ Controller::Controller() :
   nh_private_.getParam("max_e_dot", max_.e_dot);
   nh_private_.getParam("max_d_dot", max_.d_dot);
 
+  nh_private_.getParam("min_altitude", min_altitude_);
+
   _func = boost::bind(&Controller::reconfigure_callback, this, _1, _2);
   _server.setCallback(_func);
 
@@ -115,14 +117,14 @@ void Controller::cmdCallback(const rosflight_msgs::CommandConstPtr &msg)
     case rosflight_msgs::Command::MODE_XPOS_YPOS_YAW_ALTITUDE:
       xc_.pn = msg->x;
       xc_.pe = msg->y;
-      xc_.pd = msg->F;
+      xc_.pd = -msg->F;
       xc_.psi = msg->z;
       control_mode_ = msg->mode;
       break;
     case rosflight_msgs::Command::MODE_XVEL_YVEL_YAWRATE_ALTITUDE:
       xc_.x_dot = msg->x;
       xc_.y_dot = msg->y;
-      xc_.pd = msg->F;
+      xc_.pd = -msg->F;
       xc_.r = msg->z;
       control_mode_ = msg->mode;
       break;
@@ -294,6 +296,13 @@ void Controller::computeControl(double dt)
     command_.x = saturate(xc_.phi, max_.roll, -max_.roll);
     command_.y = saturate(xc_.theta, max_.pitch, -max_.pitch);
     command_.z = saturate(xc_.r, max_.yaw_rate, -max_.yaw_rate);
+
+    if (-xhat_.pd < min_altitude_)
+    {
+      command_.x = 0.;
+      command_.y = 0.;
+      command_.z = 0.;
+    }
   }
 }
 

@@ -41,14 +41,14 @@
 
     <!-- PID Position Controller -->
     <node name="controller" pkg="roscopter" type="controller" output="screen">
-      <!--<remap from="estimate" to="ground_truth/odometry/NED"/> -->
+      <!-- <remap from="estimate" to="ground_truth/odometry/NED"/> -->
       <remap from="estimate" to="odom"/>
     </node>
 
     <!-- Waypoint Manager -->
     <node name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
       <remap from="waypoint" to="high_level_command"/>
-      <!--<remap from="state" to="ground_truth/odometry/NED"/> -->
+      <!-- <remap from="state" to="ground_truth/odometry/NED"/> -->
       <remap from="state" to="odom"/>
     </node>
 
@@ -58,12 +58,12 @@
       <!--Inputs-->
       <remap from="imu" to="imu/data"/>
       <!--<remap from="pose" to="pose"/>-->
-      <remap from="reference" to="ground_truth/odometry/NED_throttled"/>
-      <!--<remap from="gnss" to="gnss"/>-->
+      <!-- <remap from="reference" to="ground_truth/odometry/NED_throttled"/> -->
+      <remap from="gnss" to="gps/data"/>
+      <remap from="baro" to="baro/data"/>
       <!--Outputs-->
       <remap from="is_flying" to="not_for_sim"/>
     </node>
-
 
     <!-- plot states -->
     <!--<node pkg="roscopter" type="states_plotter.py" name="states_plotter" output="screen">
