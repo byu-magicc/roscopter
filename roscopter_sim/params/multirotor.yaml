@@ -157,7 +157,8 @@ topic: gps/data,
 north_stdev: 0.0135, #rtk
 east_stdev: 0.0135, #rtk
 alt_stdev: 0.065, #rtk
-velocity_stdev: 0.02, #rtk
+# velocity_stdev: 0.02, #rtk
+velocity_stdev: 2.0, #rtk
 k_north: 0.0009090909, # 1/1100
 k_east: 0.0009090909, # 1/1100
 k_alt: 0.0009090909, # 1/1100
