@@ -58,7 +58,7 @@
       <!--Inputs-->
       <remap from="imu" to="imu/data"/>
       <!--<remap from="pose" to="pose"/>-->
-      <!-- <remap from="reference" to="ground_truth/odometry/NED_throttled"/> -->
+      <remap from="reference" to="ground_truth/odometry/NED_throttled"/>
       <remap from="gnss" to="gps/data"/>
       <remap from="baro" to="baro/data"/>
       <!--Outputs-->
