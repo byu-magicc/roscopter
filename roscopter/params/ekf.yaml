@@ -15,7 +15,7 @@ is_flying_threshold: 10.5 # if accel measurement exceed this magnitude, set is_f
 
 ## Logging
 log_prefix: "/tmp/roscopter/ekf/"
-enable_log: true
+enable_log: false
 
 ## Measurement Processing
 enable_out_of_order: false

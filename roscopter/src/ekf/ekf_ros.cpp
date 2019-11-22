@@ -57,12 +57,11 @@ void EKF_ROS::initROS()
   odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odom", 1);
   imu_bias_pub_ = nh_.advertise<sensor_msgs::Imu>("imu_bias", 1);
   is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1);
-
   imu_sub_ = nh_.subscribe("imu", 100, &EKF_ROS::imuCallback, this);
   pose_sub_ = nh_.subscribe("pose", 10, &EKF_ROS::poseCallback, this);
   odom_sub_ = nh_.subscribe("reference", 10, &EKF_ROS::odomCallback, this);
   gnss_sub_ = nh_.subscribe("gnss", 10, &EKF_ROS::gnssCallback, this);
-
+  
   ros_initialized_ = true;
 
 #ifdef INERTIAL_SENSE
@@ -187,7 +186,6 @@ void EKF_ROS::odomCallback(const nav_msgs::OdometryConstPtr &msg)
             msg->pose.pose.orientation.x,
             msg->pose.pose.orientation.y,
             msg->pose.pose.orientation.z;
-
   mocapCallback(msg->header.stamp, z);
 }
 

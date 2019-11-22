@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(roscopter_sim)
-
+find_package(gazebo)
+if(gazebo_FOUND)
 set(CMAKE_CXX_STANDARD 11)
 if (NOT CMAKE_BUILD_TYPE)
     # Options: Debug, Release, MinSizeRel, RelWithDebInfo
@@ -53,4 +54,4 @@ install(
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 )
-
+ENDIF()

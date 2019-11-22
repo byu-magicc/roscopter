@@ -1,28 +1,31 @@
 <?xml version="1.0"?>
 
 <launch>
-
-
+	<arg name="waypoints_pid"	default="$(find mass_visual)/param/tchalla.yaml"/>
+  <arg name="gps_topic"		default="\tchalla_ned"/>
   <!-- FCU communication -->
   <node name="rosflight_io" pkg="rosflight" type="rosflight_io" output="screen">
+    <param name="port" value="/dev/ttyACM0"/>
     <param name="udp" value="false"/>
   </node>
-
+  <node name="calibrate" pkg="rosservice" type="rosservice" args="call --wait /calibrate_imu"/>
+  <node name="mocap_mapping" pkg="optitrack_vrpn" type="node">
+  	<param name="frame" value="world"/>
+  </node>
   <!-- Load common parameters -->
   <rosparam command="load" file="$(find roscopter)/params/F450.yaml"/>
-
+  <rosparam command="load" file="$(arg waypoints_pid)"/>
   <!-- PID Position Controller -->
   <node name="controller" pkg="roscopter" type="controller">
     <remap from="estimate" to="odom"/>
   </node>
 
   <!-- Estimator -->
-  <rosparam command="load" file="$(find roscopter)/params/ekf_gains.yaml" ns="estimator"/>
+  <rosparam command="load" file="$(find roscopter)/params/ekf.yaml" ns="estimator"/>
   <rosparam command="load" file="$(find roscopter)/params/ekf_drone.yaml" ns="estimator"/>
   <node name="estimator" type="ekf_node" pkg="roscopter" output="screen">
-    <remap from="imu" to="/imu/data"/>
-    <remap from="truth/pose" to="/vrpn_client_node/planck/pose"/>
-    <remap from="truth/transform" to="/multirotor/truth/NED"/>
+	  <remap to="/imu/data" from="imu"/>
+	  <remap to="/tchalla_ned" from="pose"/>
   </node>
 
   <!-- Waypoint Manager -->
