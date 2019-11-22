@@ -20,7 +20,7 @@ find_package(inertial_sense QUIET)
 
 if (${inertial_sense_FOUND})
     message(WARNING "found inertial sense library")
-    add_definitions(-DINERTIAL_SENSE)
+    add_definitions(-DINERTIAL_SENSE) #defines Intertial Sense
 else()
     message(WARNING "Did NOT find inertial sense library")
 endif()
@@ -29,7 +29,7 @@ find_package(ublox QUIET)
 
 if (${ublox_FOUND})
     message(WARNING "found ublox library")
-    add_definitions(-DUBLOX)
+    add_definitions(-DUBLOX) #defines UBLOX
 else()
     message(WARNING "Did NOT find ublox library")
 endif()
