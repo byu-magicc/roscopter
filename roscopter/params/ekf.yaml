@@ -89,6 +89,6 @@ range_noise_stdev: 0.1 # used in sensor model noise
 
 # used in sensor model noise if set to true
 manual_gps_noise: false # choose noise params for GPS or use the values reported from the message topic
-gps_horizontal_stdev: 0.021
-gps_vertical_stdev: 0.04
-gps_speed_stdev: 0.2
+gps_horizontal_stdev: 0.0135
+gps_vertical_stdev: 0.065
+gps_speed_stdev: 0.02

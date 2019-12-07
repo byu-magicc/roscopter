@@ -154,7 +154,7 @@ gps: {
 noise_on: true,
 rate: 5.0, #actual rate for rtk
 topic: gps/data,
-north_stdev: 0.0135, #rtk
+north_stdev: 0.0135, #rtk #rostopic takes the worst of north and east stdev and uses that as the horizontal accuracy
 east_stdev: 0.0135, #rtk
 alt_stdev: 0.065, #rtk
 # north_stdev: 0.0001, #test

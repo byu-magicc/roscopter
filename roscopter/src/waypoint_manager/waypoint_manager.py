@@ -15,7 +15,7 @@ class WaypointManager():
 
         # get parameters
         try:
-            self.waypoint_list = rospy.get_param('~waypoints')
+            self.waypoint_list = rospy.get_param('~waypoints') #params are loaded in launch file
         except KeyError:
             rospy.logfatal('waypoints not set')
             rospy.signal_shutdown('Parameters not set')

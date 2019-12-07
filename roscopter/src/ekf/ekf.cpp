@@ -542,7 +542,7 @@ void EKF::gnssUpdate(const meas::Gnss &z)
 
   // Update ref_lla based on current estimate
   // ???not sure why we would update ref_lla and not sure how this is doing that.
-  Vector3d ref_lla(ref_lat_radians_, ref_lon_radians_, x().ref)
+  Vector3d ref_lla(ref_lat_radians_, ref_lon_radians_, x().ref);
   xform::Xformd x_e2n = x_ecef2ned(lla2ecef(ref_lla));
   x_e2I_.t() = x_e2n.t();
   x_e2I_.q() = x_e2n.q() * q_n2I_;
