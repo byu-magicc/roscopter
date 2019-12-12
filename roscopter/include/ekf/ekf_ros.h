@@ -59,7 +59,9 @@
 #include "inertial_sense/GPS.h"
 #endif
 
-namespace roscopter::ekf
+namespace roscopter
+{
+namespace ekf
 {
 class EKF_ROS
 {
@@ -151,6 +153,7 @@ private:
   void publishEstimates(const sensor_msgs::ImuConstPtr &msg);
 };
 
+}
 }
 
 

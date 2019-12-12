@@ -4,7 +4,9 @@
 
 namespace fs = std::experimental::filesystem;
 
-namespace roscopter::ekf
+namespace roscopter
+{
+namespace ekf
 {
 
 void EKF::initLog()
@@ -32,4 +34,4 @@ void EKF::logCov()
 
 
 }
-
+}

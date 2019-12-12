@@ -37,7 +37,9 @@
 
 using namespace Eigen;
 
-namespace roscopter::ekf
+namespace roscopter
+{
+namespace ekf
 {
 
 EKF_ROS::EKF_ROS() :
@@ -379,4 +381,5 @@ void EKF_ROS::gnssCallbackInertialSense(const inertial_sense::GPSConstPtr &msg)
 
 
 
+}
 }

@@ -1,6 +1,10 @@
 #include "ekf/meas.h"
 
-namespace roscopter::ekf::meas
+namespace roscopter
+{
+namespace ekf
+{
+namespace meas
 {
 
 Base::Base()
@@ -91,5 +95,7 @@ ZeroVel::ZeroVel(double _t)
 {
     t = _t;
     type = ZERO_VEL;
+}
+}
 }
 }

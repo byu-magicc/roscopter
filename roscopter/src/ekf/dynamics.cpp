@@ -7,7 +7,9 @@ using namespace std;
 
 #define T transpose()
 
-namespace roscopter::ekf
+namespace roscopter
+{
+namespace ekf
 {
 
 void EKF::dynamics(const State &x, const Vector6d& u, ErrorState &dx, bool calc_jac)
@@ -69,4 +71,5 @@ void EKF::errorStateDynamics(const State& xhat, const ErrorState& xt, const Vect
     dxdot.v = x.q.rotp(gravity) + a - w.cross(x.v) - (xhat.q.rotp(gravity) + ahat - what.cross(xhat.v));
 }
 
+}
 }
