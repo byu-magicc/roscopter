@@ -46,7 +46,7 @@
     </node>
 
     <!-- Waypoint Manager -->
-    <node name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
+    <node name="waypoint_manager" pkg="roscopter" type="velocity_manager.py" output="screen">
       <remap from="waypoint" to="high_level_command"/>
       <!-- <remap from="state" to="ground_truth/odometry/NED"/> -->
       <remap from="state" to="odom"/>
