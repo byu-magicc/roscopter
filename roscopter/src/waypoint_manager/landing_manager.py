@@ -66,29 +66,12 @@ class WaypointManager():
             # wait for new messages and call the callback when they arrive
             rospy.spin()
 
-
-    def addWaypointCallback(req):
-        print("addwaypoints")
-
-    def removeWaypointCallback(req):
-        print("remove Waypoints")
-
-    def setWaypointsFromFile(req):
-        print("set Waypoints from File")
-
     def odometryCallback(self, msg):
         # Get error between waypoint and current state
         current_position = np.array([msg.pose.pose.position.x,
                                 msg.pose.pose.position.y,
                                 -msg.pose.pose.position.z])
-        # orientation in quaternion form
-        qw = msg.pose.pose.orientation.w
-        qx = msg.pose.pose.orientation.x
-        qy = msg.pose.pose.orientation.y
-        qz = msg.pose.pose.orientation.z
 
-        # yaw from quaternion
-        y = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
         if self.current_waypoint_index < len(self.waypoint_list)-1:
             current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
             error = np.linalg.norm(current_position - current_waypoint[0:3])
