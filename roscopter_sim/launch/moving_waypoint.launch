@@ -1,22 +1,36 @@
 <?xml version="1.0"?>
 <launch>
   <arg name="mav_name"            default="multirotor"/>
+  <arg name="target_name"         default="platform"/>
+  <arg name="target_x"            default="0.0"/>
+  <arg name="target_y"            default="0.0"/>
+  <arg name="target_z"            default="0.1"/>
   <arg name="color"               default="White"/>
   <arg name="x"                   default="0"/>
   <arg name="y"                   default="0"/>
-  <arg name="z"                   default="0.1"/>
+  <arg name="z"                   default="0.4"/>
   <arg name="yaw"                 default="0"/>
   <arg name="debug"               default="false"/>
 
   <!-- Start Simulator -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <arg name="paused" value="true"/>
+    <arg name="paused" value="false"/>
     <arg name="gui" value="true"/>
     <arg name="verbose" value="false"/>
     <arg name="debug" value="$(arg debug)"/>
   </include>
 
-  <!-- Spawn Model in Gazebo -->
+  <!-- Spawn Platform and Multirotor Models in Gazebo -->
+  <include file="$(find roscopter_sim)/launch/spawn_target.launch">
+    <arg name="target_name"         value="$(arg target_name)" />
+    <arg name="model"               value="$(find roscopter_sim)/xacro/$(arg target_name).urdf.xacro" />
+    <arg name="x"                   value="$(arg target_x)"/>
+    <arg name="y"                   value="$(arg target_y)"/>
+    <arg name="z"                   value="$(arg target_z)"/>
+    <arg name="yaw"                 value="$(arg yaw)"/>
+    <arg name="color"               value="Black"/>
+  </include>
+
   <include file="$(find roscopter_sim)/launch/spawn_mav.launch">
     <arg name="mav_name"            value="$(arg mav_name)" />
     <arg name="model"               value="$(find roscopter_sim)/xacro/$(arg mav_name).urdf.xacro" />
@@ -26,6 +40,16 @@
     <arg name="yaw"                 value="$(arg yaw)"/>
     <arg name="color"               value="$(arg color)"/>
   </include>
+
+  <!-- Platform Movement-->
+  <group ns="$(arg target_name)">
+    <!-- Load common parameters -->
+    <rosparam command="load" file="$(find roscopter_sim)/params/$(arg target_name).yaml"/>
+
+    <!-- Platform Velocity Manager -->
+    <node name="platform_manager" pkg="roscopter" type="platform_manager.py" output="screen"/>
+  
+  </group>
 
   <!-- Controller -->
   <group ns="$(arg mav_name)">
@@ -46,10 +70,11 @@
     </node>
 
     <!-- Waypoint Manager -->
-    <node name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
+    <node name="waypoint_manager" pkg="roscopter" type="landing_manager.py" output="screen">
       <remap from="waypoint" to="high_level_command"/>
       <!-- <remap from="state" to="ground_truth/odometry/NED"/> -->
       <remap from="state" to="odom"/>
+      <remap from="platform_odom" to="/$(arg target_name)/odom"/>
     </node>
 
     <!--Estimator-->

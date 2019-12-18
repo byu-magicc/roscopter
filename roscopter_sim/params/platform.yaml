@@ -1,0 +1,12 @@
+
+### Platform Velocity ###
+
+platform_manager: {
+
+linear_velocity:
+  [0.3, 0.3, 0.0], # X, Y, Z velocity (keep planar)
+  
+angular_velocity:
+  [0.0, 0.0, 0.05] # (keep planar)
+
+}

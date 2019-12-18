@@ -39,10 +39,10 @@ alt_D: 32.0
 waypoint_manager: {
 
 waypoints:
-  [[0.0, 0.0, 20.0, 0.0], # North, East, Altitude, Yaw (radians)
-  [12.0, -18.0, 13.0, 1.2], 
-  [0.0, 0.0, 20.0, 0.0],
-  [0.0, 0.0, 0.0, 0.0]],
+  [[0.0, 0.0, 10.0, 0.0], # North, East, Altitude, Yaw (radians)
+  [3.0, -8.0, 13.0, 1.2]], 
+  # [0.0, 0.0, 10.0, 0.0]],
+  # [0.0, 0.0, 0.0, 0.0]],
 
 threshold: 0.1,
 cyle: false

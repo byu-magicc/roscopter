@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+
+<!--
+
+Gazebo Platform Definition File
+Author: Matthew Rydalch
+
+-->
+
+<robot name="Platform" xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <!-- Properties -->
+  <xacro:property name="namespace" value="platform" />
+  <xacro:property name="mass" value="300.0" />
+  <xacro:property name="body_width" value="2.0" />
+  <xacro:property name="body_height" value="0.2" />
+  <xacro:property name="body_inertia">
+    <inertia ixx="70.00" ixy="80.0" ixz="80.0" iyy="80.08" iyz="80.0" izz="80.12" />
+  </xacro:property>
+  <xacro:property name="color" value="Black" />
+
+  <!-- *********************** GAZEBO ROBOT DEFINITION ******************* -->
+
+  <link name="${namespace}/base_link">
+    <inertial>
+      <mass value="${mass}" />  <!-- [kg] -->
+      <origin xyz="0 0 0" />
+      <xacro:insert_block name="body_inertia" />
+    </inertial>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="${body_width} ${body_width} ${body_height}"/>
+      </geometry>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="${body_width} ${body_width} ${body_height}"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- <gazebo reference="${namespace}/base_link">
+    <material>Gazebo/${color}</material>
+  </gazebo> -->
+
+  <gazebo>
+    <plugin name="object_controller" filename="libgazebo_ros_planar_move.so">
+      <commandTopic>cmd_vel</commandTopic>
+      <odometryTopic>odom</odometryTopic>
+      <odometryFrame>odom</odometryFrame>
+      <odometryRate>20.0</odometryRate>
+      <robotBaseFrame>base_footprint</robotBaseFrame>
+      <material>Gazebo/${color}</material>
+    </plugin>
+  </gazebo>
+
+</robot>

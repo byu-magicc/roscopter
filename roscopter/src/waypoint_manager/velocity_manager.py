@@ -99,6 +99,8 @@ class WaypointManager():
 
         error = current_position - current_waypoint[0:3]
 
+        ## big differences between velocity and waypoint start here
+       
         # replace next line with rotation matrix
         # i_to_b = quaternion_matrix([msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w])
         i_to_b = np.eye(3)
