@@ -65,6 +65,7 @@
 
     <!-- PID Position Controller -->
     <node name="controller" pkg="roscopter" type="controller" output="screen">
+      <remap from="platform_odom" to="/$(arg target_name)/odom"/>
       <!-- <remap from="estimate" to="ground_truth/odometry/NED"/> -->
       <remap from="estimate" to="odom"/>
     </node>

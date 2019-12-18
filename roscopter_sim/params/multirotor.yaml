@@ -40,7 +40,7 @@ waypoint_manager: {
 
 waypoints:
   [[0.0, 0.0, 10.0, 0.0], # North, East, Altitude, Yaw (radians)
-  # [3.0, -8.0, 13.0, 1.2], 
+  # [3.0, -8.0, 10.0, 1.2], 
   # [0.0, 0.0, 10.0, 0.0]],
   [0.0, 0.0, 0.0, 0.0]], #if landing on moving platform this final line is a place holder
 

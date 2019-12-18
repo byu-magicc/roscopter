@@ -1,5 +1,10 @@
 #include <controller/controller.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <iostream>
+#include <fstream>
+
+
 
 namespace controller
 {
@@ -43,8 +48,12 @@ Controller::Controller() :
   cmd_sub_ =
       nh_.subscribe("high_level_command", 1, &Controller::cmdCallback, this);
   status_sub_ = nh_.subscribe("status", 1, &Controller::statusCallback, this);
+  pltOdom_sub_ =
+    nh_.subscribe("platform_odom", 1, &Controller::pltOdomCallback, this);
 
   command_pub_ = nh_.advertise<rosflight_msgs::Command>("command", 1);
+  is_landing_sub_ =
+    nh_.subscribe("is_landing", 1, &Controller::isLandingCallback, this);
 }
 
 
@@ -145,6 +154,24 @@ void Controller::cmdCallback(const rosflight_msgs::CommandConstPtr &msg)
     received_cmd_ = true;
 }
 
+void Controller::pltOdomCallback(const nav_msgs::OdometryConstPtr &msg)
+{
+
+  plt_hat_.u = msg->twist.twist.linear.x;
+  plt_hat_.v = msg->twist.twist.linear.y;
+  plt_hat_.w = msg->twist.twist.linear.z;
+
+  plt_hat_.p = msg->twist.twist.angular.x;
+  plt_hat_.q = msg->twist.twist.angular.y;
+  plt_hat_.r = msg->twist.twist.angular.z;
+
+}
+
+void Controller::isLandingCallback(const std_msgs::BoolConstPtr &msg)
+{
+  is_landing_ = msg->data;
+}
+
 void Controller::reconfigure_callback(roscopter::ControllerConfig& config,
                                       uint32_t level)
 {
@@ -237,6 +264,13 @@ void Controller::computeControl(double dt)
 
     xc_.x_dot = pndot_c*cos(xhat_.psi) + pedot_c*sin(xhat_.psi);
     xc_.y_dot = -pndot_c*sin(xhat_.psi) + pedot_c*cos(xhat_.psi);
+
+    if(is_landing_)
+    {
+      xc_.x_dot = xc_.x_dot + plt_hat_.u; //feed forward the platform velocity
+      xc_.y_dot = xc_.y_dot - plt_hat_.v; //subtracted because v is a frame where y is in the opposite direction
+      // xc_.r = xc_.r+plt_hat_.r;
+    }
 
     mode_flag = rosflight_msgs::Command::MODE_XVEL_YVEL_YAWRATE_ALTITUDE;
   }

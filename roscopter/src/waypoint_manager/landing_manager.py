@@ -4,6 +4,7 @@ import numpy as np
 import rospy
 import std_msgs.msg
 
+from std_msgs.msg import Bool
 from nav_msgs.msg import Odometry
 from rosflight_msgs.msg import Command
 from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
@@ -40,6 +41,7 @@ class WaypointManager():
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
         self.plt_odom_sub_ = rospy.Subscriber('platform_odom', Odometry, self.pltOdomCallback, queue_size=5)
         self.waypoint_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
+        self.is_landing_pub_ = rospy.Publisher('is_landing', Bool, queue_size=5, latch=True)
        
         self.current_waypoint_index = 0
 
@@ -86,6 +88,7 @@ class WaypointManager():
                 command_msg.mode = Command.MODE_XPOS_YPOS_YAW_ALTITUDE
                 self.waypoint_pub_.publish(command_msg)
         else:
+            self.is_landing_pub_.publish(True)
             next_waypoint = self.plt_odom
             command_msg = Command()
             command_msg.header.stamp = rospy.Time.now()

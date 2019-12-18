@@ -36,6 +36,17 @@ typedef struct
 
 typedef struct
 {
+  double u = 0.0;
+  double v = 0.0;
+  double w = 0.0;
+
+  double p = 0.0;
+  double q = 0.0;
+  double r = 0.0;
+} plt_vel_t;
+
+typedef struct
+{
   double pn;
   double pe;
   double pd;
@@ -86,6 +97,8 @@ private:
   ros::Subscriber is_flying_sub_;
   ros::Subscriber cmd_sub_;
   ros::Subscriber status_sub_;
+  ros::Subscriber pltOdom_sub_;
+  ros::Subscriber is_landing_sub_;
 
   ros::Publisher command_pub_;
 
@@ -99,6 +112,8 @@ private:
   bool is_flying_;
   bool armed_;
   bool received_cmd_;
+  bool is_landing_ = false;
+
 
   // PID Controllers
   controller::SimplePID PID_x_dot_;
@@ -117,6 +132,7 @@ private:
 
   // Memory for sharing information between functions
   state_t xhat_ = {}; // estimate
+  plt_vel_t plt_hat_ = {}; //platform(frame) twist
   max_t max_ = {};
   rosflight_msgs::Command command_;
   command_t xc_ = {}; // command
@@ -128,6 +144,8 @@ private:
   void isFlyingCallback(const std_msgs::BoolConstPtr &msg);
   void cmdCallback(const rosflight_msgs::CommandConstPtr &msg);
   void statusCallback(const rosflight_msgs::StatusConstPtr &msg);
+  void pltOdomCallback(const nav_msgs::OdometryConstPtr &msg);
+  void isLandingCallback(const std_msgs::BoolConstPtr &msg);
 
   void computeControl(double dt);
   void resetIntegrators();

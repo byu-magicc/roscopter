@@ -4,11 +4,11 @@
 platform_manager: {
 
 linear_velocity:
-  # [0.3, 0.3, 0.0], # X, Y, Z velocity (keep planar)
-  [0.8, 0.8, 0.0], # X, Y, Z velocity (keep planar)
+  [0.3, 0.3, 0.0], # X, Y, Z velocity (keep planar)
+  # [0.8, 0.8, 0.0], # X, Y, Z velocity (keep planar)
   
 angular_velocity:
-  # [0.0, 0.0, 0.05] # (keep planar)
-  [0.0, 0.0, 0.0] # (keep planar)
+  [0.0, 0.0, 0.5] # (keep planar)
+  # [0.0, 0.0, 0.0] # (keep planar)
 
 }
