@@ -32,11 +32,6 @@ class WaypointManager():
 
         self.prev_time = rospy.Time.now()
 
-        # set up Services
-        self.add_waypoint_service = rospy.Service('add_waypoint', AddWaypoint, self.addWaypointCallback)
-        self.remove_waypoint_service = rospy.Service('remove_waypoint', RemoveWaypoint, self.addWaypointCallback)
-        self.set_waypoint_from_file_service = rospy.Service('set_waypoints_from_file', SetWaypointsFromFile, self.addWaypointCallback)
-
         # Wait a second before we publish the first waypoint
         while (rospy.Time.now() < rospy.Time(2.)):
             pass
@@ -96,7 +91,7 @@ class WaypointManager():
             command_msg.header.stamp = rospy.Time.now()
             command_msg.x = next_waypoint[0]
             command_msg.y = next_waypoint[1]
-            command_msg.F = next_waypoint[2]
+            command_msg.F = next_waypoint[2]-0.5
             command_msg.z = 0
             command_msg.mode = Command.MODE_XPOS_YPOS_YAW_ALTITUDE
             self.waypoint_pub_.publish(command_msg)
