@@ -4,11 +4,23 @@
 platform_manager: {
 #The platform uses a NWU body fixed frame
 linear_velocity:
-  [1.0, 1.0, 0.0], # X, Y, Z velocity (keep planar)
+  [[0.3, 0.7, 0.0],
+  [0.1, 0.2, 0.0],
+  [-0.1, -0.2, 0.0],
+  [-0.3, -0.7, 0.0],
+  [-0.1, -0.2, 0.0],
+  [0.1, 0.2, 0.0]], # X, Y, Z velocity (keep planar)
   # [0.0, 0.0, 0.0], # X, Y, Z velocity (keep planar)
   
 angular_velocity:
-  [0.0, 0.0, 0.5] # (keep planar)
+  [[0.0, 0.0, 0.0],
+  [0.0, 0.0, 0.0],
+  [0.0, 0.0, 0.0],
+  [0.0, 0.0, 0.0],
+  [0.0, 0.0, 0.0],
+  [0.0, 0.0, 0.0]], # (keep planar)
   # [0.0, 0.0, 0.0] # (keep planar)
+
+transition_time: 0.5
 
 }
