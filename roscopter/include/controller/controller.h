@@ -36,17 +36,6 @@ typedef struct
 
 typedef struct
 {
-  double u = 0.0;
-  double v = 0.0;
-  double w = 0.0;
-
-  double p = 0.0;
-  double q = 0.0;
-  double r = 0.0;
-} plt_vel_t;
-
-typedef struct
-{
   double pn;
   double pe;
   double pd;
@@ -132,7 +121,7 @@ private:
 
   // Memory for sharing information between functions
   state_t xhat_ = {}; // estimate
-  plt_vel_t plt_hat_ = {}; //platform(frame) twist
+  state_t plt_hat_ = {}; //platform(frame) state
   max_t max_ = {};
   rosflight_msgs::Command command_;
   command_t xc_ = {}; // command

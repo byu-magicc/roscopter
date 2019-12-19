@@ -17,7 +17,8 @@ class PlatformManager():
             rospy.signal_shutdown('Parameters not set')
 
         # Wait a second before we publish the first waypoint
-        while (rospy.Time.now() < rospy.Time(15.)):
+        # while (rospy.Time.now() < rospy.Time(15.)):
+        while (rospy.Time.now() < rospy.Time(3.)):
             pass
 
         # Set Up Publishers

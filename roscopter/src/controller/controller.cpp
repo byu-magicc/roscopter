@@ -157,13 +157,23 @@ void Controller::cmdCallback(const rosflight_msgs::CommandConstPtr &msg)
 void Controller::pltOdomCallback(const nav_msgs::OdometryConstPtr &msg)
 {
 
-  plt_hat_.u = msg->twist.twist.linear.x;
-  plt_hat_.v = msg->twist.twist.linear.y;
-  plt_hat_.w = msg->twist.twist.linear.z;
+  // Convert Quaternion to RPY
+  tf::Quaternion tf_quat;
+  tf::quaternionMsgToTF(msg->pose.pose.orientation, tf_quat);
+  tf::Matrix3x3(tf_quat).getRPY(plt_hat_.phi, plt_hat_.theta, plt_hat_.psi);
+  plt_hat_.psi = -plt_hat_.psi; //have to negate to go from Counter Clockwise positive rotation to Clockwise;
 
-  plt_hat_.p = msg->twist.twist.angular.x;
-  plt_hat_.q = msg->twist.twist.angular.y;
-  plt_hat_.r = msg->twist.twist.angular.z;
+  double sinp = sin(plt_hat_.psi);
+  double cosp = cos(plt_hat_.psi);
+
+  double u = msg->twist.twist.linear.x;
+  double v = -msg->twist.twist.linear.y; //have to negate to go from NWU to NE altitude frame
+  double w = msg->twist.twist.linear.z;
+
+  plt_hat_.u = cosp * u - sinp * v;
+  plt_hat_.v = sinp * u + cosp * v;
+
+  plt_hat_.r = -msg->twist.twist.angular.z; //have to negate to go from Counter Clockwise positive rotation to Clockwise
 
 }
 
@@ -268,8 +278,8 @@ void Controller::computeControl(double dt)
     if(is_landing_)
     {
       xc_.x_dot = xc_.x_dot + plt_hat_.u; //feed forward the platform velocity
-      xc_.y_dot = xc_.y_dot - plt_hat_.v; //subtracted because v is a frame where y is in the opposite direction
-      // xc_.r = xc_.r+plt_hat_.r;
+      xc_.y_dot = xc_.y_dot + plt_hat_.v;
+      xc_.r = xc_.r+plt_hat_.r;
     }
 
     mode_flag = rosflight_msgs::Command::MODE_XVEL_YVEL_YAWRATE_ALTITUDE;

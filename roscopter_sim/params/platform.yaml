@@ -2,13 +2,13 @@
 ### Platform Velocity ###
 
 platform_manager: {
-
+#The platform uses a NWU body fixed frame
 linear_velocity:
-  [0.3, 0.3, 0.0], # X, Y, Z velocity (keep planar)
-  # [0.8, 0.8, 0.0], # X, Y, Z velocity (keep planar)
+  [1.0, 1.0, 0.0], # X, Y, Z velocity (keep planar)
+  # [0.0, 0.0, 0.0], # X, Y, Z velocity (keep planar)
   
 angular_velocity:
-  [0.0, 0.0, 0.5] # (keep planar)
+  [0.0, 0.0, 1.0] # (keep planar)
   # [0.0, 0.0, 0.0] # (keep planar)
 
 }
