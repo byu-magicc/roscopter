@@ -44,7 +44,7 @@ class WaypointManager():
         self.is_landing_pub_ = rospy.Publisher('is_landing', Bool, queue_size=5, latch=True)
        
         self.current_waypoint_index = 0
-        self.landing_mode = 0
+        self.landing_mode = 0 #landing mode 0, try to hover over the target
 
         command_msg = Command()
         current_waypoint = np.array(self.waypoint_list[0])
@@ -93,12 +93,12 @@ class WaypointManager():
             self.is_landing_pub_.publish(True)
             next_waypoint = self.plt_odom
             error = np.linalg.norm(current_position[0:2]-next_waypoint[0:2])
-            if error > self.threshold:
-                self.landing_mode = 1
-                command_msg.F = next_waypoint[2]+5.0
-            else:
-                self.landing_mode = 2
+            if error < self.threshold: #if the drone gets above the target try to land
+                self.landing_mode = 1 #attempt to land
+            if self.landing_mode == 1:
                 command_msg.F = next_waypoint[2]-1.0
+            else:
+                command_msg.F = next_waypoint[2]+5.0 #landing mode 0, try to hover over the target
             command_msg.header.stamp = rospy.Time.now()
             command_msg.x = next_waypoint[0]
             command_msg.y = next_waypoint[1]

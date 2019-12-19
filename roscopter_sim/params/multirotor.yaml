@@ -42,7 +42,7 @@ waypoints:
   [[0.0, 0.0, 5.0, 0.0], # North, East, Altitude, Yaw (radians)
   [0.0, 0.0, 0.0, 0.0]], #if landing on moving platform this final line is a place holder
 
-threshold: 0.5,
+threshold: 1.0,
 cyle: false
 
 }
