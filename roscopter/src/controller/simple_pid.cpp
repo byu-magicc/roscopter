@@ -135,6 +135,9 @@ double SimplePID::computePID(double desired, double current, double dt, double x
     // largest value it could be to max out the control
     integrator_ = (u_sat - p_term + d_term) / ki_;
   }
+  // std::cerr << "p = " << kp_ << "\n";
+  // std::cerr << "d = " << kd_ << "\n";
+  // std::cerr << "i = " << ki_ << "\n";
   return u_sat;
 }
 
