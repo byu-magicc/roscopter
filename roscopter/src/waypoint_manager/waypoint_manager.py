@@ -1,7 +1,8 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 import numpy as np
 import rospy
+import std_msgs.msg
 
 import std_msgs.msg
 from nav_msgs.msg import Odometry
@@ -32,6 +33,10 @@ class WaypointManager():
         self.add_waypoint_service = rospy.Service('add_waypoint', AddWaypoint, self.addWaypointCallback)
         self.remove_waypoint_service = rospy.Service('remove_waypoint', RemoveWaypoint, self.addWaypointCallback)
         self.set_waypoint_from_file_service = rospy.Service('set_waypoints_from_file', SetWaypointsFromFile, self.addWaypointCallback)
+
+        # Wait a second before we publish the first waypoint
+        while (rospy.Time.now() < rospy.Time(2.)):
+            pass
 
         # Set Up Publishers and Subscribers
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
@@ -76,7 +81,7 @@ class WaypointManager():
         current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
         current_position = np.array([msg.pose.pose.position.x,
                                      msg.pose.pose.position.y,
-                                     msg.pose.pose.position.z])
+                                     -msg.pose.pose.position.z])
                                      
         # orientation in quaternion form
         qw = msg.pose.pose.orientation.w

@@ -14,7 +14,9 @@ ErrorState::ErrorState() :
     q(arr.data()+3),
     v(arr.data()+6),
     ba(arr.data()+9),
-    bg(arr.data()+12)
+    bg(arr.data()+12),
+    bb(*(arr.data()+15)),
+    ref(*(arr.data()+16))
 {
     arr.setConstant(NAN);
 }
@@ -110,14 +112,16 @@ State::State() :
     v(arr.data()+8),
     ba(arr.data()+11),
     bg(arr.data()+14),
+    bb(*(arr.data()+17)),
+    ref(*(arr.data()+18)),
     imu(arr.data()+1+NX),
     a(arr.data()+1+NX),
     w(arr.data()+1+NX+3)
 {
-#ifndef NDEBUG
+//#ifndef NDEBUG
     // to help with tracking down uninitialized memory, in debug mode fill with nans
     arr.setConstant(NAN);
-#endif
+//#endif
 }
 
 State::State(const State &other) :
@@ -140,6 +144,8 @@ State State::operator+(const ErrorState& dx) const
     xp.v = v + dx.v;
     xp.ba = ba + dx.ba;
     xp.bg = bg + dx.bg;
+    xp.bb = bb + dx.bb;
+    xp.ref = ref + dx.ref;
     return xp;
 }
 
@@ -151,6 +157,8 @@ State State::operator+(const Matrix<double, ErrorState::SIZE, 1>& dx) const
     xp.v = v + dx.segment<3>(ErrorState::DV);
     xp.ba = ba + dx.segment<3>(ErrorState::DBA);
     xp.bg = bg + dx.segment<3>(ErrorState::DBG);
+    xp.bb = bb + dx(ErrorState::DBB);
+    xp.ref = ref + dx(ErrorState::DREF);
     return xp;
 }
 
@@ -161,6 +169,8 @@ State& State::operator+=(const VectorXd& dx)
     v += dx.segment<3>(ErrorState::DV);
     ba += dx.segment<3>(ErrorState::DBA);
     bg += dx.segment<3>(ErrorState::DBG);
+    bb += dx(ErrorState::DBB);
+    ref += dx(ErrorState::DREF);
 
     *this;
 }
@@ -172,6 +182,8 @@ State& State::operator+=(const ErrorState& dx)
     v = v + dx.v;
     ba = ba + dx.ba;
     bg = bg + dx.bg;
+    bb = bb + dx.bb;
+    ref = ref + dx.ref;
 
     return *this;
 }
@@ -184,6 +196,8 @@ ErrorState State:: operator-(const State& dx) const
     del.v = v - dx.v;
     del.ba = ba - dx.ba;
     del.bg = bg - dx.bg;
+    del.bb = bb - dx.bb;
+    del.ref = ref - dx.ref;
     return del;
 }
 
@@ -194,14 +208,14 @@ StateBuf::StateBuf(int _size) :
     head(0),
     tail(0)
 {
-#ifndef NDEBUG
+//#ifndef NDEBUG
     // to help with tracking down uninitialized memory, in debug mode fill with nans
     for (int i = 0; i < buf.size(); i++)
     {
         buf[i].x.arr.setConstant(NAN);
         buf[i].P.setConstant(NAN);
     }
-#endif
+//#endif
 }
 
 State& StateBuf::x()

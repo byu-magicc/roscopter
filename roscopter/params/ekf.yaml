@@ -1,55 +1,93 @@
 ## Post-Process Information
-bag_name: "/home/superjax/rosbag/roscopter_carry/carry1.bag"
-# bag_name: "/home/superjax/rosbag/roscopter_carry/carry2.bag"
-# bag_name: "/home/superjax/rosbag/roscopter_carry/carry3.bag"
-imu_topic: "/rf/imu"
-start_time: 10
-duration: 100000
+# bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/groot_sensors_stationary.bag"
+# bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/groot_sensors_triangle.bag"
+# bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_walkpath.bag"
+# bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_north_eastfirst.bag"
+# bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_parkinglot_south_eastfirst.bag"
+bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_updown.bag"
+status_topic: "/status"
+imu_topic: "/imu/data"
+baro_topic: "/serial/baro"
+range_topic: "/serial/laser"
+pose_topic: ""
+odom_topic: ""
+gnss_topic: ""
+ublox_gnss_topic: ""
+inertial_sense_gnss_topic: "/ins/gps"
+
+start_time: 0
+duration: 1000
 
 ## Is_flying checks
 enable_arm_check: false # require armed before checking for is_flying
 is_flying_threshold: 10.5 # if accel measurement exceed this magnitude, set is_flying
+update_baro_velocity_threshold: 0.5
 
 ## Logging
 log_prefix: "/tmp/roscopter/ekf/"
 enable_log: true
 
 ## Measurement Processing
-enable_out_of_order: false
-use_truth: false
+enable_partial_update: true
+enable_out_of_order: false # TODO this isnt fully implemented
+use_mocap: true
 use_gnss: true
-use_alt: true
+use_baro: true
+use_range: false
 use_zero_vel: true
 
-R_zero_vel: [0.001, 0.001, 0.001,  # vel
-             0.01]                 # yaw
+R_zero_vel: [0.001, 0.001, 0.001, # vel
+              0.001] # Altitude
 
 ## Initial Uncertainty
-P0: [10., 10.0, 10.0,
-     0.1, 0.1, 2.0,
-     0.001, 0.001, 0.001,
-     0.3, 0.3, 0.3,
-     0.1, 0.1, 0.1]
+P0: [10.0, 10.0, 10.0, # pos
+     0.01, 0.01, 0.01, # att
+     0.001, 0.001, 0.001, # vel
+     0.01, 0.01, 0.01, # accel bias
+     0.001, 0.001, 0.001, # gyro bias
+     9.0,           # baro bias
+     100.0] # reference altitude
 
 ## Additive Process Noise
 Qx: [0.000, 0.000, 0.000,       # pos
-     0.001, 0.001, 0.001,       # att
-     0.001, 0.001, 0.001,       # vel
-     0.001, 0.001, 0.001,       # accel bias
-     0.0001, 0.0001, 0.0001]    # gyro bias
+     0.000, 0.000, 0.000,       # att
+     0.00001, 0.00001, 0.00001,       # vel
+     0.0001, 0.0001, 0.0001,       # accel bias
+     0.0001, 0.0001, 0.0001,    # gyro bias
+     0.000001,                    # baro bias
+     1.0]                       # reference altitude
+
+## Lambda (Partial Update)
+# 1.0 = use full update
+# 0.0 = do not update at all
+lambda: [1.0, 1.0, 1.0,       # pos
+         1.0, 1.0, 1.0,       # att
+         1.0, 1.0, 1.0,       # vel
+         0.1, 0.1, 0.1,       # accel bias
+         0.1, 0.1, 0.1,       # gyro bias
+         0.5,                 # baro bias
+         0.3]                 # reference altitude
 
 # Constant Parameeters
-p_b2g: [0, 0, 0]
+p_b2g: [0, 0, 0] # position from body frame to gps frame
 
 # Initial State
-ref_lla: [40.24632, -111.646882, 1415.0]
-ref_heading: 0.0
+manual_ref_lla: false # Use manual ref_lla or use first lla from gps
+ref_lla: [40.267320, -111.635629, 1387.0]
+ref_heading: 0.0 # reference heading for inertial frame (from north)
+
 x0: [0, 0, 0,       # pos
      1, 0, 0, 0]    # att
 
 ## Sensor Noise
 accel_noise_stdev: 0.5
 gyro_noise_stdev: 0.02
-position_noise_stdev: 0.01
-attitude_noise_stdev: 0.01
-alt_noise_stdev: 0.1
+position_noise_stdev: 0.01 # Mocap
+attitude_noise_stdev: 0.01 # Mocap
+baro_pressure_noise_stdev: 2.0
+range_noise_stdev: 0.1
+
+manual_gps_noise: false # choose noise params for GPS or use the values reported from the message topic
+gps_horizontal_stdev: 0.021
+gps_vertical_stdev: 0.04
+gps_speed_stdev: 0.2

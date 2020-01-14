@@ -43,11 +43,17 @@
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/Range.h>
 #include <nav_msgs/Odometry.h>
+#include <rosflight_msgs/Barometer.h>
 #include <rosflight_msgs/Status.h>
 #include <rosflight_msgs/GNSS.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <geometry_msgs/Vector3Stamped.h>
 #include <std_msgs/Bool.h>
+
+#ifdef UBLOX
+#include "ublox/PosVelEcef.h"
+#endif
 
 #ifdef INERTIAL_SENSE
 #include "inertial_sense/GPS.h"
@@ -65,11 +71,17 @@ public:
   void initROS();
 
   void imuCallback(const sensor_msgs::ImuConstPtr& msg);
+  void baroCallback(const rosflight_msgs::BarometerConstPtr& msg);
+  void rangeCallback(const sensor_msgs::RangeConstPtr& msg);
   void poseCallback(const geometry_msgs::PoseStampedConstPtr &msg);
   void odomCallback(const nav_msgs::OdometryConstPtr &msg);
   void gnssCallback(const rosflight_msgs::GNSSConstPtr& msg);
   void mocapCallback(const ros::Time& time, const xform::Xformd &z);
   void statusCallback(const rosflight_msgs::StatusConstPtr& msg);
+
+#ifdef UBLOX
+  void gnssCallbackUblox(const ublox::PosVelEcefConstPtr& msg);
+#endif
 
 #ifdef INERTIAL_SENSE
   void gnssCallbackInertialSense(const inertial_sense::GPSConstPtr& msg);
@@ -85,15 +97,25 @@ private:
   ros::NodeHandle nh_private_;
 
   ros::Subscriber imu_sub_;
+  ros::Subscriber baro_sub_;
   ros::Subscriber pose_sub_;
   ros::Subscriber odom_sub_;
   ros::Subscriber gnss_sub_;
   ros::Subscriber status_sub_;
 
   ros::Publisher odometry_pub_;
-  ros::Publisher bias_pub_;
+  ros::Publisher euler_pub_;
+  ros::Publisher imu_bias_pub_;
   ros::Publisher is_flying_pub_;
+
+  sensor_msgs::Imu imu_bias_msg_;
   nav_msgs::Odometry odom_msg_;
+  geometry_msgs::Vector3Stamped euler_msg_;
+  std_msgs::Bool is_flying_msg_;
+
+#ifdef UBLOX
+  ros::Subscriber ublox_gnss_sub_;
+#endif
 
 #ifdef INERTIAL_SENSE
   ros::Subscriber is_gnss_sub_;
@@ -106,6 +128,8 @@ private:
 
   bool use_odom_;
   bool use_pose_;
+
+  bool ros_initialized_ = false;
   
   bool is_flying_ = false;
   bool armed_ = false;
@@ -116,7 +140,15 @@ private:
   
   Matrix6d imu_R_;
   Matrix6d mocap_R_;
-  Eigen::Matrix<double, 1, 1> alt_R_;
+  double baro_R_;
+  double range_R_;
+
+  bool manual_gps_noise_;
+  double gps_horizontal_stdev_;
+  double gps_vertical_stdev_;
+  double gps_speed_stdev_;
+
+  void publishEstimates(const sensor_msgs::ImuConstPtr &msg);
 };
 
 }

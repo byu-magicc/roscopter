@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(roscopter_sim)
 
+find_package(gazebo QUIET)
+IF(NOT gazebo_FOUND)
+  message(STATUS "Gazebo not found. Not building roscopter_sim.")
+ELSE()
 set(CMAKE_CXX_STANDARD 11)
 if (NOT CMAKE_BUILD_TYPE)
     # Options: Debug, Release, MinSizeRel, RelWithDebInfo
@@ -27,7 +31,6 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 find_package(Eigen3 REQUIRED)
-find_package(gazebo REQUIRED)
 link_directories(${GAZEBO_LIBRARY_DIRS})
 
 catkin_package(
@@ -54,3 +57,4 @@ install(
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 )
 
+ENDIF()
