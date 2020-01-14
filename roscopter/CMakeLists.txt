@@ -25,6 +25,15 @@ else()
     message(WARNING "Did NOT find inertial sense library")
 endif()
 
+find_package(ublox QUIET)
+
+if (${ublox_FOUND})
+    message(WARNING "found ublox library")
+    add_definitions(-DUBLOX)
+else()
+    message(WARNING "Did NOT find ublox library")
+endif()
+
 generate_dynamic_reconfigure_options(
   cfg/Controller.cfg
 )
@@ -71,8 +80,9 @@ add_library(ekf_ros src/ekf/ekf_ros.cpp)
 target_link_libraries(ekf_ros ekf ${catkin_LIBRARIES})
 add_dependencies(ekf_ros ${catkin_EXPORTED_TARGETS})
 
-#add_executable(ekf_node src/ekf/ekf_node.cpp)
-#target_link_libraries(ekf_node ekf_ros ${catkin_LIBRARIES})
+add_executable(ekf_node src/ekf/ekf_node.cpp)
+target_link_libraries(ekf_node ekf_ros ${catkin_LIBRARIES})
+add_dependencies(ekf_node ${catkin_EXPORTED_TARGETS})
 
 add_executable(ekf_rosbag src/ekf/ekf_rosbag.cpp)
 target_link_libraries(ekf_rosbag ekf_ros ${catkin_LIBRARIES})

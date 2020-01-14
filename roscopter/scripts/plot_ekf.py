@@ -11,7 +11,7 @@ def plotLla():
     f = plt.figure()
     plt.suptitle("lla")
     for i in range(3):
-        plt.subplot(3, 2,2*i+1)
+        plt.subplot(3, 2, 2*i+1)
         if i == 2:
             plt.plot(data.lla['t'], data.lla['hat'][:,i], label=r"$\hat{z}$")
             plt.plot(data.lla['t'], data.lla['bar'][:,i], label=r"$\bar{z}$")
@@ -20,9 +20,15 @@ def plotLla():
             plt.plot(data.lla['t'], data.lla['bar'][:,i]*180.0/np.pi, label=r"$\bar{z}$")
         if i == 0:
             plt.legend()
-    plt.subplot(1,2,2)
+    plt.subplot(2,2,2)
     plt.plot(data.lla['hat'][:,1]*180/np.pi, data.lla['hat'][:,0]*180.0/np.pi, label=r"$\hat{z}$")
     plt.plot(data.lla['bar'][:,1]*180/np.pi, data.lla['bar'][:,0]*180.0/np.pi, label=r"$\bar{z}$")
+    plt.subplot(2,2,4)
+    plt.plot(data.x['t'], data.x['ref'], label=r"$\hat{z}$")
+    if plotCov:
+        plt.plot(data.x['t'], data.x['ref'][:,] + 2.0*np.sqrt(data.cov['P'][:,16, 16]), '-k', alpha=0.3)
+        plt.plot(data.x['t'], data.x['ref'][:,] - 2.0*np.sqrt(data.cov['P'][:,16, 16]), '-k', alpha=0.3)
+    plt.ylabel("Refernce Altitude (m)")
     pw.addPlot("lla", f);
 
 def plotIMU():
@@ -53,6 +59,15 @@ def plotPosition():
         if i == 0:
             plt.legend()
     pw.addPlot("Position", f)
+
+def plotPosition2d(): 
+    f = plt.figure()
+    plt.suptitle('Position 2d')
+    plt.plot(data.ref['x']['p'][:,1], data.ref['x']['p'][:,0], label='ref')
+    plt.plot(data.x['x']['p'][:,1], data.x['x']['p'][:,0], label=r"$\hat{x}$")
+    plt.ylabel("North (m)")
+    plt.xlabel("East (m)")
+    pw.addPlot("Position 2d", f)
 
 def plotVelocity(): 
     f = plt.figure()
@@ -89,7 +104,7 @@ def plotEuler():
     rad2deg = 180.0/np.pi
     for i in range(3):
         plt.subplot(3, 1, i+1)
-        plt.title(vtitles[i])
+        plt.title(etitles[i])
         plt.plot(data.ref['t'], data.ref['euler'][:,i] * rad2deg, label='ref')
         plt.plot(data.x['t'], data.x['euler'][:,i] * rad2deg, label=r"$\hat{x}$")
         if plotCov:
@@ -131,6 +146,40 @@ def plotZVRes():
             plt.legend()
     pw.addPlot("ZeroVel", f)
 
+def plotBaroRes():
+    f = plt.figure()
+    plt.suptitle('Baro Res')
+    plt.subplot(4, 1, 1)
+    plt.plot(data.baroRes['t'], data.baroRes['z'][:], label=r'$z$')                          
+    plt.plot(data.baroRes['t'], data.baroRes['zhat'][:], label=r'$\hat{z}$')                          
+    plt.legend()
+    plt.subplot(4, 1, 2)
+    plt.plot(data.baroRes['t'], data.baroRes['r'][:], label="r")                          
+    plt.legend()
+    plt.subplot(4, 1, 3)
+    plt.plot(data.baroRes['t'], data.baroRes['temp'][:], label="temp")                          
+    plt.ylabel('Temperature (K)')
+    plt.legend()
+    plt.subplot(4, 1, 4)
+    plt.plot(data.x['t'], data.x['bb'][:], label="bias")                          
+    if plotCov:
+        plt.plot(data.x['t'], data.x['bb'][:, ] + 2.0*np.sqrt(data.cov['P'][:,15, 15]), '-k', alpha=0.3)                
+        plt.plot(data.x['t'], data.x['bb'][:, ] - 2.0*np.sqrt(data.cov['P'][:,15, 15]), '-k', alpha=0.3)                
+    plt.legend()
+    pw.addPlot("Baro Res", f)
+
+def plotRangeRes():
+    f = plt.figure()
+    plt.suptitle('Range Res')
+    plt.subplot(2, 1, 1)
+    plt.plot(data.rangeRes['t'], data.rangeRes['z'][:], label=r'$z$')                          
+    plt.plot(data.rangeRes['t'], data.rangeRes['zhat'][:], label=r'$\hat{z}$')                          
+    plt.legend()
+    plt.subplot(2, 1, 2)
+    plt.plot(data.rangeRes['t'], data.rangeRes['r'][:], label="r")                          
+    plt.legend()
+    pw.addPlot("Range Res", f)
+
 def plotGnssRes():
     f = plt.figure()
     plt.suptitle('Gnss Res')
@@ -148,9 +197,10 @@ def plotResults(directory):
     plt.rc('text', usetex=True)
     plt.rc('font', family='serif')
 
-    global xtitles, vtitles, imu_titles, colors, data, pw, plotCov
+    global xtitles, vtitles, etitles, imu_titles, colors, data, pw, plotCov
     xtitles = ['$p_x$', '$p_y$', '$p_z$', '$q_w$', '$q_x$', '$q_y$', '$q_z$']
     vtitles = ['$v_x$', '$v_y$', '$v_z$']
+    etitles = ['$\phi$', r'$\theta$', '$\psi$']
     imu_titles = [r"$acc_x$", r"$acc_y$", r"$acc_z$", r"$\omega_x$", r"$\omega_y$", r"$\omega_z$"]
     colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
 
@@ -160,6 +210,7 @@ def plotResults(directory):
     pw = plotWindow()
 
     plotPosition()
+    plotPosition2d()
     plotVelocity()
     plotAttitude()
     plotEuler()
@@ -168,6 +219,8 @@ def plotResults(directory):
     plotImuBias()
 
     plotZVRes()
+    plotBaroRes()
+    plotRangeRes()
     plotGnssRes()
 
     pw.show()

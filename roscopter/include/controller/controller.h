@@ -95,9 +95,10 @@ private:
   double max_thrust_;
   double max_accel_xy_;
   double max_accel_z_;
-  double drag_constant_;
+  double min_altitude_;
   bool is_flying_;
   bool armed_;
+  bool received_cmd_;
 
   // PID Controllers
   controller::SimplePID PID_x_dot_;

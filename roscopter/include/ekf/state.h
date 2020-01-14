@@ -20,8 +20,10 @@ public:
         DV = 6,
         DBA = 9,
         DBG = 12,
-        NDX = 15,
-        SIZE = 15
+        DBB = 15,
+        DREF = 16,
+        NDX = 17,
+        SIZE = 17
     };
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     Eigen::Matrix<double, SIZE, 1> arr;
@@ -31,6 +33,8 @@ public:
     Eigen::Map<Eigen::Vector3d> v;
     Eigen::Map<Eigen::Vector3d> ba;
     Eigen::Map<Eigen::Vector3d> bg;
+    double& bb; // bias for barometer measurements
+    double& ref; // reference global altitude of NED frame
 
     ErrorState();
     ErrorState(const ErrorState& obj);
@@ -75,9 +79,11 @@ public:
       V = 8,
       BA = 11,
       BG = 14,
-      A = 17,
-      W = 20,
-      NX = 16, // number of states
+      BB = 17,
+      REF = 18,
+      A = 19,
+      W = 22,
+      NX = 18, // number of states
       SIZE = 1 + NX + 6
   };
   Eigen::Matrix<double, SIZE, 1> arr;
@@ -93,6 +99,8 @@ public:
   Eigen::Map<Eigen::Vector3d> v;
   Eigen::Map<Eigen::Vector3d> ba;
   Eigen::Map<Eigen::Vector3d> bg;
+  double& bb; // barometer pressure bias
+  double& ref; // reference global altitude of NED frame
 
   State();
   State(const State& other);

@@ -47,7 +47,15 @@ private:
 
     EKF_ROS ekf_;
 
+    std::string status_topic_;
     std::string imu_topic_;
+    std::string baro_topic_;
+    std::string range_topic_;
+    std::string pose_topic_;
+    std::string odom_topic_;
+    std::string gnss_topic_;
+    std::string ublox_gnss_topic_;
+    std::string inertial_sense_gnss_topic_;
 
     Matrix6d imu_R_;
     Matrix6d mocap_R_;
