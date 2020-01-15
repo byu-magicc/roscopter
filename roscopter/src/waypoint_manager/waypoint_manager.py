@@ -2,9 +2,7 @@
 
 import numpy as np
 import rospy
-import std_msgs.msg
 
-import std_msgs.msg
 from nav_msgs.msg import Odometry
 from rosflight_msgs.msg import Command
 from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
@@ -18,18 +16,18 @@ class WaypointManager():
         try:
             self.waypoint_list = rospy.get_param('~waypoints')
         except KeyError:
-            rospy.logfatal('waypoints not set')
-            rospy.signal_shutdown('Parameters not set')
+            rospy.logfatal('[waypoint_manager] waypoints not set')
+            rospy.signal_shutdown('[waypoint_manager] Parameters not set')
 
         self.len_wps = len(self.waypoint_list)
         
         # how close does the MAV need to get before going to the next waypoint?
+
         self.pos_threshold = rospy.get_param('~threshold', 5)
         self.heading_threshold = rospy.get_param('~heading_threshold', 0.035)  # radians
         self.cyclical_path = rospy.get_param('~cycle', True)
-
-        self.prev_time = rospy.Time.now()
-
+        self.print_wp_reached = rospy.get_param('~print_wp_reached', True)
+        
         # set up Services
         self.add_waypoint_service = rospy.Service('add_waypoint', AddWaypoint, self.addWaypointCallback)
         self.remove_waypoint_service = rospy.Service('remove_waypoint', RemoveWaypoint, self.addWaypointCallback)
@@ -56,13 +54,13 @@ class WaypointManager():
 
 
     def addWaypointCallback(self, req):
-        print("addwaypoints")
+        print("[waypoint_manager] addwaypoints")
 
     def removeWaypointCallback(self, req):
-        print("remove Waypoints")
+        print("[waypoint_manager] remove Waypoints")
 
     def setWaypointsFromFile(self, req):
-        print("set Waypoints from File")
+        print("[waypoint_manager] set Waypoints from File")
 
     def odometryCallback(self, msg):
         # stop iterating over waypoints if cycle==false and last waypoint reached
@@ -89,7 +87,8 @@ class WaypointManager():
 
         if position_error < self.pos_threshold and heading_error < self.heading_threshold:
             ind = self.current_waypoint_index
-            rospy.loginfo(f'[waypoint_manager] Reached waypoint {ind+1}')
+            if self.print_wp_reached:
+                rospy.loginfo(f'[waypoint_manager] Reached waypoint {ind+1}')
             # Get new waypoint index
             self.current_waypoint_index += 1
             self.current_waypoint_index %= self.len_wps
