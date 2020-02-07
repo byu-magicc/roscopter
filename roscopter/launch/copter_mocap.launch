@@ -6,6 +6,7 @@
   <!-- FCU communication -->
   <node name="rosflight_io" pkg="rosflight" type="rosflight_io" output="screen">
     <param name="udp" value="false"/>
+    <param name="port" value="/dev/ttyACM0"/>
   </node>
 
   <!-- Load common parameters -->
@@ -17,8 +18,7 @@
   </node>
 
   <!-- Estimator -->
-  <rosparam command="load" file="$(find roscopter)/params/ekf_gains.yaml" ns="estimator"/>
-  <rosparam command="load" file="$(find roscopter)/params/ekf_drone.yaml" ns="estimator"/>
+  <rosparam command="load" file="$(find roscopter)/params/ekf.yaml" ns="estimator"/>
   <node name="estimator" type="ekf_node" pkg="roscopter" output="screen">
     <remap from="imu" to="/imu/data"/>
     <remap from="truth/pose" to="/vrpn_client_node/planck/pose"/>
