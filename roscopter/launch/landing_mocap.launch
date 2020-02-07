@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+
+<launch>
+  <arg name="mav_name"            value="ragnarok"/>
+  <arg name="target_name"         value="Platform_boat_landing"/>
+
+  <!-- FCU communication -->
+  <node name="rosflight_io" pkg="rosflight" type="rosflight_io" output="screen">
+    <param name="udp" value="false"/>
+  </node>
+
+  <!-- Load common parameters -->
+  <rosparam command="load" file="$(find roscopter)/params/$(arg mav_name).yaml"/>
+
+  <!-- PID Position Controller -->
+  <node name="controller" pkg="roscopter" type="controller">
+    <remap from="platform_odom" to="/$(arg target_name)_ned"/>
+    <remap from="estimate" to="odom"/>
+  </node>
+
+  <!-- Estimator -->
+  <rosparam command="load" file="$(find roscopter)/params/ekf.yaml" ns="estimator"/>
+  <!-- <rosparam command="load" file="$(find roscopter)/params/ekf_drone.yaml" ns="estimator"/> -->
+  <node name="estimator" type="ekf_node" pkg="roscopter" output="screen">
+    <remap from="imu" to="/imu/data"/>
+    <!-- <remap from="truth/pose" to="/vrpn_client_node/planck/pose"/> -->
+    <remap from="truth/transform" to="/multirotor/truth/NED"/>
+  </node>
+
+  <!-- Waypoint Manager -->
+  <node name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
+    <remap from="waypoint" to="high_level_command"/>
+    <remap from="state" to="odom"/>
+    <remap from="platform_odom" to="/$(arg target_name)_ned"/>
+  </node>
+
+</launch>
