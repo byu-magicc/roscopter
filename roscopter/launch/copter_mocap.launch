@@ -24,8 +24,7 @@
   <rosparam command="load" file="$(find roscopter)/params/ekf.yaml" ns="estimator"/>
   <node name="estimator" type="ekf_node" pkg="roscopter" output="screen">
     <remap from="imu" to="/imu/data"/>
-    <remap from="truth/pose" to="/vrpn_client_node/planck/pose"/>
-    <remap from="truth/transform" to="/multirotor/truth/NED"/>
+    <remap from="pose" to="/MOTIONCAPTUREASSET_ned"/>
   </node>
 
   <!-- Waypoint Manager -->
