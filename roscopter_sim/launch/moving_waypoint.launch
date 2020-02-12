@@ -59,7 +59,8 @@
   <group ns="$(arg mav_name)">
 
     <!-- Load common parameters -->
-    <rosparam command="load" file="$(find roscopter_sim)/params/$(arg mav_name).yaml"/>
+    <!-- <rosparam command="load" file="$(find roscopter_sim)/params/$(arg mav_name).yaml"/> -->
+    <rosparam command="load" file="$(find roscopter_sim)/params/ragnarok.yaml"/>
 
     <!-- Is Flying Publisher -->
     <node pkg="rostopic" type="rostopic" name="is_flying_pub" args="pub is_flying std_msgs/Bool true"/>
@@ -75,7 +76,8 @@
     </node>
 
     <!-- Waypoint Manager -->
-    <node name="waypoint_manager" pkg="roscopter" type="landing_manager.py" output="screen">
+    <!-- <node name="waypoint_manager" pkg="roscopter" type="landing_manager.py" output="screen"> -->
+    <node name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
       <remap from="waypoint" to="high_level_command"/>
       <!-- <remap from="state" to="ground_truth/odometry/NED"/> -->
       <remap from="state" to="odom"/>

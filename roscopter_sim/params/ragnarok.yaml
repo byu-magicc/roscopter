@@ -37,18 +37,21 @@ alt_D: 32.0
 ### Waypoints ###
 
 waypoint_manager: {
-# multirotor uses a world fixed NE and altitude frame for linear coordinates, but a North East Down for angular (i.e. positive yaw is clockwise)
-waypoints:
-  [[0.0, 0.0, 5.0, 0.0], # North, East, Altitude, Yaw (radians)
-  [0.0, 0.0, 0.0, 0.0]], #if landing on moving platform this final line is a place holder
 
-threshold: 1.0,
-cyle: false,
+waypoints:
+ [[0, 0, 1., 0],
+ [1.5, 0, 1., 1.0],
+ [0, 1.5, 2., 1.0]],
+#  [[4.5, -4.5, 4.5, 3.14],
+#  [0., -4.5, 5.5, 1.57]],
+
+threshold: 0.3,
+cyle: False,
 is_landing: True,
 landing_safety_height: 2.0
-
-
 }
+
+### Controller Parameters
 
 ### Controller Parameters
 
@@ -83,35 +86,6 @@ psi_P: 1.0,
 psi_I: 0.0,
 psi_D: 0.0,
 
-#proven gains
-# x_dot_P: 0.5,
-# x_dot_I: 0.0,
-# x_dot_D: 0.0,
-
-# y_dot_P: 0.5,
-# y_dot_I: 0.0,
-# y_dot_D: 0.0,
-
-# z_dot_P: 1.0,
-# z_dot_I: 0.0,
-# z_dot_D: 0.0,
-
-# north_P: 0.45,
-# north_I: 0.0,
-# north_d: 0.1,
-
-# east_P: 0.45,
-# east_I: 0.0,
-# east_d: 0.1,
-
-# down_P: 2.0,
-# down_I: 0.7,
-# down_D: 0.1,
-
-# psi_P: 1.0,
-# psi_I: 0.0,
-# psi_D: 0.0,
-
 tau: 0.05,
 
 equilibrium_throttle: 0.5,
@@ -122,10 +96,8 @@ max_yaw_rate: 0.785,
 max_throttle: 0.85,
 max_n_dot: 1.5,
 max_e_dot: 1.5,
-max_d_dot: 1.25
-
+max_d_dot: 0.5
 }
-
 ### Sensor Parameters ###
 
 # Odometry (Ground Truth)

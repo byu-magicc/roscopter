@@ -4,6 +4,7 @@ import numpy as np
 import rospy
 import std_msgs.msg
 
+from std_msgs.msg import Bool
 from nav_msgs.msg import Odometry
 from rosflight_msgs.msg import Command
 from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
@@ -13,7 +14,6 @@ from geometry_msgs.msg import Twist
 class WaypointManager():
 
     def __init__(self):
-
         # get parameters
         try:
             self.waypoint_list = rospy.get_param('~waypoints') #params are loaded in launch file
@@ -21,10 +21,16 @@ class WaypointManager():
             rospy.logfatal('waypoints not set')
             rospy.signal_shutdown('Parameters not set')
 
+        #initialize platform location
+        self.plt_odom = np.array([0.0,
+                                  0.0,
+                                  0.0])
+        self.landing_safety_height = rospy.get_param('~landing_safety_height', 2.0)
+        self.land = 0.0
 
         # how close does the MAV need to get before going to the next waypoint?
         self.threshold = rospy.get_param('~threshold', 5)
-        self.cyclical_path = rospy.get_param('~cycle', True)
+        self.cyclical_path = rospy.get_param('~cycle', False)
 
         self.prev_time = rospy.Time.now()
 
@@ -39,9 +45,12 @@ class WaypointManager():
 
         # Set Up Publishers and Subscribers
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
+        self.plt_odom_sub_ = rospy.Subscriber('platform_odom', Odometry, self.pltOdomCallback, queue_size=5)
         self.waypoint_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
-       
+        self.is_landing_pub_ = rospy.Publisher('is_landing', Bool, queue_size=5, latch=True)
+        self.is_landing = rospy.get_param('~is_landing', False)
         self.current_waypoint_index = 0
+        self.landing_mode = 0 #landing mode 0, try to hover over the target
 
         command_msg = Command()
         current_waypoint = np.array(self.waypoint_list[0])
@@ -50,6 +59,7 @@ class WaypointManager():
         command_msg.x = current_waypoint[0]
         command_msg.y = current_waypoint[1]
         command_msg.F = current_waypoint[2]
+
         if len(current_waypoint) > 3:
             command_msg.z = current_waypoint[3]
         else:
@@ -62,6 +72,7 @@ class WaypointManager():
             rospy.spin()
 
 
+    #TODO: Need to set up these services
     def addWaypointCallback(req):
         print("addwaypoints")
 
@@ -72,43 +83,90 @@ class WaypointManager():
         print("set Waypoints from File")
 
     def odometryCallback(self, msg):
-        # Get error between waypoint and current state
-        current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
+                # Get error between waypoint and current state
         current_position = np.array([msg.pose.pose.position.x,
                                      msg.pose.pose.position.y,
                                      -msg.pose.pose.position.z])
-                                     
-        # orientation in quaternion form
-        qw = msg.pose.pose.orientation.w
-        qx = msg.pose.pose.orientation.x
-        qy = msg.pose.pose.orientation.y
-        qz = msg.pose.pose.orientation.z
 
-        # yaw from quaternion
-        y = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
+        if self.current_waypoint_index < len(self.waypoint_list):
+            current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
+            error = np.linalg.norm(current_position - current_waypoint[0:3])
 
-        error = np.linalg.norm(current_position - current_waypoint[0:3])
+            if error < self.threshold:
+                # Get new waypoint index
+                self.current_waypoint_index += 1
+                if self.current_waypoint_index == len(self.waypoint_list):
+                    return
 
-        if error < self.threshold:
-            # Get new waypoint index
-            self.current_waypoint_index += 1
-            if self.cyclical_path:
-                self.current_waypoint_index %= len(self.waypoint_list)
-            else:
-                if self.current_waypoint_index > len(self.waypoint_list):
+                if self.cyclical_path:
+                    self.current_waypoint_index %= len(self.waypoint_list)                
+                else:
+
+                    if not self.is_landing and self.current_waypoint_index > len(self.waypoint_list):
+                        self.current_waypoint_index -=1
+
+                next_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
+                command_msg = Command()
+                command_msg.header.stamp = rospy.Time.now()
+                command_msg.x = next_waypoint[0]
+                command_msg.y = next_waypoint[1]
+                command_msg.F = next_waypoint[2]
+
+                if len(next_waypoint) > 3:
+                    command_msg.z = next_waypoint[3]
+                else:
+                    command_msg.z = 0.
+
+                command_msg.mode = Command.MODE_XPOS_YPOS_YAW_ALTITUDE
+                self.waypoint_pub_.publish(command_msg)
+
+        else:
+            if self.is_landing and self.current_waypoint_index == len(self.waypoint_list)+1:
+                self.is_landing_pub_.publish(True)
+                waypoint = self.plt_odom + np.array([0.0, 0.0, self.land])
+            else:# self.is_landing and self.current_waypoint_index == len(self.waypoint_list)+1:
+                self.is_landing_pub_.publish(True)
+                waypoint = self.plt_odom+np.array([0.0, 0.0, self.landing_safety_height])
+
+            error = np.linalg.norm(current_position - waypoint[0:3])
+            print('error = ', error)
+            if error < self.threshold:
+                # Get new waypoint index
+                self.current_waypoint_index += 1
+
+                if self.current_waypoint_index > len(self.waypoint_list)+1:
                     self.current_waypoint_index -=1
-            next_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
+                    self.land = -0.5
+
             command_msg = Command()
             command_msg.header.stamp = rospy.Time.now()
-            command_msg.x = next_waypoint[0]
-            command_msg.y = next_waypoint[1]
-            command_msg.F = next_waypoint[2]
-            if len(next_waypoint) > 3:
-                command_msg.z = next_waypoint[3]
+            command_msg.x = waypoint[0]
+            command_msg.y = waypoint[1]
+            command_msg.F = waypoint[2]
+
+            if len(waypoint) > 3:
+                command_msg.z = waypoint[3]
             else:
                 command_msg.z = 0.
+
             command_msg.mode = Command.MODE_XPOS_YPOS_YAW_ALTITUDE
-            self.waypoint_pub_.publish(command_msg)
+            self.waypoint_pub_.publish(command_msg)            
+
+                                     
+        # # orientation in quaternion form
+        # qw = msg.pose.pose.orientation.w
+        # qx = msg.pose.pose.orientation.x
+        # qy = msg.pose.pose.orientation.y
+        # qz = msg.pose.pose.orientation.z
+
+        # # yaw from quaternion
+        # y = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
+
+    def pltOdomCallback(self, msg):
+        self.plt_odom = np.array([msg.pose.pose.position.x,
+                                  -msg.pose.pose.position.y,
+                                  msg.pose.pose.position.z])
+
 
 if __name__ == '__main__':
     rospy.init_node('waypoint_manager', anonymous=True)
