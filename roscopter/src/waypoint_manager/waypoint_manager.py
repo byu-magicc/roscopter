@@ -9,7 +9,7 @@ from nav_msgs.msg import Odometry
 from rosflight_msgs.msg import Command
 from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
 from geometry_msgs.msg import Twist
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import PoseStamped
 
 
 class WaypointManager():
@@ -47,7 +47,7 @@ class WaypointManager():
         # Set Up Publishers and Subscribers
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
         self.plt_odom_sub_ = rospy.Subscriber('platform_odom', Odometry, self.pltOdomCallback, queue_size=5)
-        self.plt_pose_sub_ = rospy.Subscriber('platform_pose', Pose, self.pltPoseCallback, queue_size=5)
+        self.plt_pose_sub_ = rospy.Subscriber('platform_pose', PoseStamped, self.pltPoseCallback, queue_size=5)
         self.waypoint_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
         self.is_landing_pub_ = rospy.Publisher('is_landing', Bool, queue_size=5, latch=True)
         self.is_landing = rospy.get_param('~is_landing', False)
