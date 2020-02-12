@@ -9,7 +9,7 @@ waypoints:
  # [4.5, -4.5, 4.5, 3.14],
  # [0., -4.5, 5.5, 1.57]],
 
-threshold: 0.1,
+threshold: 0.3,
 cyle: False,
 is_landing: True,
 landing_safety_height: 2.0
@@ -61,3 +61,5 @@ max_d_dot: 0.5,
 
 # Below this altitude, zero roll, pitch, yawrate will be commanded
 min_altitude: 0.5,
+
+}

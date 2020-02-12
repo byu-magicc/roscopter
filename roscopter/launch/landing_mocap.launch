@@ -25,7 +25,7 @@
   <rosparam command="load" file="$(find roscopter)/params/ekf.yaml" ns="estimator"/>
   <node name="estimator" type="ekf_node" pkg="roscopter" output="screen">
     <remap from="imu" to="/imu/data"/>
-    <remap from="pose" to="/$(mav_name)_ned"/>
+    <remap from="pose" to="/$(arg mav_name)_ned"/>
   </node>
 
   <!-- Waypoint Manager -->
