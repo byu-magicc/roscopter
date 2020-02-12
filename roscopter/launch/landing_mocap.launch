@@ -32,7 +32,7 @@
   <node name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
     <remap from="waypoint" to="high_level_command"/>
     <remap from="state" to="odom"/>
-    <remap from="platform_odom" to="/$(arg target_name)_ned"/>
+    <remap from="platform_pose" to="/$(arg target_name)_ned"/>
   </node>
 
 </launch>
