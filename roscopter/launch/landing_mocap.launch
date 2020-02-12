@@ -2,7 +2,7 @@
 
 <launch>
   <arg name="mav_name"            value="ragnarok"/>
-  <arg name="target_name"         value="Platform_boat_landing"/>
+  <arg name="target_name"         value="boat_landing_platform"/>
 
   <!-- FCU communication -->
   <node name="rosflight_io" pkg="rosflight" type="rosflight_io" output="screen">

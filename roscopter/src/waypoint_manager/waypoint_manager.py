@@ -121,15 +121,13 @@ class WaypointManager():
                 self.waypoint_pub_.publish(command_msg)
 
         else:
+            self.is_landing_pub_.publish(True)
             if self.is_landing and self.current_waypoint_index == len(self.waypoint_list)+1:
-                self.is_landing_pub_.publish(True)
                 waypoint = self.plt_odom + np.array([0.0, 0.0, self.land])
             else:# self.is_landing and self.current_waypoint_index == len(self.waypoint_list)+1:
-                self.is_landing_pub_.publish(True)
                 waypoint = self.plt_odom+np.array([0.0, 0.0, self.landing_safety_height])
 
             error = np.linalg.norm(current_position - waypoint[0:3])
-            print('error = ', error)
             if error < self.threshold:
                 # Get new waypoint index
                 self.current_waypoint_index += 1
