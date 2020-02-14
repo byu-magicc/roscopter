@@ -17,7 +17,7 @@
 
   <!-- PID Position Controller -->
   <node name="controller" pkg="roscopter" type="controller">
-    <remap from="platform_odom" to="/$(arg target_name)_ned"/>
+    <remap from="platform_odom" to="/multirotor/platform_virtual_odom"/>
     <remap from="estimate" to="odom"/>
   </node>
 

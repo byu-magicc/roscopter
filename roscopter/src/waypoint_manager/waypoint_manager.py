@@ -9,7 +9,7 @@ from nav_msgs.msg import Odometry
 from rosflight_msgs.msg import Command
 from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
 from geometry_msgs.msg import Twist
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import PoseStamped
 
 
 class WaypointManager():
@@ -26,6 +26,9 @@ class WaypointManager():
         self.plt_odom = np.array([0.0,
                                   0.0,
                                   0.0])
+        self.plt_prev_odom = np.array([0.0,
+                                       0.0,
+                                       0.0])
         self.landing_safety_height = rospy.get_param('~landing_safety_height', 2.0)
         self.land = 0.0
 
@@ -34,6 +37,7 @@ class WaypointManager():
         self.cyclical_path = rospy.get_param('~cycle', False)
 
         self.prev_time = rospy.Time.now()
+        self.plt_prev_time = 0.0
 
         # set up Services
         self.add_waypoint_service = rospy.Service('add_waypoint', AddWaypoint, self.addWaypointCallback)
@@ -47,9 +51,11 @@ class WaypointManager():
         # Set Up Publishers and Subscribers
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
         self.plt_odom_sub_ = rospy.Subscriber('platform_odom', Odometry, self.pltOdomCallback, queue_size=5)
-        self.plt_pose_sub_ = rospy.Subscriber('platform_pose', Pose, self.pltPoseCallback, queue_size=5)
+        self.plt_pose_sub_ = rospy.Subscriber('platform_pose', PoseStamped, self.pltPoseCallback, queue_size=5)
         self.waypoint_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
         self.is_landing_pub_ = rospy.Publisher('is_landing', Bool, queue_size=5, latch=True)
+        self.platform_virtual_odom_pub_ = rospy.Publisher('platform_virtual_odometry', Odometry, queue_size=5, latch=True)
+        
         self.is_landing = rospy.get_param('~is_landing', False)
         self.current_waypoint_index = 0
         self.landing_mode = 0 #landing mode 0, try to hover over the target
@@ -163,15 +169,38 @@ class WaypointManager():
         # y = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
 
     def pltOdomCallback(self, msg):
-        self.plt_odom = np.array([msg.pose.pose.position.x,
-                                  -msg.pose.pose.position.y,
-                                  msg.pose.pose.position.z])
+        x = PoseStamped()
+
+        x.header = msg.header
+        x.pose = msg.pose.pose
+
+        self.pltPoseCallback(x)
+        # self.plt_odom = np.array([msg.pose.pose.position.x,
+        #                           -msg.pose.pose.position.y,
+        #                           msg.pose.pose.position.z])
 
     def pltPoseCallback(self, msg):
-        x = Odometry
-        x.pose.pose = msg
-        
-        self.pltOdomCallback(x)
+        current_time = msg.header.stamp.secs+msg.header.stamp.nsecs*1e-9
+        dt = current_time - self.plt_prev_time
+        self.plt_prev_time = current_time
+        self.plt_odom = np.array([msg.pose.position.x,
+                                  -msg.pose.position.y,
+                                  msg.pose.position.z])
+
+        #numerical differentiation to get velocity
+        velocity = (self.plt_odom - self.plt_prev_odom)/dt
+        self.plt_prev_odom = self.plt_odom
+
+        x = Odometry()
+        x.header.stamp = msg.header.stamp
+        x.pose.pose.position.x = self.plt_odom[0]
+        x.pose.pose.position.y = self.plt_odom[1]
+        x.pose.pose.position.z = self.plt_odom[2]
+        x.twist.twist.linear.x = velocity[0]
+        x.twist.twist.linear.y = -velocity[1]
+        x.twist.twist.linear.z = velocity[2]
+        # print('x = ', x)
+        self.platform_virtual_odom_pub_.publish(x)
 
 if __name__ == '__main__':
     rospy.init_node('waypoint_manager', anonymous=True)
