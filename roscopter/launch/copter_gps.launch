@@ -11,9 +11,9 @@
   
   <!-- GPS Node-->
   <node name="f9p" pkg="ublox" type="ublox_ros">
-	  <param name="serial_port" value="/dev/ttyACM1"/>
-		<param name="rtk_type" value="2"/>
-	</node> 
+    <param name="serial_port" value="/dev/ttyACM1"/>
+    <param name="rtk_type" value="2"/> #setting up the module as a base to recieve GPS (3 is rover)
+  </node> 
   
   <!-- Load common parameters -->
   <rosparam command="load" file="$(find roscopter)/params/F450.yaml"/>
