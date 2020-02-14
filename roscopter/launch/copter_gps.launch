@@ -28,7 +28,8 @@
   <rosparam command="load" file="$(find roscopter)/params/ekf.yaml" ns="estimator"/>
   <node name="estimator" type="ekf_node" pkg="roscopter" output="screen">
     <remap from="imu" to="/imu/data"/>
-    <remap from="pose" to="/MOTIONCAPTUREASSET_ned"/>
+    <remap from="baro" to="/baro"/>
+    <remap from="is_gnss" to="/ins/gps"/>
   </node>
 
   <!-- Waypoint Manager -->
