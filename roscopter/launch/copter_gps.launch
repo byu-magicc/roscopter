@@ -29,7 +29,9 @@
   <node name="estimator" type="ekf_node" pkg="roscopter" output="screen">
     <remap from="imu" to="/imu/data"/>
     <remap from="baro" to="/baro"/>
-    <remap from="is_gnss" to="/ins/gps"/>
+    <remap from="ublox_gnss" to="/PosVelEcef"/>
+    <remap from="pose" to="       "/>
+
   </node>
 
   <!-- Waypoint Manager -->
