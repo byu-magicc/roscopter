@@ -45,3 +45,4 @@ Velocity manager and commander.
  2. Support additional altitude sensor support (laser/sonar)
  3. Heading calibration routine (magnetometer)
  4. Include wind estimation  
+ 5. Add simpler way to add new waypoints
