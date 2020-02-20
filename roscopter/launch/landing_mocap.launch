@@ -35,4 +35,7 @@
     <remap from="platform_pose" to="/$(arg target_name)_ned"/>
   </node>
 
+  <node pkg="rosbag" type="record" name="record" output="screen" args="-o ../data/mocap_flight/flight --all"/>
+
+
 </launch>
