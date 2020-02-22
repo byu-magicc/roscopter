@@ -27,7 +27,7 @@ y_dot_P: 0.5,
 y_dot_I: 0.0,
 y_dot_D: 0.05,
 
-z_dot_P: 0.6,
+z_dot_P: 0.4,
 z_dot_I: 0.25,
 z_dot_D: 0.1,
 
