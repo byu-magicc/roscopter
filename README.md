@@ -46,3 +46,5 @@ Velocity manager and commander.
  3. Heading calibration routine (magnetometer)
  4. Include wind estimation  
  5. Add simpler way to add new waypoints
+ 6. Get states_plotter.py and commands_plotter.py
+ 7. Develop procedure for defining quadrotor physical parameters.  (add to wiki)
