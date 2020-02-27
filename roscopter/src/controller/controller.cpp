@@ -52,8 +52,8 @@ Controller::Controller() :
     nh_.subscribe("platform_odom", 1, &Controller::pltOdomCallback, this);
 
   command_pub_ = nh_.advertise<rosflight_msgs::Command>("command", 1);
-  auto_land_sub_ =
-    nh_.subscribe("auto_land", 1, &Controller::isLandingCallback, this);
+  auto_land_sub_ = nh_.subscribe("auto_land", 1, &Controller::autoLandCallback, this);
+  is_landing_sub_ = nh_.subscribe("is_landing", 1, &Controller::isLandingCallback, this);
 }
 
 
@@ -177,9 +177,14 @@ void Controller::pltOdomCallback(const nav_msgs::OdometryConstPtr &msg)
 
 }
 
-void Controller::isLandingCallback(const std_msgs::BoolConstPtr &msg)
+void Controller::autoLandCallback(const std_msgs::BoolConstPtr &msg)
 {
   auto_land_ = msg->data;
+}
+
+void Controller::isLandingCallback(const std_msgs::BoolConstPtr &msg)
+{
+  is_landing_ = msg->data;
 }
 
 void Controller::reconfigure_callback(roscopter::ControllerConfig& config,
@@ -279,7 +284,6 @@ void Controller::computeControl(double dt)
     {
       xc_.x_dot = xc_.x_dot + plt_hat_.u; //feed forward the platform velocity
       xc_.y_dot = xc_.y_dot + plt_hat_.v;
-      // xc_.w_dot = xc_.z_dot + plt_hat_.w;
       xc_.r = xc_.r+plt_hat_.r;
     }
 
@@ -336,12 +340,27 @@ void Controller::computeControl(double dt)
   if(mode_flag == rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE)
   {
     // Pack up and send the command
-    command_.mode = rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE;
-    command_.F = saturate(xc_.throttle, max_.throttle, 0.0);
-    command_.x = saturate(xc_.phi, max_.roll, -max_.roll);
-    command_.y = saturate(xc_.theta, max_.pitch, -max_.pitch);
-    command_.z = saturate(xc_.r, max_.yaw_rate, -max_.yaw_rate);
-
+    if(is_landing_ == true) //this is for the mission state "land"
+    {
+      command_.mode = rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE;
+      command_.F = throttle_down_ * command_.F;
+      command_.x = 0.0;
+      command_.y = 0.0;
+      command_.z = 0.0;
+      if(command_.F < 0.1)
+      {
+        command_.F = 0.0;
+      }
+      // std::cerr << "throttle = " << command_.F << "\n"; //good for testing the throttle_down_ multiplier
+    }
+    else
+    {
+      command_.mode = rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE;
+      command_.F = saturate(xc_.throttle, max_.throttle, 0.0);
+      command_.x = saturate(xc_.phi, max_.roll, -max_.roll);
+      command_.y = saturate(xc_.theta, max_.pitch, -max_.pitch);
+      command_.z = saturate(xc_.r, max_.yaw_rate, -max_.yaw_rate);
+    }
     if (-xhat_.pd < min_altitude_)
     {
       command_.x = 0.;

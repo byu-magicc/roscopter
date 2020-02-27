@@ -43,6 +43,7 @@ class WaypointManager():
 
         self.prev_time = rospy.Time.now()
         self.plt_prev_time = 0.0
+        self.is_landing = 0
 
         # set up Services
         self.add_waypoint_service = rospy.Service('add_waypoint', AddWaypoint, self.addWaypointCallback)
@@ -59,6 +60,7 @@ class WaypointManager():
         self.plt_pose_sub_ = rospy.Subscriber('platform_pose', PoseStamped, self.pltPoseCallback, queue_size=5)
         self.waypoint_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
         self.auto_land_pub_ = rospy.Publisher('auto_land', Bool, queue_size=5, latch=True)
+        self.is_landing_pub_ = rospy.Publisher('is_landing', Bool, queue_size=5, latch=True)
         self.platform_virtual_odom_pub_ = rospy.Publisher('platform_virtual_odometry', Odometry, queue_size=5, latch=True)
         
         self.auto_land = rospy.get_param('~auto_land', False)
@@ -161,7 +163,14 @@ class WaypointManager():
             self.mission_state = 3 #switch to land state
 
     def land(self, current_position):
-        a = 1
+
+        if self.is_landing == 0:
+            waypoint = np.array([self.plt_odom[0], current_position[1], current_position[2]])
+            self.new_waypoint(waypoint)
+            self.is_landing = 1
+            self.is_landing_pub_.publish(True) #this will signal the controller to include the velocity feed forward term from the barge
+
+        #TODO find a way to disarm after reaching the waypoint
 
     def new_waypoint(self, waypoint):
         command_msg = Command()
