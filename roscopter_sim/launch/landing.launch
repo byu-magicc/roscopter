@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <launch>
+  <arg name="drone_name"          default="ragnarok"/>
   <arg name="mav_name"            default="multirotor"/>
   <arg name="target_name"         default="platform"/>
   <arg name="target_x"            default="0.0"/>
@@ -50,16 +51,16 @@
     <node name="platform_manager" pkg="roscopter" type="platform_manager.py" output="screen"/>
 
     <node name="landing_error" pkg="roscopter" type="landing_error.py" output="screen">
-      <remap from="drone_odom" to="/$(arg mav_name)/odom"/>
+      <remap from="drone_odom" to="/$(arg drone_name)/odom"/>
     </node>
   
   </group>
 
   <!-- Controller -->
-  <group ns="$(arg mav_name)">
+  <group ns="$(arg drone_name)">
 
     <!-- Load common parameters -->
-    <!-- <rosparam command="load" file="$(find roscopter_sim)/params/$(arg mav_name).yaml"/> -->
+    <!-- <rosparam command="load" file="$(find roscopter_sim)/params/$(arg drone_name).yaml"/> -->
     <rosparam command="load" file="$(find roscopter_sim)/params/ragnarok.yaml"/>
     <rosparam command="load" file="$(find roscopter)/params/ragnarok.yaml"/>
 

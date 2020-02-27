@@ -9,13 +9,13 @@ from nav_msgs.msg import Odometry
 class LandingError():
 
     def __init__(self):
-        self.platform_odom = Odometry
 
         # Set Up Publishers and Subscribers
         self.platform_odom_sub_ = rospy.Subscriber('odom', Odometry, self.platformOdometryCallback, queue_size=5)
         self.drone_odom_sub_ = rospy.Subscriber('drone_odom', Odometry, self.droneOdometryCallback, queue_size=5)
         self.error_pub_ = rospy.Publisher('landing_error', Odometry, queue_size=5, latch=True)
 
+        self.platform_odom = Odometry()
         self.error_msg = Odometry()
 
         #just make sure the node doesn't shut down
