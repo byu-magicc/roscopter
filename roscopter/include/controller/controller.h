@@ -89,6 +89,7 @@ private:
   ros::Subscriber pltOdom_sub_;
   ros::Subscriber is_landing_sub_;
   ros::Subscriber auto_land_sub_;
+  ros::Subscriber landed_sub_;
 
   ros::Publisher command_pub_;
 
@@ -105,6 +106,7 @@ private:
   bool received_cmd_;
   bool auto_land_ = false;
   bool is_landing_ = false;
+  bool landed_ = false;
 
 
   // PID Controllers
@@ -139,6 +141,7 @@ private:
   void pltOdomCallback(const nav_msgs::OdometryConstPtr &msg);
   void autoLandCallback(const std_msgs::BoolConstPtr &msg);
   void isLandingCallback(const std_msgs::BoolConstPtr &msg);
+  void landedCallback(const std_msgs::BoolConstPtr &msg);
 
   void computeControl(double dt);
   void resetIntegrators();

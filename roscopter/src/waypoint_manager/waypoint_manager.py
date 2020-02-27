@@ -61,6 +61,7 @@ class WaypointManager():
         self.waypoint_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
         self.auto_land_pub_ = rospy.Publisher('auto_land', Bool, queue_size=5, latch=True)
         self.is_landing_pub_ = rospy.Publisher('is_landing', Bool, queue_size=5, latch=True)
+        self.landed_pub_ = rospy.Publisher('landed', Bool, queue_size=5, latch=True)
         self.platform_virtual_odom_pub_ = rospy.Publisher('platform_virtual_odometry', Odometry, queue_size=5, latch=True)
         
         self.auto_land = rospy.get_param('~auto_land', False)
@@ -164,13 +165,16 @@ class WaypointManager():
 
     def land(self, current_position):
 
+        waypoint = np.array([self.plt_odom[0], current_position[1], current_position[2]])
         if self.is_landing == 0:
-            waypoint = np.array([self.plt_odom[0], current_position[1], current_position[2]])
             self.new_waypoint(waypoint)
             self.is_landing = 1
             self.is_landing_pub_.publish(True) #this will signal the controller to include the velocity feed forward term from the barge
 
-        #TODO find a way to disarm after reaching the waypoint
+        error = np.linalg.norm(current_position - waypoint)
+        if error < self.threshold:
+            self.landed_pub_.publish(True)
+            #TODO find a way to disarm after reaching the waypoint
 
     def new_waypoint(self, waypoint):
         command_msg = Command()
@@ -194,9 +198,6 @@ class WaypointManager():
         x.pose = msg.pose.pose
 
         self.pltPoseCallback(x)
-        # self.plt_odom = np.array([msg.pose.pose.position.x,
-        #                           -msg.pose.pose.position.y,
-        #                           msg.pose.pose.position.z])
 
     def pltPoseCallback(self, msg):
         current_time = msg.header.stamp.secs+msg.header.stamp.nsecs*1e-9
@@ -218,7 +219,6 @@ class WaypointManager():
         x.twist.twist.linear.x = velocity[0]
         x.twist.twist.linear.y = -velocity[1]
         x.twist.twist.linear.z = velocity[2]
-        # print('x = ', x)
         self.platform_virtual_odom_pub_.publish(x)
 
 if __name__ == '__main__':

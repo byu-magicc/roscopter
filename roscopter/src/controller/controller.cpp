@@ -54,6 +54,7 @@ Controller::Controller() :
   command_pub_ = nh_.advertise<rosflight_msgs::Command>("command", 1);
   auto_land_sub_ = nh_.subscribe("auto_land", 1, &Controller::autoLandCallback, this);
   is_landing_sub_ = nh_.subscribe("is_landing", 1, &Controller::isLandingCallback, this);
+  landed_sub_ = nh_.subscribe("landed", 1, &Controller::landedCallback, this);
 }
 
 
@@ -185,6 +186,11 @@ void Controller::autoLandCallback(const std_msgs::BoolConstPtr &msg)
 void Controller::isLandingCallback(const std_msgs::BoolConstPtr &msg)
 {
   is_landing_ = msg->data;
+}
+
+void Controller::landedCallback(const std_msgs::BoolConstPtr &msg)
+{
+  landed_ = msg->data;
 }
 
 void Controller::reconfigure_callback(roscopter::ControllerConfig& config,
@@ -340,17 +346,20 @@ void Controller::computeControl(double dt)
   if(mode_flag == rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE)
   {
     // Pack up and send the command
-    if(is_landing_ == true) //this is for the mission state "land"
+    if(landed_ == true)
+    {
+      command_.F = 0.0;
+      command_.x = 0.0;
+      command_.y = 0.0;
+      command_.z = 0.0;
+    }
+    else if(is_landing_ == true) //this is for the mission state "land"
     {
       command_.mode = rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE;
       command_.F = throttle_down_ * command_.F;
       command_.x = 0.0;
       command_.y = 0.0;
       command_.z = 0.0;
-      if(command_.F < 0.1)
-      {
-        command_.F = 0.0;
-      }
       // std::cerr << "throttle = " << command_.F << "\n"; //good for testing the throttle_down_ multiplier
     }
     else
