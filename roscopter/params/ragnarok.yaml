@@ -11,8 +11,9 @@ waypoints:
 
 threshold: 0.3,
 cyle: False,
-is_landing: True,
-landing_safety_height: 2.0
+auto_land: True,
+begin_descent_height: 2.0,
+begin_landing_height: 0.2,
 }
 
 ### Controller Parameters

@@ -87,7 +87,7 @@ private:
   ros::Subscriber cmd_sub_;
   ros::Subscriber status_sub_;
   ros::Subscriber pltOdom_sub_;
-  ros::Subscriber is_landing_sub_;
+  ros::Subscriber auto_land_sub_;
 
   ros::Publisher command_pub_;
 
@@ -101,7 +101,7 @@ private:
   bool is_flying_;
   bool armed_;
   bool received_cmd_;
-  bool is_landing_ = false;
+  bool auto_land_ = false;
 
 
   // PID Controllers

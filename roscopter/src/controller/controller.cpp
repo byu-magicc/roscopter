@@ -52,8 +52,8 @@ Controller::Controller() :
     nh_.subscribe("platform_odom", 1, &Controller::pltOdomCallback, this);
 
   command_pub_ = nh_.advertise<rosflight_msgs::Command>("command", 1);
-  is_landing_sub_ =
-    nh_.subscribe("is_landing", 1, &Controller::isLandingCallback, this);
+  auto_land_sub_ =
+    nh_.subscribe("auto_land", 1, &Controller::isLandingCallback, this);
 }
 
 
@@ -179,7 +179,7 @@ void Controller::pltOdomCallback(const nav_msgs::OdometryConstPtr &msg)
 
 void Controller::isLandingCallback(const std_msgs::BoolConstPtr &msg)
 {
-  is_landing_ = msg->data;
+  auto_land_ = msg->data;
 }
 
 void Controller::reconfigure_callback(roscopter::ControllerConfig& config,
@@ -275,7 +275,7 @@ void Controller::computeControl(double dt)
     xc_.x_dot = pndot_c*cos(xhat_.psi) + pedot_c*sin(xhat_.psi);
     xc_.y_dot = -pndot_c*sin(xhat_.psi) + pedot_c*cos(xhat_.psi);
 
-    if(is_landing_)
+    if(auto_land_)
     {
       xc_.x_dot = xc_.x_dot + plt_hat_.u; //feed forward the platform velocity
       xc_.y_dot = xc_.y_dot + plt_hat_.v;

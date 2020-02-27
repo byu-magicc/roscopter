@@ -45,7 +45,7 @@ waypoints:
 
 threshold: 1.0,
 cyle: false,
-is_landing: True,
+auto_land: True,
 landing_safety_height: 2.0
 
 
