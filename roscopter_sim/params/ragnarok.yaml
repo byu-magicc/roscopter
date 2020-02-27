@@ -96,11 +96,7 @@ topic: gps/data,
 north_stdev: 0.0135, #rtk #rostopic takes the worst of north and east stdev and uses that as the horizontal accuracy
 east_stdev: 0.0135, #rtk
 alt_stdev: 0.065, #rtk
-# north_stdev: 0.0001, #test
-# east_stdev: 0.0001, #test
-# alt_stdev: 0.0001, #test
 velocity_stdev: 0.02, #rtk
-# velocity_stdev: 0.0001, #test
 k_north: 0.0009090909, # 1/1100
 k_east: 0.0009090909, # 1/1100
 k_alt: 0.0009090909, # 1/1100
