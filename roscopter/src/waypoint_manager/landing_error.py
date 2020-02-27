@@ -9,7 +9,7 @@ from nav_msgs.msg import Odometry
 class LandingError():
 
     def __init__(self):
-        self.platform_pos = [0]*3
+        self.platform_odom = Odometry
 
         # Set Up Publishers and Subscribers
         self.platform_odom_sub_ = rospy.Subscriber('odom', Odometry, self.platformOdometryCallback, queue_size=5)
@@ -23,12 +23,12 @@ class LandingError():
             rospy.spin()
 
     def platformOdometryCallback(self, msg):
-        self.platform_pos = msg.pose.pose.position
+        self.platform_odom = msg
 
     def droneOdometryCallback(self, msg):
-        self.error_msg.pose.pose.position.x = self.platform_pos.x - msg.pose.pose.position.x
-        self.error_msg.pose.pose.position.y = self.platform_pos.y + msg.pose.pose.position.y
-        self.error_msg.pose.pose.position.z = self.platform_pos.z - msg.pose.pose.position.z
+        self.error_msg.pose.pose.position.x = self.platform_odom.pose.pose.position.x - msg.pose.pose.position.x
+        self.error_msg.pose.pose.position.y = self.platform_odom.pose.pose.position.y + msg.pose.pose.position.y
+        self.error_msg.pose.pose.position.z = self.platform_odom.pose.pose.position.z - msg.pose.pose.position.z
         self.error_pub_.publish(self.error_msg)
 
 

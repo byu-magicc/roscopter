@@ -49,9 +49,9 @@
     <!-- Platform Velocity Manager -->
     <node name="platform_manager" pkg="roscopter" type="platform_manager.py" output="screen"/>
 
-    <!-- <node name="landing_error" pkg="roscopter" type="landing_error.py" output="screen">
+    <node name="landing_error" pkg="roscopter" type="landing_error.py" output="screen">
       <remap from="drone_odom" to="/$(arg mav_name)/odom"/>
-    </node> -->
+    </node>
   
   </group>
 
@@ -61,6 +61,8 @@
     <!-- Load common parameters -->
     <!-- <rosparam command="load" file="$(find roscopter_sim)/params/$(arg mav_name).yaml"/> -->
     <rosparam command="load" file="$(find roscopter_sim)/params/ragnarok.yaml"/>
+    <rosparam command="load" file="$(find roscopter)/params/ragnarok.yaml"/>
+
 
     <!-- Is Flying Publisher -->
     <node pkg="rostopic" type="rostopic" name="is_flying_pub" args="pub is_flying std_msgs/Bool true"/>
@@ -70,17 +72,13 @@
 
     <!-- PID Position Controller -->
     <node name="controller" pkg="roscopter" type="controller" output="screen">
-      <!-- <remap from="platform_odom" to="/platform/odom"/> -->
       <remap from="platform_odom" to="/multirotor/platform_virtual_odometry"/>
-      <!-- <remap from="estimate" to="ground_truth/odometry/NED"/> -->
       <remap from="estimate" to="odom"/>
     </node>
 
     <!-- Waypoint Manager -->
-    <!-- <node name="waypoint_manager" pkg="roscopter" type="landing_manager.py" output="screen"> -->
     <node name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
       <remap from="waypoint" to="high_level_command"/>
-      <!-- <remap from="state" to="ground_truth/odometry/NED"/> -->
       <remap from="state" to="odom"/>
       <remap from="platform_odom" to="/$(arg target_name)/odom"/>
     </node>
@@ -90,10 +88,8 @@
       <param name="param_filename" value="$(find roscopter)/params/ekf.yaml"/>
       <!--Inputs-->
       <remap from="imu" to="imu/data"/>
-      <!--<remap from="pose" to="pose"/>-->
       <remap from="reference" to="ground_truth/odometry/NED_throttled"/>
       <remap from="gnss" to="gps/data"/>
-      <!-- <remap from="baro" to="baro/data"/> -->
       <!--Outputs-->
       <remap from="is_flying" to="not_for_sim"/>
     </node>

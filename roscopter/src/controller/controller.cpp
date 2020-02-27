@@ -277,7 +277,6 @@ void Controller::computeControl(double dt)
 
     if(is_landing_)
     {
-      std::cerr << "feed forward u = " << plt_hat_.u << "feed forward v = " << plt_hat_.v << "\n";
       xc_.x_dot = xc_.x_dot + plt_hat_.u; //feed forward the platform velocity
       xc_.y_dot = xc_.y_dot + plt_hat_.v;
       // xc_.w_dot = xc_.z_dot + plt_hat_.w;
