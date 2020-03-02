@@ -6,6 +6,7 @@ import std_msgs.msg
 
 from nav_msgs.msg import Odometry
 from rosflight_msgs.msg import Command
+from roscopter_msgs.msg import RelativePose
 from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
 
 
@@ -39,9 +40,18 @@ class WaypointManager():
         # Set Up Publishers and Subscribers
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
         self.waypoint_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
+        self.relPose_pub_ = rospy.Publisher('relative_pose', RelativePose, queue_size=5, latch=True)
 
+        #Create the initial relPose estimate message
+        relativePose_msg = RelativePose()
+        relativePose_msg.x = 0
+        relativePose_msg.y = 0
+        relativePose_msg.z = 0
+        relativePose_msg.F = 0
+        self.relPose_pub_.publish(relativePose_msg)
+        
+        #Create the initial command message
         self.current_waypoint_index = 0
-
         command_msg = Command()
         current_waypoint = np.array(self.waypoint_list[0])
 
@@ -88,8 +98,15 @@ class WaypointManager():
 
         # yaw from quaternion
         y = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
-
         error = np.linalg.norm(current_position - current_waypoint[0:3])
+        
+        #publish the relative pose estimate
+        relativePose_msg = RelativePose()
+        relativePose_msg.x = current_position[0]
+        relativePose_msg.y = current_position[1]
+        relativePose_msg.z = y
+        relativePose_msg.F = current_position[2]
+        self.relPose_pub_.publish(relativePose_msg)
 
         if error < self.threshold:
             # Get new waypoint index
