@@ -62,13 +62,16 @@ class WaypointManager():
 
 
     def addWaypointCallback(req):
-        print("addwaypoints")
+        #TODO
+        print("addwaypoints (NOT IMPLEMENTED)")
 
     def removeWaypointCallback(req):
-        print("remove Waypoints")
+        #TODO
+        print("remove Waypoints (NOT IMPLEMENTED)")
 
     def setWaypointsFromFile(req):
-        print("set Waypoints from File")
+        #TODO
+        print("set Waypoints from File (NOT IMPLEMENTED)")
 
     def odometryCallback(self, msg):
         # Get error between waypoint and current state
