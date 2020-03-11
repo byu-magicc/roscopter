@@ -39,12 +39,16 @@ A PID controller is used.
 
 Velocity manager and commander.
 
+# Motion Capture
+
+The [Motion Capture Wiki page](https://magiccvs.byu.edu/wiki/#!sw_guides/mocap_room_tutorial.md#VRPN_Installation) has instructions on how to include motion capture data in your ROS network.
+
 
 # TODO: #
- 1. Improve GPS estimation performance using Ublox GPS 
+ 1. Improve GPS estimation performance using Ublox GPS
  2. Support additional altitude sensor support (laser/sonar)
  3. Heading calibration routine (magnetometer)
- 4. Include wind estimation  
+ 4. Include wind estimation
  5. Add simpler way to add new waypoints
  6. Get states_plotter.py and commands_plotter.py
  7. Develop procedure for defining quadrotor physical parameters.  (add to wiki)
