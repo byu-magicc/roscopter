@@ -2,7 +2,7 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-from plotWindow import plotWindow
+from plot_window import PlotWindow
 from ekf_data import Log
 import scipy.linalg
 
@@ -45,7 +45,7 @@ def plotIMU():
     plt.plot(data.imu['t'], scipy.linalg.norm(data.imu['a'], axis=1))
     pw.addPlot("IMU", f)
 
-def plotPosition(): 
+def plotPosition():
     f = plt.figure()
     plt.suptitle('Position')
     for i in range(3):
@@ -60,7 +60,7 @@ def plotPosition():
             plt.legend()
     pw.addPlot("Position", f)
 
-def plotPosition2d(): 
+def plotPosition2d():
     f = plt.figure()
     plt.suptitle('Position 2d')
     plt.plot(data.ref['x']['p'][:,1], data.ref['x']['p'][:,0], label='ref')
@@ -69,7 +69,7 @@ def plotPosition2d():
     plt.xlabel("East (m)")
     pw.addPlot("Position 2d", f)
 
-def plotVelocity(): 
+def plotVelocity():
     f = plt.figure()
     plt.suptitle('Velocity')
     for i in range(3):
@@ -83,7 +83,7 @@ def plotVelocity():
             plt.legend()
     pw.addPlot("Velocity", f)
 
-def plotAttitude(): 
+def plotAttitude():
     f = plt.figure()
     plt.suptitle('Attitude')
     for i in range(4):
@@ -98,7 +98,7 @@ def plotAttitude():
             plt.legend()
     pw.addPlot("Attitude", f)
 
-def plotEuler(): 
+def plotEuler():
     f = plt.figure()
     plt.suptitle('Euler')
     rad2deg = 180.0/np.pi
@@ -124,13 +124,13 @@ def plotImuBias():
             if j == 0:
                 plt.plot(data.x['t'], data.x['ba'][:, i])
                 if plotCov:
-                    plt.plot(data.x['t'], data.x['ba'][:, i] + 2.0*np.sqrt(data.cov['P'][:,i+9, i+9]), '-k', alpha=0.3)                
-                    plt.plot(data.x['t'], data.x['ba'][:, i] - 2.0*np.sqrt(data.cov['P'][:,i+9, i+9]), '-k', alpha=0.3)                
+                    plt.plot(data.x['t'], data.x['ba'][:, i] + 2.0*np.sqrt(data.cov['P'][:,i+9, i+9]), '-k', alpha=0.3)
+                    plt.plot(data.x['t'], data.x['ba'][:, i] - 2.0*np.sqrt(data.cov['P'][:,i+9, i+9]), '-k', alpha=0.3)
             else:
-                plt.plot(data.x['t'], data.x['bg'][:, i])                
+                plt.plot(data.x['t'], data.x['bg'][:, i])
                 if plotCov:
-                    plt.plot(data.x['t'], data.x['bg'][:, i] + 2.0*np.sqrt(data.cov['P'][:,i+12, i+12]), '-k', alpha=0.3)                
-                    plt.plot(data.x['t'], data.x['bg'][:, i] - 2.0*np.sqrt(data.cov['P'][:,i+12, i+12]), '-k', alpha=0.3)                
+                    plt.plot(data.x['t'], data.x['bg'][:, i] + 2.0*np.sqrt(data.cov['P'][:,i+12, i+12]), '-k', alpha=0.3)
+                    plt.plot(data.x['t'], data.x['bg'][:, i] - 2.0*np.sqrt(data.cov['P'][:,i+12, i+12]), '-k', alpha=0.3)
             plt.title(imu_titles[j * 3 + i])
         if i == 0:
             plt.legend()
@@ -150,21 +150,21 @@ def plotBaroRes():
     f = plt.figure()
     plt.suptitle('Baro Res')
     plt.subplot(4, 1, 1)
-    plt.plot(data.baroRes['t'], data.baroRes['z'][:], label=r'$z$')                          
-    plt.plot(data.baroRes['t'], data.baroRes['zhat'][:], label=r'$\hat{z}$')                          
+    plt.plot(data.baroRes['t'], data.baroRes['z'][:], label=r'$z$')
+    plt.plot(data.baroRes['t'], data.baroRes['zhat'][:], label=r'$\hat{z}$')
     plt.legend()
     plt.subplot(4, 1, 2)
-    plt.plot(data.baroRes['t'], data.baroRes['r'][:], label="r")                          
+    plt.plot(data.baroRes['t'], data.baroRes['r'][:], label="r")
     plt.legend()
     plt.subplot(4, 1, 3)
-    plt.plot(data.baroRes['t'], data.baroRes['temp'][:], label="temp")                          
+    plt.plot(data.baroRes['t'], data.baroRes['temp'][:], label="temp")
     plt.ylabel('Temperature (K)')
     plt.legend()
     plt.subplot(4, 1, 4)
-    plt.plot(data.x['t'], data.x['bb'][:], label="bias")                          
+    plt.plot(data.x['t'], data.x['bb'][:], label="bias")
     if plotCov:
-        plt.plot(data.x['t'], data.x['bb'][:, ] + 2.0*np.sqrt(data.cov['P'][:,15, 15]), '-k', alpha=0.3)                
-        plt.plot(data.x['t'], data.x['bb'][:, ] - 2.0*np.sqrt(data.cov['P'][:,15, 15]), '-k', alpha=0.3)                
+        plt.plot(data.x['t'], data.x['bb'][:, ] + 2.0*np.sqrt(data.cov['P'][:,15, 15]), '-k', alpha=0.3)
+        plt.plot(data.x['t'], data.x['bb'][:, ] - 2.0*np.sqrt(data.cov['P'][:,15, 15]), '-k', alpha=0.3)
     plt.legend()
     pw.addPlot("Baro Res", f)
 
@@ -172,11 +172,11 @@ def plotRangeRes():
     f = plt.figure()
     plt.suptitle('Range Res')
     plt.subplot(2, 1, 1)
-    plt.plot(data.rangeRes['t'], data.rangeRes['z'][:], label=r'$z$')                          
-    plt.plot(data.rangeRes['t'], data.rangeRes['zhat'][:], label=r'$\hat{z}$')                          
+    plt.plot(data.rangeRes['t'], data.rangeRes['z'][:], label=r'$z$')
+    plt.plot(data.rangeRes['t'], data.rangeRes['zhat'][:], label=r'$\hat{z}$')
     plt.legend()
     plt.subplot(2, 1, 2)
-    plt.plot(data.rangeRes['t'], data.rangeRes['r'][:], label="r")                          
+    plt.plot(data.rangeRes['t'], data.rangeRes['r'][:], label="r")
     plt.legend()
     pw.addPlot("Range Res", f)
 
@@ -186,7 +186,7 @@ def plotGnssRes():
     for i in range(3):
         for j in range(2):
             plt.subplot(3, 2, i * 2 + j + 1)
-            plt.plot(data.gnssRes['t'], data.gnssRes['r'][:,j*3+i])                          
+            plt.plot(data.gnssRes['t'], data.gnssRes['r'][:,j*3+i])
         if i == 0:
             plt.legend()
     pw.addPlot("Gnss Res", f)
@@ -207,7 +207,7 @@ def plotResults(directory):
     plotCov = True
 
     data = Log(directory)
-    pw = plotWindow()
+    pw = PlotWindow()
 
     plotPosition()
     plotPosition2d()
