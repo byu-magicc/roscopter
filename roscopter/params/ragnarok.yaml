@@ -12,7 +12,7 @@ waypoints:
 threshold: 0.3,
 cyle: False,
 auto_land: True,
-begin_descent_height: 2.0,
+begin_descent_height: 1.5,
 begin_landing_height: 0.2,
 }
 

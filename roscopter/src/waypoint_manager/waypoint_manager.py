@@ -150,30 +150,30 @@ class WaypointManager():
 
         self.new_waypoint(waypoint)
 
-        if error < self.threshold:
-            self.mission_state = 2 #switch to descent state
+       # if error < self.threshold:
+        #    self.mission_state = 2 #switch to descent state
 
-    def descend(self, current_position):
+   # def descend(self, current_position):
 
-        waypoint = self.plt_odom + np.array([0.0, 0.0, self.begin_landing_height])
-        error = np.linalg.norm(current_position - waypoint)
+    #    waypoint = self.plt_odom + np.array([0.0, 0.0, self.begin_landing_height])
+     #   error = np.linalg.norm(current_position - waypoint)
 
-        self.new_waypoint(waypoint)
+      #  self.new_waypoint(waypoint)
 
-        if error < self.threshold:
-            self.mission_state = 3 #switch to land state
+       # if error < self.threshold:
+        #    self.mission_state = 3 #switch to land state
 
-    def land(self, current_position):
+   # def land(self, current_position):
 
-        waypoint = np.array([self.plt_odom[0], current_position[1], current_position[2]])
-        if self.is_landing == 0:
-            self.new_waypoint(waypoint)
-            self.is_landing = 1
-            self.is_landing_pub_.publish(True) #this will signal the controller to include the velocity feed forward term from the barge
+    #    waypoint = np.array([self.plt_odom[0], current_position[1], current_position[2]])
+     #   if self.is_landing == 0:
+      #      self.new_waypoint(waypoint)
+       #     self.is_landing = 1
+        #    self.is_landing_pub_.publish(True) #this will signal the controller to include the velocity feed forward term from the barge
 
-        error = np.linalg.norm(current_position - waypoint)
-        if error < self.threshold:
-            self.landed_pub_.publish(True)
+      #  error = np.linalg.norm(current_position - waypoint)
+      #  if error < self.threshold:
+      #      self.landed_pub_.publish(True)
             #TODO find a way to disarm after reaching the waypoint
 
     def new_waypoint(self, waypoint):
@@ -204,8 +204,8 @@ class WaypointManager():
         dt = current_time - self.plt_prev_time
         self.plt_prev_time = current_time
         self.plt_odom = np.array([msg.pose.position.x,
-                                  -msg.pose.position.y,
-                                  msg.pose.position.z])
+                                  msg.pose.position.y,
+                                  -msg.pose.position.z])
 
         #numerical differentiation to get velocity
         velocity = (self.plt_odom - self.plt_prev_odom)/dt
@@ -214,7 +214,7 @@ class WaypointManager():
         x = Odometry()
         x.header.stamp = msg.header.stamp
         x.pose.pose.position.x = self.plt_odom[0]
-        x.pose.pose.position.y = self.plt_odom[1]
+        x.pose.pose.position.y = -self.plt_odom[1]
         x.pose.pose.position.z = self.plt_odom[2]
         x.twist.twist.linear.x = velocity[0]
         x.twist.twist.linear.y = -velocity[1]
