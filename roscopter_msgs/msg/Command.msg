@@ -4,6 +4,11 @@
 # mid level: xvel, yvel, zvel, yaw_rate
 # low level: xacc, yacc, zacc, yaw_acc
 
+# ros2
+# builtin_interfaces/Time stamp
+
+time stamp
+
 uint8 mode
 
 float32 cmd1
