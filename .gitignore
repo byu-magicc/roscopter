@@ -6,5 +6,7 @@
 *.swp
 *.autosave
 *.pdf
-roscopter/logs/*
+roscopter/logs/
 *.pyc
+.vscode/
+.idea/
