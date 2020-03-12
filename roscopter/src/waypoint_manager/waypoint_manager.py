@@ -18,15 +18,17 @@ class WaypointManager():
         try:
             self.waypoint_list = rospy.get_param('~waypoints')
         except KeyError:
-            rospy.logfatal('waypoints not set')
-            rospy.signal_shutdown('Parameters not set')
+            rospy.logfatal('[waypoint_manager] waypoints not set')
+            rospy.signal_shutdown('[waypoint_manager] Parameters not set')
 
+        self.len_wps = len(self.waypoint_list)
 
         # how close does the MAV need to get before going to the next waypoint?
-        self.threshold = rospy.get_param('~threshold', 5)
-        self.cyclical_path = rospy.get_param('~cycle', True)
 
-        self.prev_time = rospy.Time.now()
+        self.pos_threshold = rospy.get_param('~threshold', 5)
+        self.heading_threshold = rospy.get_param('~heading_threshold', 0.035)  # radians
+        self.cyclical_path = rospy.get_param('~cycle', True)
+        self.print_wp_reached = rospy.get_param('~print_wp_reached', True)
 
         # set up Services
         self.add_waypoint_service = rospy.Service('add_waypoint', AddWaypoint, self.addWaypointCallback)
@@ -39,7 +41,7 @@ class WaypointManager():
 
         # Set Up Publishers and Subscribers
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
-        self.waypoint_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
+        self.waypoint_cmd_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
         self.relPose_pub_ = rospy.Publisher('relative_pose', RelativePose, queue_size=5, latch=True)
 
         #Create the initial relPose estimate message
@@ -51,6 +53,10 @@ class WaypointManager():
         self.relPose_pub_.publish(relativePose_msg)
         
         #Create the initial command message
+        self.cmd_msg = Command()
+        current_waypoint = np.array(self.waypoint_list[0])
+        self.publish_command(current_waypoint)
+
         self.current_waypoint_index = 0
         command_msg = Command()
         current_waypoint = np.array(self.waypoint_list[0])
@@ -71,17 +77,17 @@ class WaypointManager():
             rospy.spin()
 
 
-    def addWaypointCallback(req):
+    def addWaypointCallback(self, req):
         #TODO
-        print("addwaypoints (NOT IMPLEMENTED)")
+        print("[waypoint_manager] addwaypoints (NOT IMPLEMENTED)")
 
-    def removeWaypointCallback(req):
+    def removeWaypointCallback(self, req):
         #TODO
-        print("remove Waypoints (NOT IMPLEMENTED)")
+        print("[waypoint_manager] remove Waypoints (NOT IMPLEMENTED)")
 
-    def setWaypointsFromFile(req):
+    def setWaypointsFromFile(self, req):
         #TODO
-        print("set Waypoints from File (NOT IMPLEMENTED)")
+        print("[waypoint_manager] set Waypoints from File (NOT IMPLEMENTED)")
 
     def odometryCallback(self, msg):
         # Get error between waypoint and current state
