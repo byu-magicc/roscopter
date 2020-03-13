@@ -21,29 +21,28 @@ class WaypointManager():
             rospy.signal_shutdown('[waypoint_manager] Parameters not set')
 
         self.len_wps = len(self.waypoint_list)
+        self.current_waypoint_index = 0
         
         # how close does the MAV need to get before going to the next waypoint?
-
-        self.pos_threshold = rospy.get_param('~threshold', 5)
+        self.pos_threshold = rospy.get_param('~threshold', 5) 
         self.heading_threshold = rospy.get_param('~heading_threshold', 0.035)  # radians
         self.cyclical_path = rospy.get_param('~cycle', True)
         self.print_wp_reached = rospy.get_param('~print_wp_reached', True)
         
-        # set up Services
+        # Wait a second before we publish the first waypoint
+        rospy.sleep(2)
+
+        # Set up Services
         self.add_waypoint_service = rospy.Service('add_waypoint', AddWaypoint, self.addWaypointCallback)
         self.remove_waypoint_service = rospy.Service('remove_waypoint', RemoveWaypoint, self.addWaypointCallback)
         self.set_waypoint_from_file_service = rospy.Service('set_waypoints_from_file', SetWaypointsFromFile, self.addWaypointCallback)
 
-        # Wait a second before we publish the first waypoint
-        while (rospy.Time.now() < rospy.Time(2.)):
-            pass
-
-        # Set Up Publishers and Subscribers
+        # Set up Publishers and Subscribers
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
         self.waypoint_cmd_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
         self.relPose_pub_ = rospy.Publisher('relative_pose', RelativePose, queue_size=5, latch=True)
 
-        #Create the initial relPose estimate message
+        # Create the initial relPose estimate message
         relativePose_msg = RelativePose()
         relativePose_msg.x = 0
         relativePose_msg.y = 0
@@ -51,15 +50,9 @@ class WaypointManager():
         relativePose_msg.F = 0
         self.relPose_pub_.publish(relativePose_msg)
         
-        #Create the initial command message
+        # Create the initial command message
         self.cmd_msg = Command()
         current_waypoint = np.array(self.waypoint_list[0])
-        self.publish_command(current_waypoint)
-
-        self.current_waypoint_index = 0
-        command_msg = Command()
-        current_waypoint = np.array(self.waypoint_list[0])
-
         self.publish_command(current_waypoint)
 
         while not rospy.is_shutdown():
