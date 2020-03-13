@@ -35,6 +35,7 @@ class WaypointManager():
         self.begin_descent_height = rospy.get_param('~begin_descent_height', 2)
         self.begin_landing_height = rospy.get_param('~begin_landing_height', 0.2)
         self.cyclical_path = rospy.get_param('~cycle', False)
+        self.auto_land = rospy.get_param('~auto_land', False)
 
         self.mission_state = 0 #0: mission
                                #1: rendevous
@@ -44,6 +45,7 @@ class WaypointManager():
         self.prev_time = rospy.Time.now()
         self.plt_prev_time = 0.0
         self.is_landing = 0
+        self.current_waypoint_index = 0
 
         # set up Services
         self.add_waypoint_service = rospy.Service('add_waypoint', AddWaypoint, self.addWaypointCallback)
@@ -55,17 +57,14 @@ class WaypointManager():
             pass
 
         # Set Up Publishers and Subscribers
-        self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
-        self.plt_odom_sub_ = rospy.Subscriber('platform_odom', Odometry, self.pltOdomCallback, queue_size=5)
-        self.plt_pose_sub_ = rospy.Subscriber('platform_pose', PoseStamped, self.pltPoseCallback, queue_size=5)
         self.waypoint_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
         self.auto_land_pub_ = rospy.Publisher('auto_land', Bool, queue_size=5, latch=True)
         self.is_landing_pub_ = rospy.Publisher('is_landing', Bool, queue_size=5, latch=True)
         self.landed_pub_ = rospy.Publisher('landed', Bool, queue_size=5, latch=True)
         self.platform_virtual_odom_pub_ = rospy.Publisher('platform_virtual_odometry', Odometry, queue_size=5, latch=True)
-        
-        self.auto_land = rospy.get_param('~auto_land', False)
-        self.current_waypoint_index = 0
+        self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
+        self.plt_odom_sub_ = rospy.Subscriber('platform_odom', Odometry, self.pltOdomCallback, queue_size=5)
+        self.plt_pose_sub_ = rospy.Subscriber('platform_pose', PoseStamped, self.pltPoseCallback, queue_size=5)
 
         command_msg = Command()
         current_waypoint = np.array(self.waypoint_list[0])
@@ -122,11 +121,11 @@ class WaypointManager():
         # y = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
     
     def mission(self, current_position):
-
         current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
         error = np.linalg.norm(current_position - current_waypoint[0:3])
        
         if error < self.threshold:
+            print('reached waypoint')
             # Get new waypoint index
             self.current_waypoint_index += 1
             if self.current_waypoint_index == len(self.waypoint_list) and self.auto_land == True:
@@ -134,7 +133,7 @@ class WaypointManager():
                 return
 
             if self.cyclical_path:
-                self.current_waypoint_index %= len(self.waypoint_list)                
+                self.current_waypoint_index %= len(self.waypoint_list)            
             elif self.current_waypoint_index == len(self.waypoint_list):
                 self.current_waypoint_index -=1
 
@@ -150,30 +149,30 @@ class WaypointManager():
 
         self.new_waypoint(waypoint)
 
-       # if error < self.threshold:
-        #    self.mission_state = 2 #switch to descent state
+        if error < self.threshold:
+            self.mission_state = 2 #switch to descent state
 
-   # def descend(self, current_position):
+    def descend(self, current_position):
 
-    #    waypoint = self.plt_odom + np.array([0.0, 0.0, self.begin_landing_height])
-     #   error = np.linalg.norm(current_position - waypoint)
+        waypoint = self.plt_odom + np.array([0.0, 0.0, self.begin_landing_height])
+        error = np.linalg.norm(current_position - waypoint)
 
-      #  self.new_waypoint(waypoint)
+        self.new_waypoint(waypoint)
 
-       # if error < self.threshold:
-        #    self.mission_state = 3 #switch to land state
+        if error < self.threshold:
+            self.mission_state = 3 #switch to land state
 
-   # def land(self, current_position):
+    def land(self, current_position):
 
-    #    waypoint = np.array([self.plt_odom[0], current_position[1], current_position[2]])
-     #   if self.is_landing == 0:
-      #      self.new_waypoint(waypoint)
-       #     self.is_landing = 1
-        #    self.is_landing_pub_.publish(True) #this will signal the controller to include the velocity feed forward term from the barge
+        waypoint = np.array([self.plt_odom[0], current_position[1], current_position[2]])
+        if self.is_landing == 0:
+            self.new_waypoint(waypoint)
+            self.is_landing = 1
+            self.is_landing_pub_.publish(True) #this will signal the controller to include the velocity feed forward term from the barge
 
-      #  error = np.linalg.norm(current_position - waypoint)
-      #  if error < self.threshold:
-      #      self.landed_pub_.publish(True)
+        error = np.linalg.norm(current_position - waypoint)
+        if error < self.threshold:
+            self.landed_pub_.publish(True)
             #TODO find a way to disarm after reaching the waypoint
 
     def new_waypoint(self, waypoint):
@@ -204,8 +203,8 @@ class WaypointManager():
         dt = current_time - self.plt_prev_time
         self.plt_prev_time = current_time
         self.plt_odom = np.array([msg.pose.position.x,
-                                  msg.pose.position.y,
-                                  -msg.pose.position.z])
+                                    msg.pose.position.y,
+                                    -msg.pose.position.z])
 
         #numerical differentiation to get velocity
         velocity = (self.plt_odom - self.plt_prev_odom)/dt

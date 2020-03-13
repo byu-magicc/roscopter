@@ -85,7 +85,7 @@
 
     <!--Estimator-->
     <node name="estimator" pkg="roscopter" type="ekf_node" output="screen">
-      <param name="param_filename" value="$(find roscopter)/params/ekf.yaml"/>
+      <param name="param_filename" value="$(find roscopter_sim)/params/ekf.yaml"/>
       <!--Inputs-->
       <remap from="imu" to="imu/data"/>
       <remap from="reference" to="ground_truth/odometry/NED_throttled"/>
