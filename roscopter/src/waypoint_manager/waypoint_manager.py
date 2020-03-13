@@ -29,9 +29,6 @@ class WaypointManager():
         self.cyclical_path = rospy.get_param('~cycle', True)
         self.print_wp_reached = rospy.get_param('~print_wp_reached', True)
         
-        # Wait a second before we publish the first waypoint
-        rospy.sleep(2)
-
         # Set up Services
         self.add_waypoint_service = rospy.Service('add_waypoint', AddWaypoint, self.addWaypointCallback)
         self.remove_waypoint_service = rospy.Service('remove_waypoint', RemoveWaypoint, self.addWaypointCallback)
@@ -41,6 +38,9 @@ class WaypointManager():
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
         self.waypoint_cmd_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
         self.relPose_pub_ = rospy.Publisher('relative_pose', RelativePose, queue_size=5, latch=True)
+
+        # Wait a second before we publish the first waypoint
+        rospy.sleep(2)
 
         # Create the initial relPose estimate message
         relativePose_msg = RelativePose()
@@ -81,7 +81,7 @@ class WaypointManager():
         current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
         current_position = np.array([msg.pose.pose.position.x,
                                      msg.pose.pose.position.y,
-                                     msg.pose.pose.position.z])
+                                     -msg.pose.pose.position.z])
                                      
         # orientation in quaternion form
         qw = msg.pose.pose.orientation.w
