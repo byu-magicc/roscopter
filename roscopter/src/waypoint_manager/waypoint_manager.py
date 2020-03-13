@@ -111,9 +111,10 @@ class WaypointManager():
         heading_error = self.wrap(current_waypoint[3] - y)
 
         if position_error < self.pos_threshold and heading_error < self.heading_threshold:
-            ind = self.current_waypoint_index
+            idx = self.current_waypoint_index
             if self.print_wp_reached:
-                rospy.loginfo(f'[waypoint_manager] Reached waypoint {ind+1}')
+                wp_str = '[waypoint_manager] Reached waypoint {}'.format(idx+1)
+                rospy.loginfo(wp_str)
             # Get new waypoint index
             self.current_waypoint_index += 1
             self.current_waypoint_index %= self.len_wps
