@@ -10,6 +10,7 @@ from rosflight_msgs.msg import Command
 from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import Pose
 
 
 class WaypointManager():
@@ -29,9 +30,11 @@ class WaypointManager():
         self.plt_prev_odom = np.array([0.0,
                                        0.0,
                                        0.0])
+                                       
 
         # how close does the MAV need to get before going to the next waypoint?
         self.threshold = rospy.get_param('~threshold', 5)
+        self.landing_threshold = rospy.get_param('~landing_threshold', 1)
         self.begin_descent_height = rospy.get_param('~begin_descent_height', 2)
         self.begin_landing_height = rospy.get_param('~begin_landing_height', 0.2)
         self.cyclical_path = rospy.get_param('~cycle', False)
@@ -62,6 +65,7 @@ class WaypointManager():
         self.is_landing_pub_ = rospy.Publisher('is_landing', Bool, queue_size=5, latch=True)
         self.landed_pub_ = rospy.Publisher('landed', Bool, queue_size=5, latch=True)
         self.platform_virtual_odom_pub_ = rospy.Publisher('platform_virtual_odometry', Odometry, queue_size=5, latch=True)
+        self.error_pub_ = rospy.Publisher('error', Pose, queue_size=5, latch=True)        
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
         self.plt_odom_sub_ = rospy.Subscriber('platform_odom', Odometry, self.pltOdomCallback, queue_size=5)
         self.plt_pose_sub_ = rospy.Subscriber('platform_pose', PoseStamped, self.pltPoseCallback, queue_size=5)
@@ -122,14 +126,16 @@ class WaypointManager():
     
     def mission(self, current_position):
         current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
+        self.publish_error(current_position, current_waypoint)
         error = np.linalg.norm(current_position - current_waypoint[0:3])
-       
+
         if error < self.threshold:
             print('reached waypoint')
             # Get new waypoint index
             self.current_waypoint_index += 1
             if self.current_waypoint_index == len(self.waypoint_list) and self.auto_land == True:
                 self.mission_state = 1 #switch to rendevous state
+                print('rendevous state')
                 return
 
             if self.cyclical_path:
@@ -146,31 +152,36 @@ class WaypointManager():
 
         waypoint = self.plt_odom + np.array([0.0, 0.0, self.begin_descent_height])
         error = np.linalg.norm(current_position - waypoint)
+        self.publish_error(current_position, waypoint)
 
         self.new_waypoint(waypoint)
 
         if error < self.threshold:
             self.mission_state = 2 #switch to descent state
+            print('descend state')
 
     def descend(self, current_position):
 
         waypoint = self.plt_odom + np.array([0.0, 0.0, self.begin_landing_height])
         error = np.linalg.norm(current_position - waypoint)
+        self.publish_error(current_position, waypoint)
 
         self.new_waypoint(waypoint)
 
-        if error < self.threshold:
+        if error < self.landing_threshold:
             self.mission_state = 3 #switch to land state
+            print('land state')
 
     def land(self, current_position):
 
-        waypoint = np.array([self.plt_odom[0], current_position[1], current_position[2]])
+        waypoint =self.plt_odom
         if self.is_landing == 0:
             self.new_waypoint(waypoint)
             self.is_landing = 1
             self.is_landing_pub_.publish(True) #this will signal the controller to include the velocity feed forward term from the barge
 
         error = np.linalg.norm(current_position - waypoint)
+        self.publish_error(current_position, waypoint)
         if error < self.threshold:
             self.landed_pub_.publish(True)
             #TODO find a way to disarm after reaching the waypoint
@@ -222,6 +233,13 @@ class WaypointManager():
         x.twist.twist.linear.y = -velocity[1]
         x.twist.twist.linear.z = velocity[2]
         self.platform_virtual_odom_pub_.publish(x)
+
+    def publish_error(self, current_position, current_waypoint):
+        error_msg = Pose()
+        error_msg.position.x = current_position[0] - current_waypoint[0]
+        error_msg.position.y = current_position[1] - current_waypoint[1]
+        error_msg.position.z = current_position[2] - current_waypoint[2]
+        self.error_pub_.publish(error_msg)
 
 if __name__ == '__main__':
     rospy.init_node('waypoint_manager', anonymous=True)

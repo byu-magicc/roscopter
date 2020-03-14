@@ -11,6 +11,7 @@ waypoints:
  # [0., -4.5, 5.5, 1.57]],
 
 threshold: 0.3,
+landing_threshold: 0.1,
 cyle: False,
 auto_land: True,
 begin_descent_height: 1.5,
@@ -34,11 +35,11 @@ z_dot_I: 0.25,
 z_dot_D: 0.1,
 
 north_P: 1.0,
-north_I: 0.1,
+north_I: 1.0, #0.1,
 north_D: 0.35,
 
 east_P: 1.0,
-east_I: 0.1,
+east_I: 1.0, #0.1,
 east_D: 0.2,
 
 down_P: 1.0,

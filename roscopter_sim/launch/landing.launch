@@ -50,10 +50,10 @@
     <!-- Platform Velocity Manager -->
     <node name="platform_manager" pkg="roscopter" type="platform_manager.py" output="screen"/>
 
-    <node name="landing_error" pkg="roscopter" type="landing_error.py" output="screen">
-      <!-- <remap from="drone_odom" to="/$(arg drone_name)/odom"/> -->
+    <!-- <node name="landing_error" pkg="roscopter" type="landing_error.py" output="screen">
+      <remap from="odom" to="/odom"/>
       <remap from="drone_odom" to="/$(arg drone_name)/odom"/>
-    </node>
+    </node> -->
   
   </group>
 
