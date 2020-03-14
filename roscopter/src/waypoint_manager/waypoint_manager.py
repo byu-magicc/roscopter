@@ -194,7 +194,10 @@ class WaypointManager():
         x = PoseStamped()
 
         x.header = msg.header
-        x.pose = msg.pose.pose
+        #convert positions to NED from NWU
+        x.pose.position.x = msg.pose.pose.position.x
+        x.pose.position.y = -msg.pose.pose.position.y
+        x.pose.position.z = -msg.pose.pose.position.z
 
         self.pltPoseCallback(x)
 
