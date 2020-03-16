@@ -136,6 +136,7 @@ class WaypointManager():
     #     # get euler published from ekf
     #     psi_deg = msg.vector.z
     #     self.psi_rad = self.psi_deg * self.deg_2_rad_
+<<<<<<< HEAD
 
     def publish_command(self, current_waypoint):
         self.cmd_msg.stamp = rospy.Time.now()
@@ -157,6 +158,8 @@ class WaypointManager():
     def wrap(self, angle):
         angle -= 2*np.pi * np.floor((angle + np.pi) / (2*np.pi))
         return angle
+=======
+>>>>>>> failed to save last change
 
 
 if __name__ == '__main__':
