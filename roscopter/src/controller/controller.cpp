@@ -357,9 +357,9 @@ void Controller::computeControl(double dt)
     {
       command_.mode = rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE;
       command_.F = throttle_down_ * command_.F;
-      command_.x = 0.0;
-      command_.y = 0.0;
-      command_.z = 0.0;
+      command_.x = saturate(xc_.phi, max_.roll, -max_.roll);
+      command_.y = saturate(xc_.theta, max_.pitch, -max_.pitch);
+      command_.z = saturate(xc_.r, max_.yaw_rate, -max_.yaw_rate);
       // std::cerr << "throttle = " << command_.F << "\n"; //good for testing the throttle_down_ multiplier
     }
     else

@@ -4,9 +4,9 @@ waypoint_manager: {
 
 #NEU inertial frame
 waypoints:
- [[0, 0, 1., 0],
- [1.5, 0, 1., 1.0],
- [0, 1.5, 2., 1.0]],
+ [[0, 0, 2., 0],
+ [4.5, 0, 3., 1.0],
+ [0, -2.5, 2., 1.0]],
  # [4.5, -4.5, 4.5, 3.14],
  # [0., -4.5, 5.5, 1.57]],
 
@@ -63,6 +63,6 @@ max_e_dot: 1.5,
 max_d_dot: 0.5,
 
 # Below this altitude, zero roll, pitch, yawrate will be commanded
-min_altitude: 0.5,
+min_altitude: 0.0,
 
 }
