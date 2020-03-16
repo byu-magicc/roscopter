@@ -1,11 +1,12 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import numpy as np
 import rospy
 
+from geometry_msgs import Vector3Stamped
 from nav_msgs.msg import Odometry
-from rosflight_msgs.msg import Command
-from roscopter_msgs.msg import RelativePose
+from roscopter_msgs.msg import Command
+from roscopter_msgs.msg import PoseEuler
 from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
 
 
@@ -20,40 +21,50 @@ class WaypointManager():
             rospy.logfatal('[waypoint_manager] waypoints not set')
             rospy.signal_shutdown('[waypoint_manager] Parameters not set')
 
-        self.len_wps = len(self.waypoint_list)
-        self.current_waypoint_index = 0
-        
+        # self.deg_2_rad_ = np.pi / 180.0
+
+        self.len_waypts = len(self.waypoint_list)
+
         # how close does the MAV need to get before going to the next waypoint?
-        self.pos_threshold = rospy.get_param('~threshold', 5) 
+        self.pos_threshold = rospy.get_param('~threshold', 5)
         self.heading_threshold = rospy.get_param('~heading_threshold', 0.035)  # radians
         self.cyclical_path = rospy.get_param('~cycle', True)
         self.print_wp_reached = rospy.get_param('~print_wp_reached', True)
-        
+
         # Set up Services
         self.add_waypoint_service = rospy.Service('add_waypoint', AddWaypoint, self.addWaypointCallback)
         self.remove_waypoint_service = rospy.Service('remove_waypoint', RemoveWaypoint, self.addWaypointCallback)
         self.set_waypoint_from_file_service = rospy.Service('set_waypoints_from_file', SetWaypointsFromFile, self.addWaypointCallback)
 
-        # Set up Publishers and Subscribers
-        self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
+        # Set Up Publishers and Subscribers
+        self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometry_callback, queue_size=5)
+        # self.eul_sub_ = rospy.Subscriber('state', Vector3Stamped, self.euler_callback, queue_size=5)
         self.waypoint_cmd_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
-        self.relPose_pub_ = rospy.Publisher('relative_pose', RelativePose, queue_size=5, latch=True)
+        self.pose_pub_ = rospy.Publisher('waypt_pose_euler', PoseEuler, queue_size=5, latch=True)
 
         # Wait a second before we publish the first waypoint
         rospy.sleep(2)
 
-        # Create the initial relPose estimate message
-        relativePose_msg = RelativePose()
-        relativePose_msg.x = 0
-        relativePose_msg.y = 0
-        relativePose_msg.z = 0
-        relativePose_msg.F = 0
-        self.relPose_pub_.publish(relativePose_msg)
-        
         # Create the initial command message
         self.cmd_msg = Command()
+        self.current_waypoint_index = 0
         current_waypoint = np.array(self.waypoint_list[0])
+
         self.publish_command(current_waypoint)
+
+
+        # Initialize member n,e,d
+        self.n = None
+        self.e = None
+        self.d = None
+        self.psi = None
+
+        self.pose_msg = PoseEuler()
+        # self.pose_msg.n = 0.0
+        # self.pose_msg.e = 0.0
+        # self.pose_msg.d = 0.0
+        # self.pose_msg.psi = 0.0
+        # self.pose_pub_.publish(self.pose_msg)
 
         while not rospy.is_shutdown():
             # wait for new messages and call the callback when they arrive
@@ -72,17 +83,20 @@ class WaypointManager():
         #TODO
         print("[waypoint_manager] set Waypoints from File (NOT IMPLEMENTED)")
 
-    def odometryCallback(self, msg):
+    def odometry_callback(self, msg):
         # stop iterating over waypoints if cycle==false and last waypoint reached
-        if not self.cyclical_path and self.current_waypoint_index == self.len_wps-1:
+        if not self.cyclical_path and self.current_waypoint_index == self.len_waypts-1:
             return
 
         # Get error between waypoint and current state
         current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
-        current_position = np.array([msg.pose.pose.position.x,
-                                     msg.pose.pose.position.y,
-                                     -msg.pose.pose.position.z])
-                                     
+        self.n = msg.pose.pose.position.x
+        self.e = msg.pose.pose.position.y
+        self.d = msg.pose.pose.position.z
+        current_position = np.array([self.n,
+                                     self.e,
+                                     self.d])
+
         # orientation in quaternion form
         qw = msg.pose.pose.orientation.w
         qx = msg.pose.pose.orientation.x
@@ -90,15 +104,7 @@ class WaypointManager():
         qz = msg.pose.pose.orientation.z
 
         # yaw from quaternion
-        y = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
-        
-        #publish the relative pose estimate
-        relativePose_msg = RelativePose()
-        relativePose_msg.x = current_position[0]
-        relativePose_msg.y = current_position[1]
-        relativePose_msg.z = y
-        relativePose_msg.F = current_position[2]
-        self.relPose_pub_.publish(relativePose_msg)
+        self.psi = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
 
         position_error = np.linalg.norm(current_waypoint[0:3] - current_position)
         heading_error = self.wrap(current_waypoint[3] - y)
@@ -110,31 +116,48 @@ class WaypointManager():
                 rospy.loginfo(wp_str)
             # Get new waypoint index
             self.current_waypoint_index += 1
-            self.current_waypoint_index %= self.len_wps
+            self.current_waypoint_index %= self.len_waypts
             current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
 
+            # next_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
+
             self.publish_command(current_waypoint)
-    
+
+
+
+        # publish the pose_euler estimate
+        self.pose_msg.n = self.n
+        self.pose_msg.e = self.e
+        self.pose_msg.d = self.d
+        self.pose_msg.psi = self.psi
+        self.pose_pub_.publish(self.pose_msg)
+
+    # def euler_callback(self, msg):
+    #     # get euler published from ekf
+    #     psi_deg = msg.vector.z
+    #     self.psi_rad = self.psi_deg * self.deg_2_rad_
+
     def publish_command(self, current_waypoint):
-        self.cmd_msg.header.stamp = rospy.Time.now()
-        self.cmd_msg.x = current_waypoint[0]
-        self.cmd_msg.y = current_waypoint[1]
-        self.cmd_msg.F = current_waypoint[2]
-        
+        self.cmd_msg.stamp = rospy.Time.now()
+        self.cmd_msg.cmd1 = current_waypoint[0]
+        self.cmd_msg.cmd2 = current_waypoint[1]
+        self.cmd_msg.cmd3 = current_waypoint[2]
+
         if len(current_waypoint) > 3:
-            self.cmd_msg.z = current_waypoint[3]
+            self.cmd_msg.cmd4 = current_waypoint[3]
         else:
-            next_waypoint_index = (self.current_waypoint_index + 1) % self.len_wps
+            next_waypoint_index = (self.current_waypoint_index + 1) % self.len_waypts
             next_waypoint = self.waypoint_list[next_waypoint_index]
             delta = next_waypoint - current_waypoint
-            self.cmd_msg.z = np.arctan2(delta[1], delta[0])
+            self.cmd_msg.cmd4 = np.arctan2(delta[1], delta[0])
 
-        self.cmd_msg.mode = Command.MODE_XPOS_YPOS_YAW_ALTITUDE
+        self.cmd_msg.mode = Command.MODE_NPOS_EPOS_DPOS_YAW
         self.waypoint_cmd_pub_.publish(self.cmd_msg)
-    
+
     def wrap(self, angle):
         angle -= 2*np.pi * np.floor((angle + np.pi) / (2*np.pi))
         return angle
+
 
 if __name__ == '__main__':
     rospy.init_node('waypoint_manager', anonymous=True)

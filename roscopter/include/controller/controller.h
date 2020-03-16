@@ -2,7 +2,7 @@
 #define CONTROLLER_H
 
 #include <ros/ros.h>
-#include <rosflight_msgs/Command.h>
+#include <roscopter_msgs/Command.h>
 #include <rosflight_msgs/Status.h>
 #include <controller/simple_pid.h>
 #include <nav_msgs/Odometry.h>
