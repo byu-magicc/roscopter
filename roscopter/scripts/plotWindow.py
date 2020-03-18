@@ -9,6 +9,8 @@ from PyQt5.QtCore import pyqtSlot
 import sys
 import signal
 
+##### I have not gotten this to work. #####
+
 class plotWindow():
     def __init__(self, parent=None):
         signal.signal(signal.SIGINT, signal.SIG_DFL)

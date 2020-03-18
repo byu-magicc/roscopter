@@ -88,6 +88,8 @@ private:
   ros::Subscriber status_sub_;
   ros::Subscriber pltOdom_sub_;
   ros::Subscriber is_landing_sub_;
+  ros::Subscriber auto_land_sub_;
+  ros::Subscriber landed_sub_;
 
   ros::Publisher command_pub_;
 
@@ -98,10 +100,13 @@ private:
   double max_accel_xy_;
   double max_accel_z_;
   double min_altitude_;
+  float throttle_down_ = 0.99;
   bool is_flying_;
   bool armed_;
   bool received_cmd_;
+  bool auto_land_ = false;
   bool is_landing_ = false;
+  bool landed_ = false;
 
 
   // PID Controllers
@@ -134,7 +139,9 @@ private:
   void cmdCallback(const rosflight_msgs::CommandConstPtr &msg);
   void statusCallback(const rosflight_msgs::StatusConstPtr &msg);
   void pltOdomCallback(const nav_msgs::OdometryConstPtr &msg);
+  void autoLandCallback(const std_msgs::BoolConstPtr &msg);
   void isLandingCallback(const std_msgs::BoolConstPtr &msg);
+  void landedCallback(const std_msgs::BoolConstPtr &msg);
 
   void computeControl(double dt);
   void resetIntegrators();

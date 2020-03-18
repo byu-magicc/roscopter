@@ -2,17 +2,20 @@
 
 waypoint_manager: {
 
+#NEU inertial frame
 waypoints:
- [[0, 0, 1., 0],
- [1.5, 0, 1., 1.0],
- [0, 1.5, 2., 1.0]],
+ [[0, 0, 1.5, 0],
+ [1.0, 0, 2.0, 1.0],
+ [0, -1.5, 2., 1.0]],
  # [4.5, -4.5, 4.5, 3.14],
  # [0., -4.5, 5.5, 1.57]],
 
 threshold: 0.3,
+landing_threshold: 0.1,
 cyle: False,
-is_landing: True,
-landing_safety_height: 2.0
+auto_land: True,
+begin_descent_height: 1.5,
+begin_landing_height: 0.2,
 }
 
 ### Controller Parameters
@@ -32,11 +35,11 @@ z_dot_I: 0.25,
 z_dot_D: 0.1,
 
 north_P: 1.0,
-north_I: 0.1,
+north_I: 0.5, #1.0, #0.1,
 north_D: 0.35,
 
 east_P: 1.0,
-east_I: 0.1,
+east_I: 0.5, #1.0, #0.1,
 east_D: 0.2,
 
 down_P: 1.0,
@@ -60,6 +63,6 @@ max_e_dot: 1.5,
 max_d_dot: 0.5,
 
 # Below this altitude, zero roll, pitch, yawrate will be commanded
-min_altitude: 0.5,
+min_altitude: 0.0,
 
 }
