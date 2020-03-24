@@ -44,7 +44,7 @@ waypoints:
   [3, 3, 2, 0.0]],
 
 threshold: 0.1,
-cyle: True
+cycle: True
 
 }
 
