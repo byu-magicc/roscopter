@@ -8,7 +8,7 @@ waypoints:
   [0, -1, 1.5, -1.57]],
 
 threshold: 0.1,
-cyle: True
+cycle: True
 }
 
 ### Controller Parameters
