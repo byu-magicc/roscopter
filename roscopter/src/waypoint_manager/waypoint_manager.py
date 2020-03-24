@@ -95,26 +95,27 @@ class WaypointManager():
         relativePose_msg.F = current_position[2]
         self.relPose_pub_.publish(relativePose_msg)
 
-        # stop iterating over waypoints if cycle==false and last waypoint reached
-        if not self.cyclical_path and self.current_waypoint_index == self.len_wps-1:
-            return
-
         # Get error between waypoint and current state
         current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
         position_error = np.linalg.norm(current_waypoint[0:3] - current_position)
         heading_error = np.abs(self.wrap(current_waypoint[3] - y))
 
-        if position_error < self.pos_threshold and heading_error < self.heading_threshold:
-            idx = self.current_waypoint_index
+        if position_error < self.pos_threshold and heading_error < self.heading_threshold: 
             if self.print_wp_reached:
+                idx = self.current_waypoint_index
                 wp_str = '[waypoint_manager] Reached waypoint {}'.format(idx+1)
                 rospy.loginfo(wp_str)
-            # Get new waypoint index
-            self.current_waypoint_index += 1
-            self.current_waypoint_index %= self.len_wps
-            current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
 
-            self.publish_command(current_waypoint)
+            # stop iterating over waypoints if cycle==false and last waypoint reached
+            if not self.cyclical_path and self.current_waypoint_index == self.len_wps-1:
+                self.print_wp_reached = False
+                return
+            else:
+                # Get new waypoint index
+                self.current_waypoint_index += 1
+                self.current_waypoint_index %= self.len_wps
+                current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
+                self.publish_command(current_waypoint)
     
     def publish_command(self, current_waypoint):
         self.cmd_msg.header.stamp = rospy.Time.now()
