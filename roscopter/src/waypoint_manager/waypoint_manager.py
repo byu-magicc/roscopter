@@ -73,16 +73,11 @@ class WaypointManager():
         print("[waypoint_manager] set Waypoints from File (NOT IMPLEMENTED)")
 
     def odometryCallback(self, msg):
-        # stop iterating over waypoints if cycle==false and last waypoint reached
-        if not self.cyclical_path and self.current_waypoint_index == self.len_wps-1:
-            return
-
-        # Get error between waypoint and current state
-        current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
+        #get current position
         current_position = np.array([msg.pose.pose.position.x,
                                      msg.pose.pose.position.y,
                                      -msg.pose.pose.position.z])
-                                     
+
         # orientation in quaternion form
         qw = msg.pose.pose.orientation.w
         qx = msg.pose.pose.orientation.x
@@ -91,7 +86,7 @@ class WaypointManager():
 
         # yaw from quaternion
         y = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
-        
+    
         #publish the relative pose estimate
         relativePose_msg = RelativePose()
         relativePose_msg.x = current_position[0]
@@ -100,8 +95,14 @@ class WaypointManager():
         relativePose_msg.F = current_position[2]
         self.relPose_pub_.publish(relativePose_msg)
 
+        # stop iterating over waypoints if cycle==false and last waypoint reached
+        if not self.cyclical_path and self.current_waypoint_index == self.len_wps-1:
+            return
+
+        # Get error between waypoint and current state
+        current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
         position_error = np.linalg.norm(current_waypoint[0:3] - current_position)
-        heading_error = self.wrap(current_waypoint[3] - y)
+        heading_error = np.abs(self.wrap(current_waypoint[3] - y))
 
         if position_error < self.pos_threshold and heading_error < self.heading_threshold:
             idx = self.current_waypoint_index
