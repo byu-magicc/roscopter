@@ -1,7 +1,8 @@
 # Add a Waypoint to the waypoint list
-
 float64 x
 float64 y
 float64 z
+float64 psi
+int32 index
 ---
-int32 length # The Length of the waypoint queue
+int32 length # The Length of the Waypoint Queue

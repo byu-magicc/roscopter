@@ -40,7 +40,7 @@ Controller::Controller() :
   state_sub_ = nh_.subscribe("estimate", 1, &Controller::stateCallback, this);
   is_flying_sub_ =
       nh_.subscribe("is_flying", 1, &Controller::isFlyingCallback, this);
-  cmd_sub_ =
+  cmd_sub_ = //TODO Shouldn't this be waypoint instead of cmd_sub? It seems confusing
       nh_.subscribe("high_level_command", 1, &Controller::cmdCallback, this);
   status_sub_ = nh_.subscribe("status", 1, &Controller::statusCallback, this);
 

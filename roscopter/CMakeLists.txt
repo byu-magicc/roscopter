@@ -20,7 +20,7 @@ find_package(inertial_sense QUIET)
 
 if (${inertial_sense_FOUND})
     message(WARNING "found inertial sense library")
-    add_definitions(-DINERTIAL_SENSE)
+    #add_definitions(-DINERTIAL_SENSE)
 else()
     message(WARNING "Did NOT find inertial sense library")
 endif()
