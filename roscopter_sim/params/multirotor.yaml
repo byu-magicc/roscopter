@@ -49,7 +49,6 @@ cyle: false,
 auto_land: false,
 landing_safety_height: 2.0
 
-
 }
 
 ### Controller Parameters
