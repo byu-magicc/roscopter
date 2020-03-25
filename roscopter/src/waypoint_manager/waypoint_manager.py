@@ -2,7 +2,6 @@
 
 import numpy as np
 import rospy
-import std_msgs.msg #remove
 
 from nav_msgs.msg import Odometry
 from rosflight_msgs.msg import Command
