@@ -21,7 +21,6 @@ class WaypointManager():
             rospy.logfatal('[waypoint_manager] waypoints not set')
             rospy.signal_shutdown('[waypoint_manager] Parameters not set')
 
-        self.len_wps = len(self.waypoint_list)
         self.current_waypoint_index = 0
 
         # how close does the MAV need to get before going to the next waypoint?
@@ -68,34 +67,36 @@ class WaypointManager():
         if req.index == -1:
             index = len(self.waypoint_list)
         elif req.index > len(self.waypoint_list):
-            rospy.logwarn("Waypoint Index Out of Range")
+            rospy.logwarn("[waypoint_manager] Waypoint Index Out of Range")
             return
         else:
             index = req.index
         self.waypoint_list.insert(index, new_waypoint)
         if self.current_waypoint_index >= index:
             self.current_waypoint_index += 1
-        rospy.loginfo("Added New Waypoint")
+        rospy.loginfo("[waypoint_manager] Added New Waypoint")
         return len(self.waypoint_list)
 
     def removeWaypointCallback(self, req):
         # Remove a waypoint from the index
         if len(self.waypoint_list) == 1:
-            rospy.logwarn("Cannot Remove Only Waypoint")
+            rospy.logwarn("[waypoint_manager] Cannot Remove Only Waypoint")
             return len(self.waypoint_list)
         if req.index >= len(self.waypoint_list):
-            rospy.logwarn("Waypoint Index Out of Range")
+            rospy.logwarn("[waypoint_manager] Waypoint Index Out of Range")
             return
         del self.waypoint_list[req.index]
+        removed_str = '[waypoint_manager] Waypoint {} Removed'.format(req.index+1)
+        rospy.loginfo(removed_str)
         # If the current waypoint was removed, wrap then publish
         if req.index == self.current_waypoint_index:
             # stop iterating over waypoints if cycle==false and last waypoint reached
-            if not self.cyclical_path and self.current_waypoint_index == self.len_wps-1:
+            if not self.cyclical_path and self.current_waypoint_index == len(self.waypoint_list)-1:
                 self.print_wp_reached = False
                 return
             else:
                 # Get new waypoint index
-                self.current_waypoint_index %= self.len_wps
+                self.current_waypoint_index %= len(self.waypoint_list)
                 current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
                 self.publish_command(current_waypoint)
         # Elif the current waypoint was the last, keep as last, don't publish
@@ -109,7 +110,18 @@ class WaypointManager():
 
     def listWaypoints(self, req):
         # Returns the waypoint list
-        print(self.waypoint_list)
+        # # Print
+        # print(self.waypoint_list)
+        # # List as Log Info
+        # waypoint_list_str = '[waypoint_manager] Waypoints: {}'.format(self.waypoint_list)
+        # rospy.loginfo(waypoint_list_str)
+        # List 1 at a time
+        rospy.loginfo('[waypoint_manager] Waypoints:')
+        i = 1
+        for waypoint in self.waypoint_list:
+            waypoint_str = '[waypoint_manager] {}: {}'.format(i, waypoint)
+            rospy.loginfo(waypoint_str)
+            i += 1
         return True
 
     # def clearWaypoints(self,req): #TODO
@@ -149,13 +161,13 @@ class WaypointManager():
                 rospy.loginfo(wp_str)
 
             # stop iterating over waypoints if cycle==false and last waypoint reached
-            if not self.cyclical_path and self.current_waypoint_index == self.len_wps-1:
+            if not self.cyclical_path and self.current_waypoint_index == len(self.waypoint_list)-1:
                 self.print_wp_reached = False
                 return
             else:
                 # Get new waypoint index
                 self.current_waypoint_index += 1
-                self.current_waypoint_index %= self.len_wps
+                self.current_waypoint_index %= len(self.waypoint_list)
                 current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
                 self.publish_command(current_waypoint)
 
@@ -168,7 +180,7 @@ class WaypointManager():
         if len(current_waypoint) > 3:
             self.cmd_msg.z = current_waypoint[3]
         else:
-            next_waypoint_index = (self.current_waypoint_index + 1) % self.len_wps
+            next_waypoint_index = (self.current_waypoint_index + 1) % len(self.waypoint_list)
             next_waypoint = self.waypoint_list[next_waypoint_index]
             delta = next_waypoint - current_waypoint
             self.cmd_msg.z = np.arctan2(delta[1], delta[0])
