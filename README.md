@@ -7,7 +7,7 @@ This repository contains the ROS packages associated with flying a multirotor on
 
 ### Simplified Dynamics Model
 
-Clone this repo, the [ROSflight_plugins](github.com/byu-magicc/rosflight_plugins) repo, and the [ROSflight](https://github.com/rosflight/rosflight.git) repo into `catkin_ws/src`, you can run the Gazebo simulator with
+Clone this repo, the [ROSflight_plugins](https://github.com/byu-magicc/rosflight_plugins) repo, and the [ROSflight](https://github.com/rosflight/rosflight.git) repo into `catkin_ws/src`, you can run the Gazebo simulator with
 
 ```bash
 $ catkin_make
@@ -23,19 +23,13 @@ To run the `rosflight` SIL simulation [information](http://docs.rosflight.org/en
 ```bash
 $ catkin_make
 $ source devel/setup.bash
-$ roslaunch roscopter copter_sil..launch
+$ roslaunch roscopter copter_sil.launch
 ```
-
 # Core Autopilot Components #
 
 ## EKF ##
 
-The EKF estimates the position of the multirotor given GPS and IMU measurements.
-
-###TODO:###
- 1. residual saturation and outlier rejection
- 2. Altimeter Fusion
- 3. Currently, the estimator doesn't work properly if it is compiled in Release mode.
+The EKF estimates the position of the multirotor given GPS (or MoCap if indoors) and IMU measurements.
 
 ### Controller ###
 
@@ -44,3 +38,13 @@ A PID controller is used.
 ### Waypoint Manager ###
 
 Velocity manager and commander.
+
+
+# TODO: #
+ 1. Improve GPS estimation performance using Ublox GPS 
+ 2. Support additional altitude sensor support (laser/sonar)
+ 3. Heading calibration routine (magnetometer)
+ 4. Include wind estimation  
+ 5. Add simpler way to add new waypoints
+ 6. Get states_plotter.py and commands_plotter.py
+ 7. Develop procedure for defining quadrotor physical parameters.  (add to wiki)
