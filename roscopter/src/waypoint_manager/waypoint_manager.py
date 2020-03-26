@@ -2,11 +2,11 @@
 
 import numpy as np
 import rospy
-import std_msgs.msg
 
 from std_msgs.msg import Bool
 from nav_msgs.msg import Odometry
 from rosflight_msgs.msg import Command
+from roscopter_msgs.msg import RelativePose
 from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseStamped
@@ -31,7 +31,9 @@ class WaypointManager():
                                        0.0,
                                        0.0])
                                        
-
+        self.len_wps = len(self.waypoint_list)
+        self.current_waypoint_index = 0
+        
         # how close does the MAV need to get before going to the next waypoint?
         self.threshold = rospy.get_param('~threshold', 5)
         self.landing_threshold = rospy.get_param('~landing_threshold', 1)
@@ -84,21 +86,22 @@ class WaypointManager():
             command_msg.z = 0.
         command_msg.mode = Command.MODE_XPOS_YPOS_YAW_ALTITUDE
         self.waypoint_pub_.publish(command_msg)
-
+        
         while not rospy.is_shutdown():
             # wait for new messages and call the callback when they arrive
             rospy.spin()
 
-
     #TODO: Need to set up these services
     def addWaypointCallback(req):
         print("addwaypoints")
+        
+    def removeWaypointCallback(self, req):
+        #TODO
+        print("[waypoint_manager] remove Waypoints (NOT IMPLEMENTED)")
 
-    def removeWaypointCallback(req):
-        print("remove Waypoints")
-
-    def setWaypointsFromFile(req):
-        print("set Waypoints from File")
+    def setWaypointsFromFile(self, req):
+        #TODO
+        print("[waypoint_manager] set Waypoints from File (NOT IMPLEMENTED)")
 
     def odometryCallback(self, msg):
         # Get error between waypoint and current state
