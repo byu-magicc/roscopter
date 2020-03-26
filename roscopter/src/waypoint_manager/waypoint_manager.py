@@ -3,7 +3,7 @@
 import numpy as np
 import rospy
 
-from geometry_msgs import Vector3Stamped
+# from geometry_msgs import Vector3Stamped
 from nav_msgs.msg import Odometry
 from roscopter_msgs.msg import Command
 from roscopter_msgs.msg import PoseEuler

@@ -20,6 +20,7 @@
   <depend>sensor_msgs</depend>
   <depend>roscpp</depend>
   <depend>rospy</depend>
+  <depend>roscopter_msgs</depend>
   <depend>rosflight_msgs</depend>
   <depend>rosflight_utils</depend>
   <depend>eigen_conversions</depend>
