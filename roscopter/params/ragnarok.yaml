@@ -63,6 +63,6 @@ max_e_dot: 1.5,
 max_d_dot: 0.5,
 
 # Below this altitude, zero roll, pitch, yawrate will be commanded
-min_altitude: 0.0,
+min_altitude: 0.0, #this needs to be zero for landing
 
 }
