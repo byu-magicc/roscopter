@@ -50,6 +50,7 @@
       <remap from="waypoint" to="high_level_command"/>
       <!-- <remap from="state" to="ground_truth/odometry/NED"/> -->
       <remap from="state" to="odom"/>
+      <!-- <remap from="estimate" to="odom"/> -->
     </node>
 
     <!--Estimator-->

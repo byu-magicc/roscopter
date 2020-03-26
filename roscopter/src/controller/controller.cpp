@@ -44,7 +44,7 @@ Controller::Controller() :
       nh_.subscribe("high_level_command", 1, &Controller::cmdCallback, this);
   status_sub_ = nh_.subscribe("status", 1, &Controller::statusCallback, this);
 
-  command_pub_ = nh_.advertise<roscopter_msgs::Command>("command", 1);
+  command_pub_ = nh_.advertise<rosflight_msgs::Command>("command", 1);
 }
 
 
