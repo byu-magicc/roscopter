@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 
 <launch>
+  <arg name="drone_name"            value="ragnarok"/>
 
 
   <!-- FCU communication -->
@@ -8,12 +9,12 @@
     <param name="udp" value="false"/>
     <param name="port" value="/dev/ttyACM0"/>
   </node>
-  
+
   <!-- Motion Capture Node-->
   <node name="node" pkg="optitrack_vrpn" type="node" output="screen"/>
-  
+
   <!-- Load common parameters -->
-  <rosparam command="load" file="$(find roscopter)/params/F450.yaml"/>
+  <rosparam command="load" file="$(find roscopter)/params/$(arg drone_name).yaml"/>
 
   <!-- PID Position Controller -->
   <node name="controller" pkg="roscopter" type="controller">
@@ -24,7 +25,7 @@
   <rosparam command="load" file="$(find roscopter)/params/ekf.yaml" ns="estimator"/>
   <node name="estimator" type="ekf_node" pkg="roscopter" output="screen">
     <remap from="imu" to="/imu/data"/>
-    <remap from="pose" to="/MOTIONCAPTUREASSET_ned"/>
+    <remap from="pose" to="/$(arg drone_name)_ned"/>
   </node>
 
   <!-- Waypoint Manager -->

@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <launch>
+  <arg name="drone_name"          default="ragnarok"/>
   <arg name="mav_name"            default="multirotor"/>
   <arg name="color"               default="White"/>
   <arg name="x"                   default="0"/>
@@ -31,7 +32,8 @@
   <group ns="$(arg mav_name)">
 
     <!-- Load common parameters -->
-    <rosparam command="load" file="$(find roscopter_sim)/params/$(arg mav_name).yaml"/>
+    <rosparam command="load" file="$(find roscopter_sim)/params/$(arg drone_name).yaml"/>
+    <rosparam command="load" file="$(find roscopter)/params/$(arg drone_name).yaml"/>
 
     <!-- Is Flying Publisher -->
     <node pkg="rostopic" type="rostopic" name="is_flying_pub" args="pub is_flying std_msgs/Bool true"/>

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+from IPython.core.debugger import set_trace
 import numpy as np
 
 import rospy
@@ -8,7 +8,8 @@ from nav_msgs.msg import Odometry
 from rosflight_msgs.msg import Command
 from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
 
-
+#TODO Need to finish this.  It is not working
+#possibly change this later
 class WaypointManager():
 
     def __init__(self):
@@ -32,15 +33,21 @@ class WaypointManager():
         self.remove_waypoint_service = rospy.Service('remove_waypoint', RemoveWaypoint, self.addWaypointCallback)
         self.set_waypoint_from_file_service = rospy.Service('set_waypoints_from_file', SetWaypointsFromFile, self.addWaypointCallback)
 
+        #this comes from waypoint_mangager.  Should it be included?
+        # Wait a second before we publish the first waypoint
+        while (rospy.Time.now() < rospy.Time(2.)):
+            pass
+
         # Set Up Publishers and Subscribers
-        self.xhat_sub_ = rospy.Subscriber('/leo/truth_NED', Odometry, self.odometryCallback, queue_size=5)
-        self.waypoint_pub_ = rospy.Publisher('/leo/velocity_command', Command, queue_size=5, latch=True)
+        self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
+        self.waypoint_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
 
         self.current_waypoint_index = 0
 
+        #this all seems to be for position not velocity
         command_msg = Command()
         current_waypoint = np.array(self.waypoint_list[0])
-
+        command_msg.header.stamp = rospy.Time.now()
         command_msg.x = current_waypoint[0]
         command_msg.y = current_waypoint[1]
         command_msg.F = current_waypoint[2]
@@ -50,7 +57,7 @@ class WaypointManager():
             next_point = self.waypoint_list[(self.current_waypoint_index + 1) % len(self.waypoint_list)]
             delta = next_point - current_waypoint
             command_msg.z = np.atan2(delta[1], delta[0])
-        command_msg.mode = Command.MODE_XPOS_YPOS_YAW_ALTITUDE
+        command_msg.mode = Command.MODE_XPOS_YPOS_YAW_ALTITUDE #change mode?
         self.waypoint_pub_.publish(command_msg)
 
         while not rospy.is_shutdown():
@@ -58,16 +65,16 @@ class WaypointManager():
             rospy.spin()
 
 
-    def addWaypointCallback(req):
+    def addWaypointCallback(self, req):
         print("addwaypoints")
 
-    def removeWaypointCallback(req):
+    def removeWaypointCallback(self, req):
         print("remove Waypoints")
 
-    def setWaypointsFromFile(req):
+    def setWaypointsFromFile(self, req):
         print("set Waypoints from File")
 
-    def saturate(x, max, min):
+    def saturate(self, x, max, min):
         if x > max:
             return max
         elif x < min:
