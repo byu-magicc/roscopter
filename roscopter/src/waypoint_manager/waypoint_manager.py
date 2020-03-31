@@ -6,7 +6,7 @@ import rospy
 from nav_msgs.msg import Odometry
 from rosflight_msgs.msg import Command
 from roscopter_msgs.msg import RelativePose
-from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile, ListWaypoints
+from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile, ListWaypoints, ClearWaypoints
 
 
 class WaypointManager():
@@ -21,6 +21,8 @@ class WaypointManager():
             rospy.signal_shutdown('[waypoint_manager] Parameters not set')
 
         self.current_waypoint_index = 0
+        self.current_position = 0
+        self.y = 0
 
         # how close does the MAV need to get before going to the next waypoint?
         self.pos_threshold = rospy.get_param('~threshold', 5)
@@ -33,6 +35,7 @@ class WaypointManager():
         self.remove_waypoint_service = rospy.Service('remove_waypoint', RemoveWaypoint, self.removeWaypointCallback)
         self.set_waypoints_from_file_service = rospy.Service('set_waypoints_from_file', SetWaypointsFromFile, self.setWaypointsFromFileCallback)
         self.list_waypoints = rospy.Service('list_waypoints', ListWaypoints, self.listWaypoints)
+        self.clear_waypoints = rospy.Service('clear_waypoints', ClearWaypoints, self.clearWaypoints)
 
         # Set Up Publishers and Subscribers
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
@@ -123,11 +126,24 @@ class WaypointManager():
             i += 1
         return True
 
-    # def clearWaypoints(self,req): #TODO
+    def clearWaypoints(self, req):
+        # Clears all waypoints, except current
+        current_waypoint = self.waypoint_list[self.current_waypoint_index]
+        del self.waypoint_list[:]
+        self.waypoint_list = [current_waypoint]
+        self.current_waypoint_index = 0
+        # # Clears all waypoints, creates a waypoint at current location
+        # del self.waypoint_list[:]
+        # self.waypoint_list = [[self.current_position[0],
+        #                       self.current_position[1],
+        #                       self.current_position[2],
+        #                       self.y]]
+        # self.current_waypoint_index = 0
+        return True
 
     def odometryCallback(self, msg):
         #get current position
-        current_position = np.array([msg.pose.pose.position.x,
+        self.current_position = np.array([msg.pose.pose.position.x,
                                      msg.pose.pose.position.y,
                                      -msg.pose.pose.position.z])
 
@@ -138,20 +154,20 @@ class WaypointManager():
         qz = msg.pose.pose.orientation.z
 
         # yaw from quaternion
-        y = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
+        self.y = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
 
         #publish the relative pose estimate
         relativePose_msg = RelativePose()
-        relativePose_msg.x = current_position[0]
-        relativePose_msg.y = current_position[1]
-        relativePose_msg.z = y
-        relativePose_msg.F = current_position[2]
+        relativePose_msg.x = self.current_position[0]
+        relativePose_msg.y = self.current_position[1]
+        relativePose_msg.z = self.y
+        relativePose_msg.F = self.current_position[2]
         self.relPose_pub_.publish(relativePose_msg)
 
         # Get error between waypoint and current state
         current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
-        position_error = np.linalg.norm(current_waypoint[0:3] - current_position)
-        heading_error = np.abs(self.wrap(current_waypoint[3] - y))
+        position_error = np.linalg.norm(current_waypoint[0:3] - self.current_position)
+        heading_error = np.abs(self.wrap(current_waypoint[3] - self.y))
 
         if position_error < self.pos_threshold and heading_error < self.heading_threshold:
             if self.print_wp_reached:
