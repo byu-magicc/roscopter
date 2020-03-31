@@ -2,6 +2,7 @@
 
 <launch>
 
+  <arg name="drone_name"            value="ragnarok"/>
 
   <!-- FCU communication -->
   <node name="rosflight_io" pkg="rosflight" type="rosflight_io" output="screen">
@@ -12,12 +13,14 @@
   <!-- GPS Node-->
   <node name="f9p" pkg="ublox" type="ublox_ros">
     <param name="serial_port" value="/dev/ttyACM1"/>
-    <!-- setting up the module as a base to recieve GPS (2 is rover)-->
-    <param name="rtk_type" value="3"/>
+    <!-- chain level is how far down the chain of RTK units this module is. -->
+    <!-- chain level = 0 for a single receiver -->
+    <param name="chain_level" value="0"/>
+    <!-- All other params are defaults -->
   </node> 
   
   <!-- Load common parameters -->
-  <rosparam command="load" file="$(find roscopter)/params/F450.yaml"/>
+  <rosparam command="load" file="$(find roscopter)/params/$(arg drone_name).yaml"/>
 
   <!-- PID Position Controller -->
   <node name="controller" pkg="roscopter" type="controller">
