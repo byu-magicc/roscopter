@@ -89,7 +89,7 @@ class WaypointManager():
             rospy.logwarn("[waypoint_manager] Waypoint Index Out of Range")
             return
         del self.waypoint_list[req.index]
-        removed_str = '[waypoint_manager] Waypoint {} Removed'.format(req.index+1)
+        removed_str = '[waypoint_manager] Waypoint {} Removed'.format(req.index)
         rospy.loginfo(removed_str)
         # If the current waypoint was removed, wrap then publish
         if req.index == self.current_waypoint_index:
@@ -138,7 +138,7 @@ class WaypointManager():
 
         # List 1 at a time
         rospy.loginfo('[waypoint_manager] Waypoints:')
-        i = 1
+        i = 0 # Start index at 0
         for waypoint in self.waypoint_list:
             waypoint_str = '[waypoint_manager] {}: {}'.format(i, waypoint)
             rospy.loginfo(waypoint_str)
@@ -192,7 +192,7 @@ class WaypointManager():
         if position_error < self.pos_threshold and heading_error < self.heading_threshold:
             if self.print_wp_reached:
                 idx = self.current_waypoint_index
-                wp_str = '[waypoint_manager] Reached waypoint {}'.format(idx+1)
+                wp_str = '[waypoint_manager] Reached waypoint {}'.format(idx)
                 rospy.loginfo(wp_str)
 
             # stop iterating over waypoints if cycle==false and last waypoint reached
