@@ -108,18 +108,18 @@ class WaypointManager():
         return len(self.waypoint_list)
 
     def setWaypointsFromFileCallback(self, req):
-        # Sets waypoint list from .csv file
-        with open(req.filename) as file_wp_list:
-            self.waypoint_list = list(csv.reader(file_wp_list, quoting=csv.QUOTE_NONNUMERIC))
+        # Sets waypoint list from .csv or .txt file
+        if req.filename.endswith('.csv'):
+            with open(req.filename) as file_wp_list:
+                self.waypoint_list = list(csv.reader(file_wp_list, quoting=csv.QUOTE_NONNUMERIC))
 
-        # Sets waypoint list from .txt file; have one waypoint per line: x, y, z, psi
-        # file = open(req.filename, 'r')
-        # file_lines = file.readlines()
-        # file_wp_list = []
-        # for waypoint in file_lines:
-        #     print(map(float, waypoint.strip().split(',')))
-        #     file_wp_list.append(map(float, waypoint.strip().split(',')))
-        # self.waypoint_list = file_wp_list
+        else:
+            file = open(req.filename, 'r')
+            file_lines = file.readlines()
+            file_wp_list = []
+            for waypoint in file_lines:
+                file_wp_list.append(map(float, waypoint.strip().split(',')))
+            self.waypoint_list = file_wp_list
 
         # Set index to 0 and publish command to first waypoint
         self.current_waypoint_index = 0
