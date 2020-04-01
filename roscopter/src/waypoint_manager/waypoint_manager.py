@@ -2,6 +2,7 @@
 
 import numpy as np
 import rospy
+import csv
 
 from nav_msgs.msg import Odometry
 from rosflight_msgs.msg import Command
@@ -107,8 +108,25 @@ class WaypointManager():
         return len(self.waypoint_list)
 
     def setWaypointsFromFileCallback(self, req):
-        #TODO
-        print("[waypoint_manager] set Waypoints from File (NOT IMPLEMENTED)")
+        # Sets waypoint list from .csv file
+        with open(req.filename) as file_wp_list:
+            self.waypoint_list = list(csv.reader(file_wp_list, quoting=csv.QUOTE_NONNUMERIC))
+
+        # Sets waypoint list from .txt file; have one waypoint per line: x, y, z, psi
+        # file = open(req.filename, 'r')
+        # file_lines = file.readlines()
+        # file_wp_list = []
+        # for waypoint in file_lines:
+        #     print(map(float, waypoint.strip().split(',')))
+        #     file_wp_list.append(map(float, waypoint.strip().split(',')))
+        # self.waypoint_list = file_wp_list
+
+        # Set index to 0 and publish command to first waypoint
+        self.current_waypoint_index = 0
+        current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
+        self.publish_command(current_waypoint)
+        rospy.loginfo("[waypoint_manager] Waypoints Set from File")
+        return True
 
     def listWaypoints(self, req):
         # Returns the waypoint list
@@ -117,6 +135,7 @@ class WaypointManager():
         # # List as Log Info
         # waypoint_list_str = '[waypoint_manager] Waypoints: {}'.format(self.waypoint_list)
         # rospy.loginfo(waypoint_list_str)
+
         # List 1 at a time
         rospy.loginfo('[waypoint_manager] Waypoints:')
         i = 1
@@ -124,6 +143,7 @@ class WaypointManager():
             waypoint_str = '[waypoint_manager] {}: {}'.format(i, waypoint)
             rospy.loginfo(waypoint_str)
             i += 1
+
         return True
 
     def clearWaypoints(self, req):
