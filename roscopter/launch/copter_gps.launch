@@ -12,12 +12,14 @@
   
   <!-- GPS Node-->
   <node name="f9p" pkg="ublox" type="ublox_ros">
+    <param name="local_host" value="localhost"/>
+    <param name="rover_host" value="localhost"/>
+    <rosparam command="load" file="$(find ublox)/params/ublox.yaml"/>
     <param name="serial_port" value="/dev/ttyACM1"/>
-    <!-- chain level is how far down the chain of RTK units this module is. -->
-    <!-- chain level = 0 for a single receiver -->
-    <param name="chain_level" value="0"/>
-    <!-- All other params are defaults -->
-  </node> 
+    <!--only using a single receiver-->
+    <param name="rover_quantity" value="0"/>
+    <param name="base_type" value="moving"/>
+   </node> 
   
   <!-- Load common parameters -->
   <rosparam command="load" file="$(find roscopter)/params/$(arg drone_name).yaml"/>
