@@ -30,7 +30,7 @@
   </node>
 
   <!-- Waypoint Management -->
-  <node name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py">
+  <node name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
     <!-- <remap from="state" to="estimate"/> -->
     <remap from="state" to="multirotor/truth/NED"/>
   </node>

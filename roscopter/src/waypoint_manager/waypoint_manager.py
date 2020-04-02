@@ -35,8 +35,8 @@ class WaypointManager():
         self.add_waypoint_service = rospy.Service('add_waypoint', AddWaypoint, self.addWaypointCallback)
         self.remove_waypoint_service = rospy.Service('remove_waypoint', RemoveWaypoint, self.removeWaypointCallback)
         self.set_waypoints_from_file_service = rospy.Service('set_waypoints_from_file', SetWaypointsFromFile, self.setWaypointsFromFileCallback)
-        self.list_waypoints = rospy.Service('list_waypoints', ListWaypoints, self.listWaypoints)
-        self.clear_waypoints = rospy.Service('clear_waypoints', ClearWaypoints, self.clearWaypoints)
+        self.list_waypoints_service = rospy.Service('list_waypoints', ListWaypoints, self.listWaypoints)
+        self.clear_waypoints_service = rospy.Service('clear_waypoints', ClearWaypoints, self.clearWaypoints)
 
         # Set Up Publishers and Subscribers
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)

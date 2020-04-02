@@ -39,9 +39,43 @@ A PID controller is used.
 
 Velocity manager and commander.
 
+Waypoints are updated through services, which are called with
+
+`rosservice call <name_of_service> <args>`
+
+**Note:** all waypoint services are 0 indexed.
+
+Current waypoint services provided are as follows:
+
+##### /add_waypoint #####
+Adds a waypoint at a specified index. Arguments are: x y z  index
+
+For example, the following code adds a waypoint at the x,y,z coordinate [1, 2, 3] facing along the positive y-axis as the first waypoint:
+
+`rosservice call /add_waypoint 1 2 3 0 0`
+
+##### /remove_waypoint #####
+Removes a waypoint at a specified index. Argument is index.
+
+For example, the following code removes the first waypoint:
+
+`rosservice call /remove_waypoint 0`
+
+##### /set_waypoints_from_file #####
+Replaces all current waypoints with a list from a file. Currently tested with .csv and .txt files. In each row/line of the file, include the waypoint x, y, z, and orientation (separated with commas in a .txt file). The argument is the path to the file.
+
+For example, the following code sets the waypoints from a .csv:
+
+`rosservice call /set_waypoints_from_file /<path>/<to>/<file>/waypoints.csv`
+
+##### /list_waypoints #####
+Lists the current waypoints in order from the first. No arguments.
+
+##### /clear_waypoints #####
+Removes all waypoints. Because the multirotor needs at least 1 waypoint to be controlled, the multirotor's position when /clear_waypoints is called is set as the waypoint.
 
 # TODO: #
- 1. Improve GPS estimation performance using Ublox GPS 
+ 1. Improve GPS estimation performance using Ublox GPS
  2. Support additional altitude sensor support (laser/sonar)
  3. Heading calibration routine (magnetometer)
  4. Include wind estimation  
