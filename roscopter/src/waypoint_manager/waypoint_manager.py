@@ -83,7 +83,6 @@ class WaypointManager():
         else:
             index = req.index
         self.waypoint_list.insert(index, new_waypoint)
-        self.hold = False
         if self.current_waypoint_index >= index:
             self.current_waypoint_index += 1
         rospy.loginfo("[waypoint_manager] Added New Waypoint")
@@ -152,16 +151,29 @@ class WaypointManager():
         # Clears all waypoints, except current
         self.hold = True
         current_waypoint = self.hold_waypoint
-        del self.waypoint_list[:]
         self.waypoint_list = []
         self.current_waypoint_index = 0
         return True
 
-    #Turn Cycle off, Turn off
+    def setCycle(self, req):
+        #Turn cycling bewteen waypoints on or off
+        #TODO
+        return
 
-    #Fix system to reach new waypoints if added
+    def hold(self, req):
+        #stop and hold current pose
+        self.hold = True
+        current_waypoint = self.hold_waypoint
+        return True
 
-    #stop_hold_waypoin
+    def release(self, req):
+        if len(self.waypoint_list) == 0:
+            rospy.loginfo("[waypoint_manager] Cannot release - Zero Waypoints")
+            return False
+        else:
+            self.hold = False
+            current_waypoint = self.waypoint_list[self.current_waypoint_index]
+            return True
 
     def odometryCallback(self, msg):
         ###### Retrieve and Publish the Current Pose ######
