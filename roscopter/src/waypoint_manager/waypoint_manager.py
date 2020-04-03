@@ -81,43 +81,52 @@ class WaypointManager():
         if self.current_waypoint_index >= index:
             self.current_waypoint_index += 1
         rospy.loginfo("[waypoint_manager] Added New Waypoint")
+        self.print_wp_reached = True
         return True
 
     def removeWaypointCallback(self, req):
-        # Remove a waypoint from the index
-        if len(self.waypoint_list) == 1:
-            rospy.logwarn("[waypoint_manager] Cannot Remove Only Waypoint")
-            return len(self.waypoint_list)
+        # Remove a waypoint at the requested index
         if req.index >= len(self.waypoint_list):
             rospy.logwarn("[waypoint_manager] Waypoint Index Out of Range")
-            return
-        del self.waypoint_list[req.index]
+            return False
+        del self.waypoint_list[req.index] # Remove the waypoint
         removed_str = '[waypoint_manager] Waypoint {} Removed'.format(req.index)
-        rospy.loginfo(removed_str)
-        # If the current waypoint was removed, wrap then publish
+        rospy.loginfo(removed_str) # Send loginfo
+        # If the current waypoint was removed:
         if req.index == self.current_waypoint_index:
-            # stop iterating over waypoints if cycle==false and last waypoint reached
-            if not self.cyclical_path and self.current_waypoint_index == len(self.waypoint_list)-1:
-                self.print_wp_reached = False
-                return
-            else:
-                # Get new waypoint index
-                self.current_waypoint_index %= len(self.waypoint_list)
+            print("Same")
+            last_waypoint_bool = self.current_waypoint_index == len(self.waypoint_list)
+            if not last_waypoint_bool:
                 current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
                 self.publish_command(current_waypoint)
-        # Elif the current waypoint was the last, keep as last, don't publish
-        elif self.current_waypoint_index >= len(self.waypoint_list):
+                return True
+            elif self.cyclical_path and len(self.waypoint_list) != 0:
+                self.current_waypoint_index = 0
+                current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
+                self.publish_command(current_waypoint)
+                return True
+            else:  #insert hold code here
+                self.waypoint_list.append([self.current_position[0],
+                                      self.current_position[1],
+                                      self.current_position[2],
+                                      self.y])
+                current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
+                self.publish_command(current_waypoint)
+                self.print_wp_reached = False
+                return True
+        # If the removed waypoint is before the current waypoint
+        elif req.index < self.current_waypoint_index:
             self.current_waypoint_index -=1
-        return len(self.waypoint_list)
+        return True
 
     def setWaypointsFromFileCallback(self, req):
         # Sets waypoint list from .csv or .txt file
-        if req.filename.endswith('.csv'):
-            with open(req.filename) as file_wp_list:
+        if req.Filename.endswith('.csv'):
+            with open(req.Filename) as file_wp_list:
                 self.waypoint_list = list(csv.reader(file_wp_list, quoting=csv.QUOTE_NONNUMERIC))
 
         else:
-            file = open(req.filename, 'r')
+            file = open(req.Filename, 'r')
             file_lines = file.readlines()
             file_wp_list = []
             for waypoint in file_lines:
@@ -129,39 +138,38 @@ class WaypointManager():
         current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
         self.publish_command(current_waypoint)
         rospy.loginfo("[waypoint_manager] Waypoints Set from File")
+        self.print_wp_reached = True
         return True
 
     def listWaypoints(self, req):
         # Returns the waypoint list
-        # # Print
-        # print(self.waypoint_list)
-        # # List as Log Info
-        # waypoint_list_str = '[waypoint_manager] Waypoints: {}'.format(self.waypoint_list)
-        # rospy.loginfo(waypoint_list_str)
-
-        # List 1 at a time
         rospy.loginfo('[waypoint_manager] Waypoints:')
         i = 0 # Start index at 0
         for waypoint in self.waypoint_list:
-            waypoint_str = '[waypoint_manager] {}: {}'.format(i, waypoint)
+            if i == self.current_waypoint_index:
+                waypoint_str = '[waypoint_manager] {}: {} (current_waypoint)'.format(i, waypoint)
+            else:
+                waypoint_str = '[waypoint_manager] {}: {}'.format(i, waypoint)
             rospy.loginfo(waypoint_str)
             i += 1
 
         return True
 
     def clearWaypoints(self, req):
-        # Clears all waypoints, except current
-        current_waypoint = self.waypoint_list[self.current_waypoint_index]
-        del self.waypoint_list[:]
-        self.waypoint_list = [current_waypoint]
-        self.current_waypoint_index = 0
-        # # Clears all waypoints, creates a waypoint at current location
+        # # Clears all waypoints, except current
+        # current_waypoint = self.waypoint_list[self.current_waypoint_index]
         # del self.waypoint_list[:]
-        # self.waypoint_list = [[self.current_position[0],
-        #                       self.current_position[1],
-        #                       self.current_position[2],
-        #                       self.y]]
+        # self.waypoint_list = [current_waypoint]
         # self.current_waypoint_index = 0
+        # Clears all waypoints, creates a waypoint at current location
+        del self.waypoint_list[:]
+        self.waypoint_list.append([self.current_position[0],
+                              self.current_position[1],
+                              self.current_position[2],
+                              self.y])
+        self.current_waypoint_index = 0
+        current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
+        self.publish_command(current_waypoint)
         return True
 
     def odometryCallback(self, msg):
