@@ -5,4 +5,4 @@ float64 z
 float64 psi
 int32 index
 ---
-int32 length # The Length of the Waypoint Queue
+bool Success
