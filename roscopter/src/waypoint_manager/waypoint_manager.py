@@ -67,18 +67,16 @@ class WaypointManager():
     def addWaypointCallback(self, req):
         # Add a waypoint to the waypoint list at the specified index.
         new_waypoint = [req.x, req.y, req.z, req.psi]
-        if req.index == -1:
-            index = len(self.waypoint_list)
-        elif req.index > len(self.waypoint_list):
+        if np.abs(req.index) > len(self.waypoint_list):
             rospy.logwarn("[waypoint_manager] Waypoint Index Out of Range")
-            return
+            return False
         else:
             index = req.index
         self.waypoint_list.insert(index, new_waypoint)
         if self.current_waypoint_index >= index:
             self.current_waypoint_index += 1
         rospy.loginfo("[waypoint_manager] Added New Waypoint")
-        return len(self.waypoint_list)
+        return True
 
     def removeWaypointCallback(self, req):
         # Remove a waypoint from the index
@@ -130,13 +128,6 @@ class WaypointManager():
 
     def listWaypoints(self, req):
         # Returns the waypoint list
-        # # Print
-        # print(self.waypoint_list)
-        # # List as Log Info
-        # waypoint_list_str = '[waypoint_manager] Waypoints: {}'.format(self.waypoint_list)
-        # rospy.loginfo(waypoint_list_str)
-
-        # List 1 at a time
         rospy.loginfo('[waypoint_manager] Waypoints:')
         i = 0 # Start index at 0
         for waypoint in self.waypoint_list:
