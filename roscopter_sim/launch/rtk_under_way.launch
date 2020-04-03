@@ -1,0 +1,109 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="drone_name"          default="ragnarok"/>
+  <arg name="mav_name"            default="multirotor"/>
+  <arg name="target_name"         default="boat"/>
+  <arg name="target_x"            default="9"/>
+  <arg name="target_y"            default="9"/>
+  <arg name="target_z"            default="0.1"/>
+  <arg name="color"               default="White"/>
+  <arg name="x"                   default="0"/>
+  <arg name="y"                   default="0"/>
+  <arg name="z"                   default="0.4"/>
+  <arg name="yaw"                 default="0"/>
+  <arg name="debug"               default="false"/>
+
+  <!-- Start Simulator -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="paused" value="true"/>
+    <arg name="gui" value="true"/>
+    <arg name="verbose" value="false"/>
+    <arg name="debug" value="$(arg debug)"/>
+  </include>
+
+  <!-- Spawn Platform and Multirotor Models in Gazebo -->
+  <include file="$(find roscopter_sim)/launch/spawn_target.launch">
+    <arg name="target_name"         value="$(arg target_name)" />
+    <arg name="model"               value="$(find ibvs_sim)/agents/boat/boat_jesse.xacro" />
+    <arg name="x"                   value="$(arg target_x)"/>
+    <arg name="y"                   value="$(arg target_y)"/>
+    <arg name="z"                   value="$(arg target_z)"/>
+    <arg name="yaw"                 value="$(arg yaw)"/>
+    <arg name="color"               value="Black"/>
+  </include>
+
+  <include file="$(find roscopter_sim)/launch/spawn_mav.launch">
+    <arg name="mav_name"            value="$(arg mav_name)" />
+    <arg name="model"               value="$(find roscopter_sim)/xacro/$(arg mav_name).urdf.xacro" />
+    <arg name="x"                   value="$(arg x)"/>
+    <arg name="y"                   value="$(arg y)"/>
+    <arg name="z"                   value="$(arg z)"/>
+    <arg name="yaw"                 value="$(arg yaw)"/>
+    <arg name="color"               value="$(arg color)"/>
+  </include>
+
+  <!-- Platform Movement-->
+  <group ns="$(arg target_name)">
+    <!-- Load common parameters -->
+    <rosparam command="load" file="$(find ibvs_sim)/agents/boat/boat_jesse.yaml"/>
+
+    <!-- Boat controller-->
+    <node pkg="ibvs_sim" name="boat_command" type="boat_cmd_under_way.py">
+      <!-- max roll/pitch angle (degrees) -->
+      <param name="max_roll_pitch" value="30.0"/>
+
+      <param name="xy_translation" value="true"/>
+      <param name="x_pos_cmd" value="$(arg target_x)"/>
+      <param name="y_pos_cmd" value="$(arg target_y)"/>
+    </node>
+  
+  </group>
+
+  <node name="boat_vel_pub" pkg="ibvs_sim" type="boat_velocity_pub.py" output="screen">
+  </node>
+
+  <!-- Controller -->
+  <group ns="$(arg mav_name)">
+
+    <!-- Load common parameters -->
+    <rosparam command="load" file="$(find roscopter_sim)/params/$(arg drone_name).yaml"/>
+    <rosparam command="load" file="$(find roscopter)/params/$(arg drone_name).yaml"/>
+
+    <!-- Is Flying Publisher -->
+    <node pkg="rostopic" type="rostopic" name="is_flying_pub" args="pub is_flying std_msgs/Bool true"/>
+
+    <!-- Status Publisher -->
+    <node pkg="rostopic" type="rostopic" name="status_pub" args="pub -r 1 status rosflight_msgs/Status '{armed: true, failsafe: false, rc_override: false, offboard: true, error_code: 0, num_errors: 0, loop_time_us: 1}'"/>
+
+    <!-- PID Position Controller -->
+    <node name="controller" pkg="roscopter" type="controller" output="screen">
+      <remap from="platform_odom" to="/$(arg mav_name)/platform_virtual_odometry"/>
+      <remap from="estimate" to="odom"/>
+    </node>
+
+    <!-- Waypoint Manager -->
+    <node name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
+      <!--remap from="waypoint" to="high_level_command"/-->
+      <remap from="state" to="odom"/>
+      <remap from="platform_odom" to="/$(arg target_name)/odometry/NWU"/>
+    </node>
+
+    <!--Estimator-->
+    <node name="estimator" pkg="roscopter" type="ekf_node" output="screen">
+      <param name="param_filename" value="$(find roscopter_sim)/params/ekf.yaml"/>
+      <!--Inputs-->
+      <remap from="imu" to="imu/data"/>
+      <remap from="reference" to="ground_truth/odometry/NED_throttled"/>
+      <remap from="gnss" to="gps/data"/>
+      <!--Outputs-->
+      <remap from="is_flying" to="not_for_sim"/>
+    </node>
+
+  </group>
+
+  <!--Throttle ground truth for use in the estimator. Estimator cant handle 1000hz-->
+  <node name="truth_throttler" type="throttle" pkg="topic_tools" args="messages /$(arg drone_name)/ground_truth/odometry/NED 100 /$(arg drone_name)/ground_truth/odometry/NED_throttled" />
+
+  <!--node pkg="rosbag" type="record" name="record" output="screen" args="-O ../data/boatLanding_sim/sim.bag -a"/-->
+
+</launch>
