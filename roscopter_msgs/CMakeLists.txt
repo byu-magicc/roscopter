@@ -43,6 +43,8 @@ add_service_files(
   SetWaypointsFromFile.srv
   ListWaypoints.srv
   ClearWaypoints.srv
+  Hold.srv
+  Release.srv
 )
 
 ## Generate actions in the 'action' folder

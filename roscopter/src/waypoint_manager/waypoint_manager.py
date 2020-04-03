@@ -40,8 +40,10 @@ class WaypointManager():
         self.add_waypoint_service = rospy.Service('add_waypoint', AddWaypoint, self.addWaypointCallback)
         self.remove_waypoint_service = rospy.Service('remove_waypoint', RemoveWaypoint, self.removeWaypointCallback)
         self.set_waypoints_from_file_service = rospy.Service('set_waypoints_from_file', SetWaypointsFromFile, self.setWaypointsFromFileCallback)
-        self.list_waypoints_service = rospy.Service('list_waypoints', ListWaypoints, self.listWaypoints)
-        self.clear_waypoints_service = rospy.Service('clear_waypoints', ClearWaypoints, self.clearWaypoints)
+        self.list_waypoints_service = rospy.Service('list_waypoints', ListWaypoints, self.listWaypointsCallback)
+        self.clear_waypoints_service = rospy.Service('clear_waypoints', ClearWaypoints, self.clearWaypointsCallback)
+        self.hold_service = rospy.Service('hold',Hold,self.holdCallback)
+        self.release_service = rospy.Service('release',Release,self.releaseCallback)
 
         # Set Up Publishers and Subscribers
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
@@ -136,7 +138,7 @@ class WaypointManager():
         rospy.loginfo("[waypoint_manager] Waypoints Set from File")
         return True
 
-    def listWaypoints(self, req):
+    def listWaypointsCallback(self, req):
         # Returns the waypoint list
         rospy.loginfo('[waypoint_manager] Waypoints:')
         i = 0 # Start index at 0
@@ -147,7 +149,7 @@ class WaypointManager():
 
         return True
 
-    def clearWaypoints(self, req):
+    def clearWaypointsCallback(self, req):
         # Clears all waypoints, except current
         self.hold = True
         current_waypoint = self.hold_waypoint
@@ -155,18 +157,13 @@ class WaypointManager():
         self.current_waypoint_index = 0
         return True
 
-    def setCycle(self, req):
-        #Turn cycling bewteen waypoints on or off
-        #TODO
-        return
-
-    def hold(self, req):
+    def holdCallback(self, req):
         #stop and hold current pose
         self.hold = True
         current_waypoint = self.hold_waypoint
         return True
 
-    def release(self, req):
+    def releaseCallback(self, req):
         if len(self.waypoint_list) == 0:
             rospy.loginfo("[waypoint_manager] Cannot release - Zero Waypoints")
             return False
