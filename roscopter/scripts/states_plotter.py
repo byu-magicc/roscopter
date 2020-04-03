@@ -186,6 +186,8 @@ class Plotter:
         self.ay_e = 0
         self.az_e = 0
         self.mu_e = 0
+        
+        self.time_max=0
 
         # truth/estimate storage lists
         self.estimates = []
@@ -211,9 +213,12 @@ class Plotter:
             if self.estimates[0][0] < self.estimates[-1][0] - self.t_win:
                 self.estimates.pop(0)
 
+        # find the maximum time forward
+        self.time_max=np.amax([self.estimates[-1][0], self.truths[-1][0]])
+
         # set the window widths
         for i in range(0,len(self.p_list)):
-            self.p_list[i].setLimits(xMin=self.estimates[-1][0] - self.t_win, xMax=self.estimates[-1][0])
+            self.p_list[i].setLimits(xMin=self.time_max - self.t_win, xMax=self.time_max)
         
         # stack the data lists
         truths_array = np.vstack(self.truths)
