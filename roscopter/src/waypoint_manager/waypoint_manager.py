@@ -7,7 +7,7 @@ import csv
 from nav_msgs.msg import Odometry
 from rosflight_msgs.msg import Command
 from roscopter_msgs.msg import RelativePose
-from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile, ListWaypoints, ClearWaypoints
+from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile, ListWaypoints, ClearWaypoints, Hold, Release
 
 
 class WaypointManager():
@@ -28,7 +28,7 @@ class WaypointManager():
             self.hold = True
         else:
             self.hold = False
-        self.hold_waypoint = [0 0 0 0]
+        self.hold_waypoint = [0, 0, 0, 0]
 
         # how close does the MAV need to get before going to the next waypoint?
         self.pos_threshold = rospy.get_param('~threshold', 5)
@@ -42,8 +42,8 @@ class WaypointManager():
         self.set_waypoints_from_file_service = rospy.Service('set_waypoints_from_file', SetWaypointsFromFile, self.setWaypointsFromFileCallback)
         self.list_waypoints_service = rospy.Service('list_waypoints', ListWaypoints, self.listWaypointsCallback)
         self.clear_waypoints_service = rospy.Service('clear_waypoints', ClearWaypoints, self.clearWaypointsCallback)
-        self.hold_service = rospy.Service('hold',Hold,self.holdCallback)
-        self.release_service = rospy.Service('release',Release,self.releaseCallback)
+        self.hold_service = rospy.Service('hold', Hold, self.holdCallback)
+        self.release_service = rospy.Service('release', Release, self.releaseCallback)
 
         # Set Up Publishers and Subscribers
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
@@ -101,7 +101,6 @@ class WaypointManager():
         rospy.loginfo(removed_str) # Send loginfo
         # If the current waypoint was removed:
         if req.index == self.current_waypoint_index:
-            print("Same")
             last_waypoint_bool = self.current_waypoint_index == len(self.waypoint_list)
             if not last_waypoint_bool:
                 current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
@@ -113,13 +112,14 @@ class WaypointManager():
                 self.publish_command(current_waypoint)
                 return True
             else:  #insert hold code here
-                self.waypoint_list.append([self.current_position[0],
-                                      self.current_position[1],
-                                      self.current_position[2],
-                                      self.y])
-                current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
-                self.publish_command(current_waypoint)
-                self.print_wp_reached = False
+                self.hold = True
+                # self.waypoint_list.append([self.current_position[0],
+                #                       self.current_position[1],
+                #                       self.current_position[2],
+                #                       self.y])
+                # current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
+                # self.publish_command(current_waypoint)
+                # self.print_wp_reached = False
                 return True
         # If the removed waypoint is before the current waypoint
         elif req.index < self.current_waypoint_index:
@@ -159,39 +159,20 @@ class WaypointManager():
                 waypoint_str = '[waypoint_manager] {}: {}'.format(i, waypoint)
             rospy.loginfo(waypoint_str)
             i += 1
-
         return True
 
-<<<<<<< HEAD
-    def clearWaypoints(self, req):
-        # # Clears all waypoints, except current
-        # current_waypoint = self.waypoint_list[self.current_waypoint_index]
-        # del self.waypoint_list[:]
-        # self.waypoint_list = [current_waypoint]
-        # self.current_waypoint_index = 0
-        # Clears all waypoints, creates a waypoint at current location
-        del self.waypoint_list[:]
-        self.waypoint_list.append([self.current_position[0],
-                              self.current_position[1],
-                              self.current_position[2],
-                              self.y])
-        self.current_waypoint_index = 0
-        current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
-        self.publish_command(current_waypoint)
-=======
     def clearWaypointsCallback(self, req):
         # Clears all waypoints, except current
         self.hold = True
-        current_waypoint = self.hold_waypoint
+        current_waypoint = self.hold_waypoint # FIXME
         self.waypoint_list = []
         self.current_waypoint_index = 0
->>>>>>> f9c1f404b5d73b7111d88cae526be26eb5c38f42
         return True
 
     def holdCallback(self, req):
         #stop and hold current pose
         self.hold = True
-        current_waypoint = self.hold_waypoint
+        current_waypoint = self.hold_waypoint # FIXME
         return True
 
     def releaseCallback(self, req):
@@ -201,6 +182,7 @@ class WaypointManager():
         else:
             self.hold = False
             current_waypoint = self.waypoint_list[self.current_waypoint_index]
+            self.publish_command(current_waypoint)
             return True
 
     def odometryCallback(self, msg):
@@ -225,15 +207,16 @@ class WaypointManager():
         self.relPose_pub_.publish(relativePose_msg)
 
         ###### Hold Pose - if commanded, or if there are zero waypoints ######
-        if hold:
+        if self.hold:
             self.publish_command(self.hold_waypoint)
             return
-        
+
         ###### Check Waypoint Arrival Status & Update to Next Waypoint #######
         else:
             # Calculate error between current pose and commanded waypoint
             self.hold_waypoint = [self.current_position[0] , self.current_position[1] , self.current_position[2] , self.y ]
             current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
+
             position_error = np.linalg.norm(current_waypoint[0:3] - self.current_position)
             heading_error = np.abs(self.wrap(current_waypoint[3] - self.y))
             #if error is within the threshold
