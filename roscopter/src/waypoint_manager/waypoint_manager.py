@@ -78,14 +78,17 @@ class WaypointManager():
         elif req.index > len(self.waypoint_list) or req.index < -1:
             rospy.logwarn("[waypoint_manager] Waypoint Index Out of Range")
             return False
-        #Valid index
+        # Valid index
         else:
             index = req.index
         self.waypoint_list.insert(index, new_waypoint)
-        if self.current_waypoint_index >= index:
+        # Increment the current index if a waypoint is added before the current
+        if self.current_waypoint_index > index:
             self.current_waypoint_index += 1
         rospy.loginfo("[waypoint_manager] Added New Waypoint")
         self.no_command = False
+        current_waypoint = self.waypoint_list[self.current_waypoint_index]
+        self.publish_command(current_waypoint)
         return True
 
     def removeWaypointCallback(self, req):
@@ -140,11 +143,11 @@ class WaypointManager():
             self.waypoint_list = file_wp_list
 
         # Set index to 0 and publish command to first waypoint
+        self.no_command = False
         self.current_waypoint_index = 0
         current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
         self.publish_command(current_waypoint)
         rospy.loginfo("[waypoint_manager] Waypoints Set from File")
-        self.no_command = False
         return True
 
     def listWaypointsCallback(self, req):
@@ -163,6 +166,8 @@ class WaypointManager():
     def clearWaypointsCallback(self, req):
         # Clears all waypoints, except current
         self.no_command = True
+        # Wait for Odometry Callback to switch to no_command loop
+        rospy.sleep(0.1)
         self.waypoint_list = []
         self.current_waypoint_index = 0
         rospy.loginfo("[waypoint_manager] No remaining commands, pose halted")
@@ -178,8 +183,11 @@ class WaypointManager():
         rospy.loginfo("[waypoint_manager] Multirotor's pose is held - release to continue")
 
     def releaseCallback(self, req):
-        if len(self.waypoint_list) == 0:
-            rospy.loginfo("[waypoint_manager] Cannot release - Zero Waypoints")
+        if self.hold == False:
+            rospy.logwarn("[waypoint_manager] Cannot release - Not in hold")
+            return False
+        elif len(self.waypoint_list) == 0:
+            rospy.logwarn("[waypoint_manager] Cannot release - Zero Waypoints")
             return False
         else:
             self.hold = False
