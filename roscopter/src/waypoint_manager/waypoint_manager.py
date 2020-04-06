@@ -74,10 +74,8 @@ class WaypointManager():
     def addWaypointCallback(self, req):
         # This Function adds a waypoint to the waypoint list at the specified index.
         new_waypoint = [req.x, req.y, req.z, req.psi]
-        #Add waypoint to end of list
         if req.index == -1:
             index = len(self.waypoint_list)
-        #Throw Error index out of bounds
         elif req.index > len(self.waypoint_list) or req.index < -1:
             rospy.logwarn("[waypoint_manager] Waypoint Index Out of Range")
             return False
@@ -88,7 +86,7 @@ class WaypointManager():
         if self.current_waypoint_index >= index:
             self.current_waypoint_index += 1
         rospy.loginfo("[waypoint_manager] Added New Waypoint")
-        self.print_wp_reached = True
+        self.no_command = False
         return True
 
     def removeWaypointCallback(self, req):
@@ -111,8 +109,9 @@ class WaypointManager():
                 current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
                 self.publish_command(current_waypoint)
                 return True
-            else:  #insert hold code here
-                self.holdPose()
+            else:  # If the current waypoint was the only waypoint and was removed,
+                   # or if it was the last and the list is not cyclical
+                self.no_command = True
                 return True
         # If the removed waypoint is before the current waypoint
         elif req.index < self.current_waypoint_index:
@@ -138,7 +137,7 @@ class WaypointManager():
         current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
         self.publish_command(current_waypoint)
         rospy.loginfo("[waypoint_manager] Waypoints Set from File")
-        self.print_wp_reached = True
+        self.no_command = False
         return True
 
     def listWaypointsCallback(self, req):
@@ -156,13 +155,13 @@ class WaypointManager():
 
     def clearWaypointsCallback(self, req):
         # Clears all waypoints, except current
-        self.holdPose()
+        self.no_command = True
         self.waypoint_list = []
         self.current_waypoint_index = 0
         return True
 
     def holdCallback(self, req):
-        #stop and hold current pose
+        # stop and hold current pose
         self.holdPose()
         return True
 
@@ -183,7 +182,7 @@ class WaypointManager():
 
     def odometryCallback(self, msg):
         ###### Retrieve and Publish the Current Pose ######
-        #get current position
+        # get current position
         current_pose = np.array([msg.pose.pose.position.x,
                                      msg.pose.pose.position.y,
                                      -msg.pose.pose.position.z])
@@ -194,7 +193,7 @@ class WaypointManager():
         qz = msg.pose.pose.orientation.z
         # yaw from quaternion
         self.y = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
-        #publish the relative pose estimate
+        # publish the relative pose estimate
         relativePose_msg = RelativePose()
         relativePose_msg.x = current_pose[0]
         relativePose_msg.y = current_pose[1]
@@ -207,7 +206,7 @@ class WaypointManager():
             self.publish_command(self.halt_waypoint)
             return
 
-        elif 
+        elif
 
         ###### Check Waypoint Arrival Status & Update to Next Waypoint #######
         else:
