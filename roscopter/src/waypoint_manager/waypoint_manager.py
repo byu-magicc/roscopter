@@ -26,7 +26,6 @@ class WaypointManager():
         self.hold = False
         self.no_command = False
         if len(self.waypoint_list) == 0:
-            self.holdPose()
             self.no_command = True
         self.halt_waypoint = [0, 0, 0, 0]
 
@@ -88,7 +87,6 @@ class WaypointManager():
         if self.current_waypoint_index >= index:
             self.current_waypoint_index += 1
         rospy.loginfo("[waypoint_manager] Added New Waypoint")
-        self.print_wp_reached = True
         return True
 
     def removeWaypointCallback(self, req):
@@ -138,7 +136,6 @@ class WaypointManager():
         current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
         self.publish_command(current_waypoint)
         rospy.loginfo("[waypoint_manager] Waypoints Set from File")
-        self.print_wp_reached = True
         return True
 
     def listWaypointsCallback(self, req):
@@ -202,12 +199,10 @@ class WaypointManager():
         relativePose_msg.F = current_pose[2]
         self.relPose_pub_.publish(relativePose_msg)
 
-        ###### Hold Pose - if commanded, or if there are zero waypoints ######
-        if self.hold:
+        ###### Halt Pose - If Hold or No Command ######
+        if self.hold or self.no_command:
             self.publish_command(self.halt_waypoint)
             return
-
-        elif 
 
         ###### Check Waypoint Arrival Status & Update to Next Waypoint #######
         else:
@@ -222,16 +217,13 @@ class WaypointManager():
                 #Print if we did not already print
                 if self.print_wp_reached:
                     idx = self.current_waypoint_index
-                    wp_str = '[waypoint_manager] Reached waypoint {}'.format(idx)
-                    rospy.loginfo(wp_str)
+                    rospy.loginfo('[waypoint_manager] Reached waypoint {}'.format(idx))
                 # stop iterating over waypoints if cycle==false and last waypoint reached
                 if not self.cyclical_path and self.current_waypoint_index == len(self.waypoint_list)-1:
-                    self.print_wp_reached = False
+                    self.no_command = True
                     return
                 # Get new waypoint index
                 else:
-                    # Get new waypoint index
-                    self.print_wp_reached = True
                     self.current_waypoint_index += 1
                     self.current_waypoint_index %= len(self.waypoint_list)
                     current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
