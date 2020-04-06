@@ -1,0 +1,4 @@
+# Holds current pose of the multirotor
+
+---
+bool Success
