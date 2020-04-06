@@ -112,6 +112,7 @@ class WaypointManager():
                 #If not cyclical, or zero waypoints left
                 else:
                     self.no_command = True
+                    rospy.sleep(0.1)
                     rospy.loginfo("[waypoint_manager] No remaining commands, pose halted")
             #If not last waypoint in the list
             else:
