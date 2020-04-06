@@ -121,7 +121,7 @@ class WaypointManager():
         #If the removed waypoint is before the current waypoint index
         else: # req.index < self.current_waypoint_index:
             current_index = self.current_waypoint_index - 1
-
+        #Update private variables and publish command
         self.current_waypoint_index = current_index
         del self.waypoint_list[req.index] # Remove the waypoint
         removed_str = '[waypoint_manager] Waypoint {} Removed'.format(req.index)
