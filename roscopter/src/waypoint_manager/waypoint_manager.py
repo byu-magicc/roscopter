@@ -112,6 +112,7 @@ class WaypointManager():
                 #If not cyclical, or zero waypoints left
                 else:
                     self.no_command = True
+                    current_index = 0
                     rospy.sleep(0.1)
                     rospy.loginfo("[waypoint_manager] No remaining commands, pose halted")
             #If not last waypoint in the list
@@ -123,10 +124,11 @@ class WaypointManager():
 
         self.current_waypoint_index = current_index
         del self.waypoint_list[req.index] # Remove the waypoint
-        current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
-        self.publish_command(current_waypoint)
         removed_str = '[waypoint_manager] Waypoint {} Removed'.format(req.index)
         rospy.loginfo(removed_str) # Send loginfo
+        if not self.no_command:
+            current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
+            self.publish_command(current_waypoint)
         return True
 
     def setWaypointsFromFileCallback(self, req):
