@@ -89,32 +89,40 @@ class WaypointManager():
         return True
 
     def removeWaypointCallback(self, req):
-        # Remove a waypoint at the requested index
+        ##### Remove a waypoint at the requested index ####
+        #If requested index out of bounds of waypoint list
         if req.index >= len(self.waypoint_list):
             rospy.logwarn("[waypoint_manager] Waypoint Index Out of Range")
             return False
+        #If requested index is after the current waypoint index
+        elif req.index > self.current_waypoint_index:
+            #do nothing
+            current_index = self.current_waypoint_index
+        #If the current waypoint was removed:
+        elif req.index == self.current_waypoint_index:
+            #If it's the last waypoint in the list
+            last_waypoint_bool = self.current_waypoint_index == (len(self.waypoint_list)-1)
+            if last_waypoint_bool:
+                #If cyclical, and there remains at least one waypoint 
+                if self.cyclical_path and len(self.waypoint_list) > 1:
+                    current_index = 0
+                #If not cyclical, or zero waypoints left
+                else:
+                    self.no_command = True
+                    rospy.loginfo("[waypoint_manager] No remaining commands, pose halted")
+            #If not last waypoint in the list
+            else:
+                current_index = self.current_waypoint_index
+        #If the removed waypoint is before the current waypoint index
+        else: # req.index < self.current_waypoint_index:
+            current_index = self.current_waypoint_index - 1
+
+        self.current_waypoint_index = current_index
         del self.waypoint_list[req.index] # Remove the waypoint
+        current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
+        self.publish_command(current_waypoint)
         removed_str = '[waypoint_manager] Waypoint {} Removed'.format(req.index)
         rospy.loginfo(removed_str) # Send loginfo
-        # If the current waypoint was removed:
-        if req.index == self.current_waypoint_index:
-            last_waypoint_bool = self.current_waypoint_index == len(self.waypoint_list)
-            if not last_waypoint_bool:
-                current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
-                self.publish_command(current_waypoint)
-                return True
-            elif self.cyclical_path and len(self.waypoint_list) != 0:
-                self.current_waypoint_index = 0
-                current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
-                self.publish_command(current_waypoint)
-                return True
-            else:  # If the current waypoint was the only waypoint and was removed,
-                   # or if it was the last and the list is not cyclical
-                self.no_command = True
-                return True
-        # If the removed waypoint is before the current waypoint
-        elif req.index < self.current_waypoint_index:
-            self.current_waypoint_index -=1
         return True
 
     def setWaypointsFromFileCallback(self, req):
@@ -157,6 +165,7 @@ class WaypointManager():
         self.no_command = True
         self.waypoint_list = []
         self.current_waypoint_index = 0
+        rospy.loginfo("[waypoint_manager] No remaining commands, pose halted")
         return True
 
     def holdCallback(self, req):
@@ -222,6 +231,7 @@ class WaypointManager():
                 # stop iterating over waypoints if cycle==false and last waypoint reached
                 if not self.cyclical_path and self.current_waypoint_index == len(self.waypoint_list)-1:
                     self.no_command = True
+                    rospy.loginfo("[waypoint_manager] No remaining commands, pose halted")
                     return
                 # Get new waypoint index
                 else:
