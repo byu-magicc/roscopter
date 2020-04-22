@@ -5,6 +5,8 @@
   <arg name="drone_name"            value="ragnarok"/>
   <arg name="f4_serial_port" default="/dev/ttyACM0"/>
   <arg name="rover_serial_port" default="/dev/ttyACM1"/>
+  <arg name="base_host" default="192.168.1.121"/>
+  <arg name="rover_host" default="192.168.1.102"/>
 
   <!-- FCU communication -->
   <node name="rosflight_io" pkg="rosflight" type="rosflight_io" output="screen">
@@ -18,7 +20,7 @@
     <param name="local_host" value="$(arg rover_host)"/>
     <param name="local_port" value="16145"/>
     <param name="rover_host" value="$(arg base_host)"/>
-    <param name="rover_port" value"16140"/>
+    <param name="rover_port" value="16140"/>
     <rosparam command="load" file="$(find ublox)/params/ublox.yaml"/>
     <param name="chain_level" value="1"/>
     <param name="rover_quantity" value="0"/>
