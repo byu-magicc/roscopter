@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+
+<launch>
+
+  <arg name="drone_name"            value="ragnarok"/>
+  <arg name="f4_serial_port" default="/dev/ttyACM0"/>
+  <arg name="rover_serial_port" default="/dev/ttyACM1"/>
+
+  <!-- FCU communication -->
+  <node name="rosflight_io" pkg="rosflight" type="rosflight_io" output="screen">
+    <param name="udp" value="false"/>
+    <param name="port" value="$(arg f4_serial_port)"/>
+  </node>
+  
+  <!-- GPS Node-->
+  <node name="f9p" pkg="ublox" type="ublox_ros">
+    <param name="serial_port" value="$(arg rover_serial_port)"/>
+    <param name="local_host" value="$(arg rover_host)"/>
+    <param name="local_port" value="16145"/>
+    <param name="rover_host" value="$(arg base_host)"/>
+    <param name="rover_port" value"16140"/>
+    <rosparam command="load" file="$(find ublox)/params/ublox.yaml"/>
+    <param name="chain_level" value="1"/>
+    <param name="rover_quantity" value="0"/>
+   </node> 
+  
+  <!-- Load common parameters -->
+  <rosparam command="load" file="$(find roscopter)/params/$(arg drone_name).yaml"/>
+
+  <!-- PID Position Controller -->
+  <node name="controller" pkg="roscopter" type="controller">
+    <remap from="estimate" to="odom"/>
+  </node>
+
+  <!-- Estimator -->
+  <rosparam command="load" file="$(find roscopter)/params/ekf.yaml" ns="estimator"/>
+  <node name="estimator" type="ekf_node" pkg="roscopter" output="screen">
+    <remap from="imu" to="/imu/data"/>
+    <remap from="baro" to="/baro"/>
+    <remap from="ublox_gnss" to="/PosVelEcef"/>
+
+  </node>
+
+  <!-- Waypoint Manager -->
+  <node name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
+    <remap from="waypoint" to="high_level_command"/>
+    <remap from="state" to="odom"/>
+  </node>
+
+  <node pkg="rosbag" type="record" name="record" output="screen" args="-o ../data/walk --all"/>
+</launch>
