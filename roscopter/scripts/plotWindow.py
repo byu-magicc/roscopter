@@ -11,6 +11,7 @@ import signal
 
 ###### I haven't gotten this to work #####
 
+
 class plotWindow():
     def __init__(self, parent=None):
         signal.signal(signal.SIGINT, signal.SIG_DFL)

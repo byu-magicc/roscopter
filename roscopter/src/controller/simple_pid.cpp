@@ -91,6 +91,10 @@ double SimplePID::computePID(double desired, double current, double dt, double x
   double i_term = 0.0;
   double d_term = 0.0;
 
+  // // Check gains
+  // std::cerr << "kp = " << kp_ << "\n";
+  // std::cerr << "kd = " << kd_ << "\n";
+  // std::cerr << "ki = " << ki_ << "\n";
 
   // Calculate Derivative Term
   if (kd_ > 0.0)

@@ -1,5 +1,10 @@
 #include <controller/controller.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <iostream>
+#include <fstream>
+
+
 
 namespace controller
 {
@@ -43,8 +48,13 @@ Controller::Controller() :
   cmd_sub_ =
       nh_.subscribe("high_level_command", 1, &Controller::cmdCallback, this);
   status_sub_ = nh_.subscribe("status", 1, &Controller::statusCallback, this);
+  pltOdom_sub_ =
+    nh_.subscribe("platform_odom", 1, &Controller::pltOdomCallback, this);
 
   command_pub_ = nh_.advertise<rosflight_msgs::Command>("command", 1);
+  auto_land_sub_ = nh_.subscribe("auto_land", 1, &Controller::autoLandCallback, this);
+  is_landing_sub_ = nh_.subscribe("is_landing", 1, &Controller::isLandingCallback, this);
+  landed_sub_ = nh_.subscribe("landed", 1, &Controller::landedCallback, this);
 }
 
 
@@ -145,6 +155,44 @@ void Controller::cmdCallback(const rosflight_msgs::CommandConstPtr &msg)
     received_cmd_ = true;
 }
 
+void Controller::pltOdomCallback(const nav_msgs::OdometryConstPtr &msg)
+{
+
+  // // Convert Quaternion to RPY
+  // tf::Quaternion tf_quat;
+  // tf::quaternionMsgToTF(msg->pose.pose.orientation, tf_quat);
+  // tf::Matrix3x3(tf_quat).getRPY(plt_hat_.phi, plt_hat_.theta, plt_hat_.psi);
+  // plt_hat_.psi = -plt_hat_.psi; //have to negate to go from Counter Clockwise positive rotation to Clockwise;
+
+  // double sinp = sin(plt_hat_.psi);
+  // double cosp = cos(plt_hat_.psi);
+
+  double u = msg->twist.twist.linear.x;
+  double v = -msg->twist.twist.linear.y; //have to negate to go from NWU to NE altitude frame
+  double w = msg->twist.twist.linear.z;
+
+  plt_hat_.u = u;
+  plt_hat_.v = v;
+
+  plt_hat_.r = -msg->twist.twist.angular.z; //have to negate to go from Counter Clockwise positive rotation to Clockwise
+
+}
+
+void Controller::autoLandCallback(const std_msgs::BoolConstPtr &msg)
+{
+  auto_land_ = msg->data;
+}
+
+void Controller::isLandingCallback(const std_msgs::BoolConstPtr &msg)
+{
+  is_landing_ = msg->data;
+}
+
+void Controller::landedCallback(const std_msgs::BoolConstPtr &msg)
+{
+  landed_ = msg->data;
+}
+
 void Controller::reconfigure_callback(roscopter::ControllerConfig& config,
                                       uint32_t level)
 {
@@ -238,6 +286,13 @@ void Controller::computeControl(double dt)
     xc_.x_dot = pndot_c*cos(xhat_.psi) + pedot_c*sin(xhat_.psi);
     xc_.y_dot = -pndot_c*sin(xhat_.psi) + pedot_c*cos(xhat_.psi);
 
+    if(auto_land_)
+    {
+      xc_.x_dot = xc_.x_dot + plt_hat_.u; //feed forward the platform velocity
+      xc_.y_dot = xc_.y_dot + plt_hat_.v;
+      xc_.r = xc_.r+plt_hat_.r;
+    }
+
     mode_flag = rosflight_msgs::Command::MODE_XVEL_YVEL_YAWRATE_ALTITUDE;
   }
 
@@ -291,12 +346,30 @@ void Controller::computeControl(double dt)
   if(mode_flag == rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE)
   {
     // Pack up and send the command
-    command_.mode = rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE;
-    command_.F = saturate(xc_.throttle, max_.throttle, 0.0);
-    command_.x = saturate(xc_.phi, max_.roll, -max_.roll);
-    command_.y = saturate(xc_.theta, max_.pitch, -max_.pitch);
-    command_.z = saturate(xc_.r, max_.yaw_rate, -max_.yaw_rate);
-
+    if(landed_ == true)
+    {
+      command_.F = 0.0;
+      command_.x = 0.0;
+      command_.y = 0.0;
+      command_.z = 0.0;
+    }
+    else if(is_landing_ == true) //this is for the mission state "land"
+    {
+      command_.mode = rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE;
+      command_.F = throttle_down_ * command_.F;
+      command_.x = saturate(xc_.phi, max_.roll, -max_.roll);
+      command_.y = saturate(xc_.theta, max_.pitch, -max_.pitch);
+      command_.z = saturate(xc_.r, max_.yaw_rate, -max_.yaw_rate);
+      // std::cerr << "throttle = " << command_.F << "\n"; //good for testing the throttle_down_ multiplier
+    }
+    else
+    {
+      command_.mode = rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE;
+      command_.F = saturate(xc_.throttle, max_.throttle, 0.0);
+      command_.x = saturate(xc_.phi, max_.roll, -max_.roll);
+      command_.y = saturate(xc_.theta, max_.pitch, -max_.pitch);
+      command_.z = saturate(xc_.r, max_.yaw_rate, -max_.yaw_rate);
+    }
     if (-xhat_.pd < min_altitude_)
     {
       command_.x = 0.;
