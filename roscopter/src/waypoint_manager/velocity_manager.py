@@ -8,6 +8,7 @@ from nav_msgs.msg import Odometry
 from rosflight_msgs.msg import Command
 from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
 
+#TODO Need to finish this.  It is not working
 #possibly change this later
 class WaypointManager():
 

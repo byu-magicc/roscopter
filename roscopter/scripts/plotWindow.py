@@ -9,7 +9,8 @@ from PyQt5.QtCore import pyqtSlot
 import sys
 import signal
 
-##### I have not gotten this to work. #####
+###### I haven't gotten this to work #####
+
 
 class plotWindow():
     def __init__(self, parent=None):
@@ -72,9 +73,3 @@ if __name__ == '__main__':
     pw.show()
 
     # sys.exit(app.exec_())
-
-
-
-
-
-

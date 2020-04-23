@@ -51,7 +51,7 @@ add_definitions(-DROSCOPTER_DIR="${CMAKE_CURRENT_LIST_DIR}")
 ## Build ##
 ###########
 
-include_directories(include 
+include_directories(include
   ${EIGEN3_INCLUDE_DIRS} 
   ${catkin_INCLUDE_DIRS}
   )
