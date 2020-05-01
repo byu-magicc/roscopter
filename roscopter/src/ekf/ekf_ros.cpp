@@ -81,6 +81,7 @@ void EKF_ROS::initROS()
 // Subscribes if found
 #ifdef UBLOX
   ublox_gnss_sub_ = nh_.subscribe("ublox_gnss", 10, &EKF_ROS::gnssCallbackUblox, this);
+  std::cerr << "UBLOX is defined \n";
 #endif
 #ifdef INERTIAL_SENSE
   is_gnss_sub_ = nh_.subscribe("is_gnss", 10, &EKF_ROS::gnssCallbackInertialSense, this);

@@ -33,14 +33,16 @@ class WaypointManager():
                                        
         self.len_wps = len(self.waypoint_list)
         self.current_waypoint_index = 0
-        
+
         # how close does the MAV need to get before going to the next waypoint?
-        self.threshold = rospy.get_param('~threshold', 5)
+
+        self.pos_threshold = rospy.get_param('~threshold', 5)
         self.landing_threshold = rospy.get_param('~landing_threshold', 1)
         self.begin_descent_height = rospy.get_param('~begin_descent_height', 2)
         self.begin_landing_height = rospy.get_param('~begin_landing_height', 0.2)
         self.cyclical_path = rospy.get_param('~cycle', False)
         self.auto_land = rospy.get_param('~auto_land', False)
+        self.print_wp_reached = rospy.get_param('~print_wp_reached', True)
 
         self.mission_state = 0 #0: mission
                                #1: rendevous
@@ -53,6 +55,7 @@ class WaypointManager():
         self.current_waypoint_index = 0
 
         # set up Services
+        
         self.add_waypoint_service = rospy.Service('add_waypoint', AddWaypoint, self.addWaypointCallback)
         self.remove_waypoint_service = rospy.Service('remove_waypoint', RemoveWaypoint, self.addWaypointCallback)
         self.set_waypoint_from_file_service = rospy.Service('set_waypoints_from_file', SetWaypointsFromFile, self.addWaypointCallback)
@@ -72,7 +75,20 @@ class WaypointManager():
         self.plt_odom_sub_ = rospy.Subscriber('platform_odom', Odometry, self.pltOdomCallback, queue_size=5)
         self.plt_pose_sub_ = rospy.Subscriber('platform_pose', PoseStamped, self.pltPoseCallback, queue_size=5)
 
-        command_msg = Command()
+        # Wait a second before we publish the first waypoint
+        rospy.sleep(2)
+
+        # Create the initial relPose estimate message
+        relativePose_msg = RelativePose()
+        relativePose_msg.x = 0
+        relativePose_msg.y = 0
+        relativePose_msg.z = 0
+        relativePose_msg.F = 0
+        self.relPose_pub_.publish(relativePose_msg)
+
+        # Create the initial command message
+        self.cmd_msg = Command()
+        
         current_waypoint = np.array(self.waypoint_list[0])
 
         command_msg.header.stamp = rospy.Time.now()
@@ -118,19 +134,28 @@ class WaypointManager():
         else:
             self.mission(current_position)           
 
-        # # orientation in quaternion form
-        # qw = msg.pose.pose.orientation.w
-        # qx = msg.pose.pose.orientation.x
-        # qy = msg.pose.pose.orientation.y
-        # qz = msg.pose.pose.orientation.z
+        # yaw from quaternion
+        y = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
+
+        #publish the relative pose estimate
+        relativePose_msg = RelativePose()
+        relativePose_msg.x = current_position[0]
+        relativePose_msg.y = current_position[1]
+        relativePose_msg.z = y
+        relativePose_msg.F = current_position[2]
+        self.relPose_pub_.publish(relativePose_msg)
 
         # # yaw from quaternion
         # y = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
     
     def mission(self, current_position):
         current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
+
         self.publish_error(current_position, current_waypoint)
         error = np.linalg.norm(current_position - current_waypoint[0:3])
+        
+        #may want to implement heading error at some point
+        heading_error = np.abs(self.wrap(current_waypoint[3] - y))
 
         if error < self.threshold:
             print('reached waypoint')

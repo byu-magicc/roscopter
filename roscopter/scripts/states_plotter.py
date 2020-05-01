@@ -8,7 +8,7 @@ from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu
 from geometry_msgs.msg import Vector3Stamped
 
-##### I have not gotten this to work ####
+###### I haven't gotten this to work #####
 
 # Enable antialiasing for prettier plots
 pg.setConfigOptions(antialias=True)
@@ -219,7 +219,7 @@ class Plotter:
         # set the window widths
         for i in range(0,len(self.p_list)):
             self.p_list[i].setLimits(xMin=self.time_max - self.t_win, xMax=self.time_max)
-        
+
         # stack the data lists
         truths_array = np.vstack(self.truths)
         time_t_array = truths_array[:,0]
