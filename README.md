@@ -83,6 +83,7 @@ Removes all waypoints. Because the multirotor needs at least 1 waypoint to be co
  2. Support additional altitude sensor support (laser/sonar)
  3. Heading calibration routine (magnetometer)
  4. Include wind estimation  
- 5. Add simpler way to add new waypoints
- 6. Get states_plotter.py and commands_plotter.py
- 7. Develop procedure for defining quadrotor physical parameters.  (add to wiki)
+ 5. Get states_plotter.py and commands_plotter.py
+ 6. Develop procedure for defining quadrotor physical parameters.  (add to wiki)
+ 9. Add drift model to GPS estimator
+ 10. Develop and document gps covariance tuning methods, and or fix use of automatic GPS covariances
