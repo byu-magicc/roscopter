@@ -86,6 +86,10 @@ private:
   ros::Subscriber is_flying_sub_;
   ros::Subscriber cmd_sub_;
   ros::Subscriber status_sub_;
+  ros::Subscriber pltOdom_sub_;
+  ros::Subscriber is_landing_sub_;
+  ros::Subscriber auto_land_sub_;
+  ros::Subscriber landed_sub_;
 
   ros::Publisher command_pub_;
 
@@ -96,9 +100,14 @@ private:
   double max_accel_xy_;
   double max_accel_z_;
   double min_altitude_;
+  float throttle_down_ = 0.99;
   bool is_flying_;
   bool armed_;
   bool received_cmd_;
+  bool auto_land_ = false;
+  bool is_landing_ = false;
+  bool landed_ = false;
+
 
   // PID Controllers
   controller::SimplePID PID_x_dot_;
@@ -117,6 +126,7 @@ private:
 
   // Memory for sharing information between functions
   state_t xhat_ = {}; // estimate
+  state_t plt_hat_ = {}; //platform(frame) state
   max_t max_ = {};
   rosflight_msgs::Command command_;
   command_t xc_ = {}; // command
@@ -128,6 +138,10 @@ private:
   void isFlyingCallback(const std_msgs::BoolConstPtr &msg);
   void cmdCallback(const rosflight_msgs::CommandConstPtr &msg);
   void statusCallback(const rosflight_msgs::StatusConstPtr &msg);
+  void pltOdomCallback(const nav_msgs::OdometryConstPtr &msg);
+  void autoLandCallback(const std_msgs::BoolConstPtr &msg);
+  void isLandingCallback(const std_msgs::BoolConstPtr &msg);
+  void landedCallback(const std_msgs::BoolConstPtr &msg);
 
   void computeControl(double dt);
   void resetIntegrators();

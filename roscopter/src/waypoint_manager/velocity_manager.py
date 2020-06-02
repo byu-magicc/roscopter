@@ -16,7 +16,7 @@ class WaypointManager():
 
         # get parameters
         try:
-            self.waypoint_list = rospy.get_param('~waypoints')
+            self.waypoint_list = rospy.get_param('~waypoints') #parameters seem too come from launch file rosparam command.  This directs to mav_name.yaml
         except KeyError:
             rospy.logfatal('waypoints not set')
             rospy.signal_shutdown('Parameters not set')
@@ -28,6 +28,7 @@ class WaypointManager():
 
         self.prev_time = rospy.Time.now()
 
+        #are these services even used?
         # set up Services
         self.add_waypoint_service = rospy.Service('add_waypoint', AddWaypoint, self.addWaypointCallback)
         self.remove_waypoint_service = rospy.Service('remove_waypoint', RemoveWaypoint, self.addWaypointCallback)
@@ -47,7 +48,7 @@ class WaypointManager():
         #this all seems to be for position not velocity
         command_msg = Command()
         current_waypoint = np.array(self.waypoint_list[0])
-        command_msg.header.stamp = rospy.Time.now()
+        command_msg.header.stamp = rospy.Time.now() #added from waypoint_manager.py
         command_msg.x = current_waypoint[0]
         command_msg.y = current_waypoint[1]
         command_msg.F = current_waypoint[2]
@@ -99,6 +100,8 @@ class WaypointManager():
 
         error = current_position - current_waypoint[0:3]
 
+        ## big differences between velocity and waypoint start here
+       
         # replace next line with rotation matrix
         # i_to_b = quaternion_matrix([msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w])
         i_to_b = np.eye(3)

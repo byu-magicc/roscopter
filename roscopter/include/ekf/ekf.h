@@ -54,7 +54,7 @@ public:
   ~EKF();
 
   State& x() { return xbuf_.x(); } // The current state object
-  const State& x() const { return xbuf_.x(); }
+  const State& x() const { return xbuf_.x(); } //called by EKF_ROS::publishEstimates
   dxMat& P() { return xbuf_.P(); } // The current covariance
   const dxMat& P() const { return xbuf_.P(); }
 
@@ -68,12 +68,13 @@ public:
   void setArmed() { armed_ = true; }
   void setDisarmed() { armed_ = false; }
 
-  bool refLlaSet() { return ref_lla_set_; }
+  bool refLlaSet() { return ref_lla_set_; } //called from EKF_ROS::gnssCallback
 
   void setGroundTempPressure(const double& temp, const double& press);
-  bool groundTempPressSet() { return (ground_pressure_ != 0) && (ground_temperature_ != 0); }
+  //called by EKF_ROS::baroCallback
+  bool groundTempPressSet() { return (ground_pressure_ != 0) && (ground_temperature_ != 0); } //returns true if ground pressure and groudn temperature are not equal to 0
 
-  bool isFlying() { return is_flying_; }
+  bool isFlying() { return is_flying_; } // called from EKF_ROS::publishEstimates
   void checkIsFlying();
 
   bool measUpdate(const Eigen::VectorXd &res, const Eigen::MatrixXd &R, const Eigen::MatrixXd &H);
