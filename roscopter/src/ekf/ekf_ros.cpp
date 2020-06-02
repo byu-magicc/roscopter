@@ -66,6 +66,7 @@ void EKF_ROS::initROS()
   euler_pub_ = nh_.advertise<geometry_msgs::Vector3Stamped>("euler_degrees", 1);
   imu_bias_pub_ = nh_.advertise<sensor_msgs::Imu>("imu_bias", 1);
   gps_ned_cov_pub_ = nh_.advertise<geometry_msgs::PoseWithCovariance>("gps_ned_cov", 1);
+  gps_ecef_cov_pub_ = nh_.advertise<geometry_msgs::PoseWithCovariance>("gps_ecef_cov", 1);
   is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1);
 
   //sets up subscriptions.  Number referes to queue size
@@ -222,18 +223,29 @@ void EKF_ROS::publishEstimates(const sensor_msgs::ImuConstPtr &msg)
   }
 }
 
-void EKF_ROS::publishGpsNedCov(Vector6d sigma, Vector6d z)
+void EKF_ROS::publishGpsCov(Matrix6d sigma_ecef, Vector6d sigma_ned, Vector6d z)
 {
   // const Eigen::Vector3d& ecef
   // z_ned = x_ecef2ned(const Eigen::Vector3d& ecef)
 
+  //gps ecef covariance
+  gps_ecef_cov_msg_.covariance[0] = sigma_ecef(0,0);
+  gps_ecef_cov_msg_.covariance[1] = sigma_ecef(0,1);
+  gps_ecef_cov_msg_.covariance[2] = sigma_ecef(0,2);
+  gps_ecef_cov_msg_.covariance[3] = sigma_ecef(1,0);
+  gps_ecef_cov_msg_.covariance[4] = sigma_ecef(1,1);
+  gps_ecef_cov_msg_.covariance[5] = sigma_ecef(1,2);
+  gps_ecef_cov_msg_.covariance[6] = sigma_ecef(2,0);
+  gps_ecef_cov_msg_.covariance[7] = sigma_ecef(2,1);
+  gps_ecef_cov_msg_.covariance[8] = sigma_ecef(2,2);
+
   // gps ned covariance
-  gps_ned_cov_msg_.covariance[0] = sigma[0];
-  gps_ned_cov_msg_.covariance[1] = sigma[1];
-  gps_ned_cov_msg_.covariance[2] = sigma[2];
-  gps_ned_cov_msg_.covariance[3] = sigma[3];
-  gps_ned_cov_msg_.covariance[4] = sigma[4];
-  gps_ned_cov_msg_.covariance[5] = sigma[5];
+  gps_ned_cov_msg_.covariance[0] = sigma_ned[0];
+  gps_ned_cov_msg_.covariance[1] = sigma_ned[1];
+  gps_ned_cov_msg_.covariance[2] = sigma_ned[2];
+  gps_ned_cov_msg_.covariance[3] = sigma_ned[3];
+  gps_ned_cov_msg_.covariance[4] = sigma_ned[4];
+  gps_ned_cov_msg_.covariance[5] = sigma_ned[5];
 
   //convert z to ned frame
   Vector3d z_lla = ecef2lla(z.head<3>());
@@ -246,6 +258,7 @@ void EKF_ROS::publishGpsNedCov(Vector6d sigma, Vector6d z)
   gps_ned_cov_msg_.pose.position.z = z_ned[2];
 
   gps_ned_cov_pub_.publish(gps_ned_cov_msg_);
+  gps_ecef_cov_pub_.publish(gps_ecef_cov_msg_);
 }
 
 void EKF_ROS::imuCallback(const sensor_msgs::ImuConstPtr &msg)
@@ -410,7 +423,6 @@ void EKF_ROS::gnssCallback(const rosflight_msgs::GNSSConstPtr &msg)
   //cwiseProduct returns an expression of the Schur product (coefficient wise product) of *this and other
   //looks like it is just element wise matrix multiplication.  So this is just squaring each element of Sigma_diag_NED. https://eigen.tuxfamily.org/dox/classEigen_1_1MatrixBase.html#title37
   Sigma_diag_NED = Sigma_diag_NED.cwiseProduct(Sigma_diag_NED);
-  publishGpsNedCov(Sigma_diag_NED, z); //delete this later
 
   Matrix3d R_e2n = q_e2n(ecef2lla(z.head<3>())).R();
 
@@ -428,7 +440,7 @@ void EKF_ROS::gnssCallback(const rosflight_msgs::GNSSConstPtr &msg)
     ekf_.setRefLla(ref_lla);
   }
 
-  publishGpsNedCov(Sigma_diag_NED, z); //delete this later
+  publishGpsCov(Sigma_ecef, Sigma_diag_NED, z); //delete this later
 
   if (start_time_.sec == 0)
     return;

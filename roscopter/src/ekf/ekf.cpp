@@ -577,6 +577,7 @@ void EKF::gnssUpdate(const meas::Gnss &z)
 
   ///////////END OF ALGORITHM SECTION/////////////
   /// TODO: Saturate r
+  std::cerr << "z.R = " << z.R << "\n";
   if (use_gnss_)
     measUpdate(r, z.R, H);
 
