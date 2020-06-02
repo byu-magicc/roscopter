@@ -106,12 +106,14 @@ private:
   ros::Publisher odometry_pub_;
   ros::Publisher euler_pub_;
   ros::Publisher imu_bias_pub_;
+  ros::Publisher gps_ned_cov_pub_;
   ros::Publisher is_flying_pub_;
 
   sensor_msgs::Imu imu_bias_msg_;
   nav_msgs::Odometry odom_msg_;
   geometry_msgs::Vector3Stamped euler_msg_;
   std_msgs::Bool is_flying_msg_;
+  geometry_msgs::PoseWithCovariance gps_ned_cov_msg_;
 
 #ifdef UBLOX
   ros::Subscriber ublox_gnss_sub_;
@@ -149,6 +151,7 @@ private:
   double gps_speed_stdev_;
 
   void publishEstimates(const sensor_msgs::ImuConstPtr &msg);
+  void publishGpsNedCov(Vector6d sigma, Vector6d z);
 };
 
 }

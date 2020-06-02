@@ -57,6 +57,7 @@ void EKF_ROS::initROS()
   odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odom", 1);
   euler_pub_ = nh_.advertise<geometry_msgs::Vector3Stamped>("euler_degrees", 1);
   imu_bias_pub_ = nh_.advertise<sensor_msgs::Imu>("imu_bias", 1);
+  gps_ned_cov_pub_ = nh_.advertise<geometry_msgs::PoseWithCovariance>("gps_ned_cov", 1);
   is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1);
 
   imu_sub_ = nh_.subscribe("imu", 100, &EKF_ROS::imuCallback, this);
@@ -158,6 +159,17 @@ void EKF_ROS::publishEstimates(const sensor_msgs::ImuConstPtr &msg)
   imu_bias_msg_.linear_acceleration.y = state_est.ba(1);
   imu_bias_msg_.linear_acceleration.z = state_est.ba(2);
 
+  // linear acceleration covariance
+  imu_bias_msg_.linear_acceleration_covariance[0] = imu_R_(0,0);
+  imu_bias_msg_.linear_acceleration_covariance[1] = imu_R_(0,1);
+  imu_bias_msg_.linear_acceleration_covariance[2] = imu_R_(0,2);
+  imu_bias_msg_.linear_acceleration_covariance[3] = imu_R_(1,0);
+  imu_bias_msg_.linear_acceleration_covariance[4] = imu_R_(1,1);
+  imu_bias_msg_.linear_acceleration_covariance[5] = imu_R_(1,2);
+  imu_bias_msg_.linear_acceleration_covariance[6] = imu_R_(2,0);
+  imu_bias_msg_.linear_acceleration_covariance[7] = imu_R_(2,1);
+  imu_bias_msg_.linear_acceleration_covariance[8] = imu_R_(2,2);
+
   imu_bias_pub_.publish(imu_bias_msg_);
 
   // Only publish is_flying is true once
@@ -170,6 +182,32 @@ void EKF_ROS::publishEstimates(const sensor_msgs::ImuConstPtr &msg)
       is_flying_pub_.publish(is_flying_msg_);
     }
   }
+}
+
+void EKF_ROS::publishGpsNedCov(Vector6d sigma, Vector6d z)
+{
+  // const Eigen::Vector3d& ecef
+  // z_ned = x_ecef2ned(const Eigen::Vector3d& ecef)
+
+  // gps ned covariance
+  gps_ned_cov_msg_.covariance[0] = sigma[0];
+  gps_ned_cov_msg_.covariance[1] = sigma[1];
+  gps_ned_cov_msg_.covariance[2] = sigma[2];
+  gps_ned_cov_msg_.covariance[3] = sigma[3];
+  gps_ned_cov_msg_.covariance[4] = sigma[4];
+  gps_ned_cov_msg_.covariance[5] = sigma[5];
+
+  //convert z to ned frame
+  Vector3d z_lla = ecef2lla(z.head<3>());
+  Vector3d ref_lla(ekf_.ref_lat_radians_, ekf_.ref_lon_radians_, ekf_.x().ref);
+  Vector3d z_ned = lla2ned(ref_lla, z_lla);
+
+  //get gps ned position
+  gps_ned_cov_msg_.pose.position.x = z_ned[0];
+  gps_ned_cov_msg_.pose.position.y = z_ned[1];
+  gps_ned_cov_msg_.pose.position.z = z_ned[2];
+
+  gps_ned_cov_pub_.publish(gps_ned_cov_msg_);
 }
 
 void EKF_ROS::imuCallback(const sensor_msgs::ImuConstPtr &msg)
@@ -307,6 +345,8 @@ void EKF_ROS::gnssCallback(const rosflight_msgs::GNSSConstPtr &msg)
   }
 
   Sigma_diag_NED = Sigma_diag_NED.cwiseProduct(Sigma_diag_NED);
+  publishGpsNedCov(Sigma_diag_NED, z); //delete this later
+
   Matrix3d R_e2n = q_e2n(ecef2lla(z.head<3>())).R();
 
   Matrix6d Sigma_ecef;
@@ -321,6 +361,8 @@ void EKF_ROS::gnssCallback(const rosflight_msgs::GNSSConstPtr &msg)
     ref_lla.head<2>() *= 180. / M_PI;
     ekf_.setRefLla(ref_lla);
   }
+
+  publishGpsNedCov(Sigma_diag_NED, z); //delete this later
 
   if (start_time_.sec == 0)
     return;
