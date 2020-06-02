@@ -13,6 +13,7 @@ from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
 class WaypointManager():
 
     def __init__(self):
+
         # get parameters
         try:
             self.waypoint_list = rospy.get_param('~waypoints')
@@ -25,15 +26,11 @@ class WaypointManager():
         self.len_waypts = len(self.waypoint_list)
 
 
-
         # ==================================================
         # Create the initial command message
         self.cmd_msg = Command()
         self.current_waypoint_index = 0
         current_waypoint = np.array(self.waypoint_list[0])
-
-        self.publish_command(current_waypoint)
-
 
         # Initialize member n,e,d
         self.n = None
@@ -64,13 +61,16 @@ class WaypointManager():
         self.set_waypoint_from_file_service = rospy.Service('set_waypoints_from_file', SetWaypointsFromFile, self.addWaypointCallback)
 
         # Set Up Subscribers
-        self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometry_callback, queue_size=5)
-        # self.xhat_sub_ = rospy.Subscriber('odom', Odometry, self.odometry_callback, queue_size=5)
+        # self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometry_callback, queue_size=5)
+        self.xhat_sub_ = rospy.Subscriber('odom', Odometry, self.odometry_callback, queue_size=5)
         # Set Up Publishers
         self.waypoint_cmd_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
         self.pose_pub_ = rospy.Publisher('waypt_pose_euler', PoseEuler, queue_size=5, latch=True)
         # Wait a second before we publish the first waypoint
+
         rospy.sleep(2)
+        self.publish_command(current_waypoint)
+
 
         while not rospy.is_shutdown():
             # wait for new messages and call the callback when they arrive
@@ -90,7 +90,6 @@ class WaypointManager():
         print("[waypoint_manager] set Waypoints from File (NOT IMPLEMENTED)")
 
     def odometry_callback(self, msg):
-        print('odom callback')
         # stop iterating over waypoints if cycle==false and last waypoint reached
         if not self.cyclical_path and self.current_waypoint_index == self.len_waypts-1:
             return
@@ -127,7 +126,7 @@ class WaypointManager():
             current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
 
             # next_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
-        self.publish_command(current_waypoint)
+            self.publish_command(current_waypoint)
 
 
 
@@ -158,7 +157,7 @@ class WaypointManager():
             self.cmd_msg.cmd4 = np.arctan2(delta[1], delta[0])
 
         self.cmd_msg.mode = Command.MODE_NPOS_EPOS_DPOS_YAW
-        # self.waypoint_cmd_pub_.publish(self.cmd_msg)
+        self.waypoint_cmd_pub_.publish(self.cmd_msg)
 
 
     def wrap(self, angle):
