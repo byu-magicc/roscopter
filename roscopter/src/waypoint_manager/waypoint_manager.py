@@ -236,11 +236,11 @@ class WaypointManager():
         ###### Check Waypoint Arrival Status & Update to Next Waypoint #######
         else:
             # Calculate error between current pose and commanded waypoint
-            self.halt_waypoint = [current_pose[0] , current_pose[1] , current_pose[2] , self.y ]
+            self.halt_waypoint = [current_pose[0] , current_pose[1] , current_pose[2] , self.psi ]
             current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
 
             position_error = np.linalg.norm(current_waypoint[0:3] - current_pose)
-            heading_error = np.abs(self.wrap(current_waypoint[3] - self.y))
+            heading_error = np.abs(self.wrap(current_waypoint[3] - self.psi))
             #if error is within the threshold
             if position_error < self.pos_threshold and heading_error < self.heading_threshold:
                 #Print if we did not already print
