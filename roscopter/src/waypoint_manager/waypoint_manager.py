@@ -210,7 +210,7 @@ class WaypointManager():
         self.n = msg.pose.pose.position.x
         self.e = msg.pose.pose.position.y
         self.d = msg.pose.pose.position.z
-        current_pose = np.array([self.n, self.e, self.d])
+        current_position = np.array([self.n, self.e, self.d])
         
         # orientation in quaternion form
         qw = msg.pose.pose.orientation.w
@@ -236,7 +236,7 @@ class WaypointManager():
         ###### Check Waypoint Arrival Status & Update to Next Waypoint #######
         else:
             # Calculate error between current pose and commanded waypoint
-            self.halt_waypoint = [current_pose[0] , current_pose[1] , current_pose[2] , self.psi ]
+            self.halt_waypoint = [self.n , self.e , self.d , self.psi ]
             current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
 
             position_error = np.linalg.norm(current_waypoint[0:3] - current_pose)
