@@ -239,7 +239,7 @@ class WaypointManager():
             self.halt_waypoint = [self.n , self.e , self.d , self.psi ]
             current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
 
-            position_error = np.linalg.norm(current_waypoint[0:3] - current_pose)
+            position_error = np.linalg.norm(current_waypoint[0:3] - current_position)
             heading_error = np.abs(self.wrap(current_waypoint[3] - self.psi))
             #if error is within the threshold
             if position_error < self.pos_threshold and heading_error < self.heading_threshold:
