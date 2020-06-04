@@ -57,7 +57,7 @@ class WaypointManager():
         # Wait a second before we publish the first waypoint
         rospy.sleep(2)
         
-        # Create the initial relPose estimate message
+        # Create the initial poseEuler estimate message
         poseEuler_msg = PoseEuler()
         poseEuler_msg.n = self.n
         poseEuler_msg.e = self.e
