@@ -1,12 +1,13 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import numpy as np
 import rospy
 import csv
 
+# from geometry_msgs import Vector3Stamped
 from nav_msgs.msg import Odometry
-from rosflight_msgs.msg import Command
-from roscopter_msgs.msg import RelativePose
+from roscopter_msgs.msg import Command
+from roscopter_msgs.msg import PoseEuler
 from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile, ListWaypoints, ClearWaypoints, Hold, Release
 
 
@@ -20,9 +21,13 @@ class WaypointManager():
         except KeyError:
             rospy.logfatal('[waypoint_manager] waypoints not set')
             rospy.signal_shutdown('[waypoint_manager] Parameters not set')
-
+            
+        #Initialize variables
+        self.n = None
+        self.e = None
+        self.d = None
+        self.psi = None
         self.current_waypoint_index = 0
-        self.y = 0
         self.hold = False
         self.no_command = False
         if len(self.waypoint_list) == 0:
@@ -47,23 +52,24 @@ class WaypointManager():
         # Set Up Publishers and Subscribers
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
         self.waypoint_cmd_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
-        self.relPose_pub_ = rospy.Publisher('relative_pose', RelativePose, queue_size=5, latch=True)
-
+        self.poseEuler_pub_ = rospy.Publisher('pose_euler', PoseEuler, queue_size=5, latch=True)
+        
         # Wait a second before we publish the first waypoint
         rospy.sleep(2)
-
-        # Create the initial relPose estimate message
-        relativePose_msg = RelativePose()
-        relativePose_msg.x = 0
-        relativePose_msg.y = 0
-        relativePose_msg.z = 0
-        relativePose_msg.F = 0
-        self.relPose_pub_.publish(relativePose_msg)
+        
+        # Create the initial poseEuler estimate message
+        poseEuler_msg = PoseEuler()
+        poseEuler_msg.n = self.n
+        poseEuler_msg.e = self.e
+        poseEuler_msg.d = self.d
+        poseEuler_msg.psi = self.psi
+        self.poseEuler_pub_.publish(poseEuler_msg)
 
         # Create the initial command message
         self.cmd_msg = Command()
         current_waypoint = np.array(self.waypoint_list[0])
         self.publish_command(current_waypoint)
+
 
         while not rospy.is_shutdown():
             # wait for new messages and call the callback when they arrive
@@ -136,7 +142,6 @@ class WaypointManager():
         if req.Filename.endswith('.csv'):
             with open(req.Filename) as file_wp_list:
                 self.waypoint_list = list(csv.reader(file_wp_list, quoting=csv.QUOTE_NONNUMERIC))
-
         else:
             file = open(req.Filename, 'r')
             file_lines = file.readlines()
@@ -202,23 +207,26 @@ class WaypointManager():
     def odometryCallback(self, msg):
         ###### Retrieve and Publish the Current Pose ######
         # get current position
-        current_pose = np.array([msg.pose.pose.position.x,
-                                     msg.pose.pose.position.y,
-                                     -msg.pose.pose.position.z])
+        self.n = msg.pose.pose.position.x
+        self.e = msg.pose.pose.position.y
+        self.d = msg.pose.pose.position.z
+        current_position = np.array([self.n, self.e, self.d])
+        
         # orientation in quaternion form
         qw = msg.pose.pose.orientation.w
         qx = msg.pose.pose.orientation.x
         qy = msg.pose.pose.orientation.y
         qz = msg.pose.pose.orientation.z
+        
         # yaw from quaternion
-        self.y = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
-        # publish the relative pose estimate
-        relativePose_msg = RelativePose()
-        relativePose_msg.x = current_pose[0]
-        relativePose_msg.y = current_pose[1]
-        relativePose_msg.z = self.y
-        relativePose_msg.F = current_pose[2]
-        self.relPose_pub_.publish(relativePose_msg)
+        self.psi = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
+        
+        # publish pose Euler estimate
+        self.poseEuler_msg.n = self.n
+        self.poseEuler_msg.e = self.e
+        self.poseEuler_msg.d = self.d
+        self.poseEuler_msg.psi = self.psi
+        self.poseEuler_pub_.publish(self.poseEuler_msg)
 
         ###### Halt Pose - If Hold or No Command ######
         if self.hold or self.no_command:
@@ -228,11 +236,11 @@ class WaypointManager():
         ###### Check Waypoint Arrival Status & Update to Next Waypoint #######
         else:
             # Calculate error between current pose and commanded waypoint
-            self.halt_waypoint = [current_pose[0] , current_pose[1] , current_pose[2] , self.y ]
+            self.halt_waypoint = [self.n , self.e , self.d , self.psi ]
             current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
 
-            position_error = np.linalg.norm(current_waypoint[0:3] - current_pose)
-            heading_error = np.abs(self.wrap(current_waypoint[3] - self.y))
+            position_error = np.linalg.norm(current_waypoint[0:3] - current_position)
+            heading_error = np.abs(self.wrap(current_waypoint[3] - self.psi))
             #if error is within the threshold
             if position_error < self.pos_threshold and heading_error < self.heading_threshold:
                 #Print if we did not already print
@@ -257,21 +265,22 @@ class WaypointManager():
         self.cmd_msg.x = current_waypoint[0]
         self.cmd_msg.y = current_waypoint[1]
         self.cmd_msg.F = current_waypoint[2]
-
+        
         if len(current_waypoint) > 3:
-            self.cmd_msg.z = current_waypoint[3]
+            self.cmd_msg.cmd4 = current_waypoint[3]
         else:
             next_waypoint_index = (self.current_waypoint_index + 1) % len(self.waypoint_list)
             next_waypoint = self.waypoint_list[next_waypoint_index]
             delta = next_waypoint - current_waypoint
-            self.cmd_msg.z = np.arctan2(delta[1], delta[0])
+            self.cmd_msg.cmd4 = np.arctan2(delta[1], delta[0])
 
-        self.cmd_msg.mode = Command.MODE_XPOS_YPOS_YAW_ALTITUDE
+        self.cmd_msg.mode = Command.MODE_NPOS_EPOS_DPOS_YAW
         self.waypoint_cmd_pub_.publish(self.cmd_msg)
 
     def wrap(self, angle):
         angle -= 2*np.pi * np.floor((angle + np.pi) / (2*np.pi))
         return angle
+
 
 if __name__ == '__main__':
     rospy.init_node('waypoint_manager', anonymous=True)
