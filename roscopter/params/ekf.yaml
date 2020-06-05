@@ -87,7 +87,7 @@ attitude_noise_stdev: 0.01 # Mocap
 baro_pressure_noise_stdev: 2.0
 range_noise_stdev: 0.1
 
-manual_gps_noise: false # choose noise params for GPS or use the values reported from the message topic
+manual_gps_noise: true # choose noise params for GPS or use the values reported from the message topic
 gps_horizontal_stdev: 0.021
 gps_vertical_stdev: 0.04
 gps_speed_stdev: 0.2
