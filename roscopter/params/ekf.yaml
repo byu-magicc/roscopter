@@ -25,9 +25,9 @@ enable_log: true
 ## Measurement Processing
 enable_partial_update: true
 enable_out_of_order: false # TODO this isnt fully implemented
-use_mocap: true
-use_gnss: false
-use_baro: false
+use_mocap: false
+use_gnss: true
+use_baro: true
 use_range: false
 use_zero_vel: true
 

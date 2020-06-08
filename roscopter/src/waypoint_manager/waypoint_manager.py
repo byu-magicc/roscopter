@@ -34,6 +34,13 @@ class WaypointManager():
             self.no_command = True
         self.halt_waypoint = [0, 0, 0, 0]
 
+        # Create the initial poseEuler estimate message
+        self.poseEuler_msg = PoseEuler()
+        self.poseEuler_msg.n = self.n
+        self.poseEuler_msg.e = self.e
+        self.poseEuler_msg.d = self.d
+        self.poseEuler_msg.psi = self.psi
+
         # how close does the MAV need to get before going to the next waypoint?
         self.pos_threshold = rospy.get_param('~threshold', 5)
         self.heading_threshold = rospy.get_param('~heading_threshold', 0.035)  # radians
@@ -56,20 +63,13 @@ class WaypointManager():
         
         # Wait a second before we publish the first waypoint
         rospy.sleep(2)
-        
-        # Create the initial poseEuler estimate message
-        poseEuler_msg = PoseEuler()
-        poseEuler_msg.n = self.n
-        poseEuler_msg.e = self.e
-        poseEuler_msg.d = self.d
-        poseEuler_msg.psi = self.psi
-        self.poseEuler_pub_.publish(poseEuler_msg)
+
+        self.poseEuler_pub_.publish(self.poseEuler_msg)
 
         # Create the initial command message
         self.cmd_msg = Command()
         current_waypoint = np.array(self.waypoint_list[0])
         self.publish_command(current_waypoint)
-
 
         while not rospy.is_shutdown():
             # wait for new messages and call the callback when they arrive
@@ -261,10 +261,10 @@ class WaypointManager():
                     return
 
     def publish_command(self, current_waypoint):
-        self.cmd_msg.header.stamp = rospy.Time.now()
-        self.cmd_msg.x = current_waypoint[0]
-        self.cmd_msg.y = current_waypoint[1]
-        self.cmd_msg.F = current_waypoint[2]
+        self.cmd_msg.stamp = rospy.Time.now()
+        self.cmd_msg.cmd1 = current_waypoint[0]
+        self.cmd_msg.cmd2 = current_waypoint[1]
+        self.cmd_msg.cmd3 = current_waypoint[2]
         
         if len(current_waypoint) > 3:
             self.cmd_msg.cmd4 = current_waypoint[3]
@@ -272,10 +272,11 @@ class WaypointManager():
             next_waypoint_index = (self.current_waypoint_index + 1) % len(self.waypoint_list)
             next_waypoint = self.waypoint_list[next_waypoint_index]
             delta = next_waypoint - current_waypoint
-            self.cmd_msg.cmd4 = np.arctan2(delta[1], delta[0])
-
+            self.cmd_msg.cmd4 = np.arctan2(delta[1], delta[0])   
+              
         self.cmd_msg.mode = Command.MODE_NPOS_EPOS_DPOS_YAW
         self.waypoint_cmd_pub_.publish(self.cmd_msg)
+        return
 
     def wrap(self, angle):
         angle -= 2*np.pi * np.floor((angle + np.pi) / (2*np.pi))
