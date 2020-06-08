@@ -3,7 +3,15 @@ ROScopter
 
 This repository contains the ROS packages associated with flying a multirotor on the [ROSflight](http://rosflight.org) autopilot stack. The `roscopter` ROS package contains a high-level multirotor autopilot while the `roscopter_sim` package is used for simulation.
 
+<<<<<<< HEAD
 ### RUNNING SIMULATION ###
+=======
+View Wiki for detailed step by step setup instructions
+
+https://github.com/byu-magicc/roscopter/wiki
+
+## Running Simulation ##
+>>>>>>> master
 
 # Simplified Dynamics Model
 
@@ -88,6 +96,7 @@ Lists the current waypoints in order from the first. No arguments.
 # /clear_waypoints #
 Removes all waypoints. Because the multirotor needs at least 1 waypoint to be controlled, the multirotor's position when /clear_waypoints is called is set as the waypoint.
 
+<<<<<<< HEAD
 
 ### TO DO: ###
  1. Improve GPS estimation performance using Ublox GPS
@@ -97,3 +106,27 @@ Removes all waypoints. Because the multirotor needs at least 1 waypoint to be co
  5. Add simpler way to add new waypoints
  6. Get states_plotter.py and commands_plotter.py
  7. Develop procedure for defining quadrotor physical parameters.  (add to wiki)
+=======
+# TODO: #
+
+
+1. Develop and document GPS noise std tuning methods. Fix issues with covariance calculations. Ensure that covariance is  used properly in estimation.
+
+2. Develop and document process noise std tuning methods.
+
+3. Fix issues with altitude estimates when calibrating the IMU and Barometer at startup. Altitude estimate occasionally spikes, and or inverts after calibration and initial movement. 
+
+4. Develop and document a tuning procedure for the multirotor. This includes tuning all the gain parameters for the flight vehicle.
+
+5. Standardize the flight controller board. Board sensor suite needs to include an IMU, barometer and magnetometer. Current board and sensor combination is becoming obsolete.
+
+6. Create a velocity follower node.
+
+7. Develop and document a magnetometer calibration routine and incorporate magnetometer measurements to the estimator. This would enable accurate heading estimates at initialization and during hover flight.
+
+8. Support an additional altitude sensor for landing. Possible options include sonar, laser, or camera.
+
+9. Create a failsafe mode so the quadrotor can have a safe landing. Use cases include when RC connection is lost, or quad trespasses a geofence.
+
+10. Improve flight performance in windy conditions. Most accurate solution is to incorporate wind estimation. This is possible without air sensors if you can estimate parameters of the flight vehicle such as drag and thrust coefficients.
+>>>>>>> master
