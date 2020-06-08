@@ -6,8 +6,7 @@ import csv
 
 # from geometry_msgs import Vector3Stamped
 from nav_msgs.msg import Odometry
-from roscopter_msgs.msg import Command
-from roscopter_msgs.msg import PoseEuler
+from roscopter_msgs.msg import Command, PoseEuler
 from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile, ListWaypoints, ClearWaypoints, Hold, Release
 
 
@@ -21,7 +20,7 @@ class WaypointManager():
         except KeyError:
             rospy.logfatal('[waypoint_manager] waypoints not set')
             rospy.signal_shutdown('[waypoint_manager] Parameters not set')
-            
+
         #Initialize variables
         self.n = None
         self.e = None
@@ -60,7 +59,7 @@ class WaypointManager():
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
         self.waypoint_cmd_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
         self.poseEuler_pub_ = rospy.Publisher('pose_euler', PoseEuler, queue_size=5, latch=True)
-        
+
         # Wait a second before we publish the first waypoint
         rospy.sleep(2)
 
@@ -112,7 +111,7 @@ class WaypointManager():
             #If it's the last waypoint in the list
             last_waypoint_bool = self.current_waypoint_index == (len(self.waypoint_list)-1)
             if last_waypoint_bool:
-                #If cyclical, and there remains at least one waypoint 
+                #If cyclical, and there remains at least one waypoint
                 if self.cyclical_path and len(self.waypoint_list) > 1:
                     current_index = 0
                 #If not cyclical, or zero waypoints left
@@ -211,16 +210,16 @@ class WaypointManager():
         self.e = msg.pose.pose.position.y
         self.d = msg.pose.pose.position.z
         current_position = np.array([self.n, self.e, self.d])
-        
+
         # orientation in quaternion form
         qw = msg.pose.pose.orientation.w
         qx = msg.pose.pose.orientation.x
         qy = msg.pose.pose.orientation.y
         qz = msg.pose.pose.orientation.z
-        
+
         # yaw from quaternion
         self.psi = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
-        
+
         # publish pose Euler estimate
         self.poseEuler_msg.n = self.n
         self.poseEuler_msg.e = self.e
@@ -265,15 +264,15 @@ class WaypointManager():
         self.cmd_msg.cmd1 = current_waypoint[0]
         self.cmd_msg.cmd2 = current_waypoint[1]
         self.cmd_msg.cmd3 = current_waypoint[2]
-        
+
         if len(current_waypoint) > 3:
             self.cmd_msg.cmd4 = current_waypoint[3]
         else:
             next_waypoint_index = (self.current_waypoint_index + 1) % len(self.waypoint_list)
             next_waypoint = self.waypoint_list[next_waypoint_index]
             delta = next_waypoint - current_waypoint
-            self.cmd_msg.cmd4 = np.arctan2(delta[1], delta[0])   
-              
+            self.cmd_msg.cmd4 = np.arctan2(delta[1], delta[0])
+
         self.cmd_msg.mode = Command.MODE_NPOS_EPOS_DPOS_YAW
         self.waypoint_cmd_pub_.publish(self.cmd_msg)
         return
