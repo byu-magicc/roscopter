@@ -69,10 +69,10 @@
     <!-- plot states -->
 <!--     <node pkg="roscopter" type="states_plotter.py" name="states_plotter" output="screen">
       <param name="time_window" value="10.0"/>
-      <remap from="truth" to="ground_truth/odometry/NED"/> -->
-<!--       <remap from="estimate" to="odom" /> -->
-<!--     </node> -->
-
+      <remap from="truth" to="ground_truth/odometry/NED"/>
+      <remap from="estimate" to="odom" />
+    </node>
+ -->
     <!-- plot states with commands -->
 <!--     <node pkg="roscopter" type="commands_plotter.py" name="commands_plotter" output="screen">
       <param name="time_window" value="10.0"/>
