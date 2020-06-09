@@ -121,11 +121,26 @@ void Controller::cmdCallback(const roscopter_msgs::CommandConstPtr &msg)
       xc_.psi = msg->cmd4;
       control_mode_ = msg->mode;
       break;
+    case roscopter_msgs::Command::MODE_NPOS_EPOS_DVEL_YAW:
+      xc_.pn = msg->cmd1;
+      xc_.pe = msg->cmd2;
+      xc_.z_dot = msg->cmd3;
+      xc_.psi = msg->cmd4;
+      control_mode_ = msg->mode;
+      break;
     // case rosflight_msgs::Command::MODE_XVEL_YVEL_YAWRATE_ALTITUDE:
     case roscopter_msgs::Command::MODE_NVEL_EVEL_DPOS_YAWRATE:
       xc_.x_dot = msg->cmd1;
       xc_.y_dot = msg->cmd2;
       xc_.pd = msg->cmd3;
+      xc_.r = msg->cmd4;
+      control_mode_ = msg->mode;
+      break;
+    // case rosflight_msgs::Command::MODE_XVEL_YVEL_YAWRATE_Z_VEL:
+    case roscopter_msgs::Command::MODE_NVEL_EVEL_DVEL_YAWRATE:
+      xc_.x_dot = msg->cmd1;
+      xc_.y_dot = msg->cmd2;
+      xc_.z_dot = msg->cmd3;
       xc_.r = msg->cmd4;
       control_mode_ = msg->mode;
       break;
@@ -224,6 +239,7 @@ void Controller::computeControl(double dt)
     // By running the position controllers
     double pndot_c = PID_n_.computePID(xc_.pn, xhat_.pn, dt);
     double pedot_c = PID_e_.computePID(xc_.pe, xhat_.pe, dt);
+    double pddot_c = PID_d_.computePID(xc_.pd, xhat_.pd, dt);
 
     // Calculate desired yaw rate
     // First, determine the shortest direction to the commanded psi
@@ -239,8 +255,55 @@ void Controller::computeControl(double dt)
 
     xc_.x_dot = pndot_c*cos(xhat_.psi) + pedot_c*sin(xhat_.psi);
     xc_.y_dot = -pndot_c*sin(xhat_.psi) + pedot_c*cos(xhat_.psi);
+    xc_.z_dot = pddot_c;
 
-    mode_flag = roscopter_msgs::Command::MODE_NVEL_EVEL_DPOS_YAWRATE;
+    mode_flag = roscopter_msgs::Command::MODE_NVEL_EVEL_DVEL_YAWRATE;
+  }
+
+if(mode_flag == roscopter_msgs::Command::MODE_NPOS_EPOS_DVEL_YAW)
+{
+  // Figure out desired velocities (in inertial frame)
+  // By running the position controllers
+  double pndot_c = PID_n_.computePID(xc_.pn, xhat_.pn, dt);
+  double pedot_c = PID_e_.computePID(xc_.pe, xhat_.pe, dt);
+
+  // Calculate desired yaw rate
+  // First, determine the shortest direction to the commanded psi
+  if(fabs(xc_.psi + 2*M_PI - xhat_.psi) < fabs(xc_.psi - xhat_.psi))
+  {
+    xc_.psi += 2*M_PI;
+  }
+  else if (fabs(xc_.psi - 2*M_PI -xhat_.psi) < fabs(xc_.psi - xhat_.psi))
+  {
+    xc_.psi -= 2*M_PI;
+  }
+  xc_.r = PID_psi_.computePID(xc_.psi, xhat_.psi, dt);
+
+  xc_.x_dot = pndot_c*cos(xhat_.psi) + pedot_c*sin(xhat_.psi);
+  xc_.y_dot = -pndot_c*sin(xhat_.psi) + pedot_c*cos(xhat_.psi);
+
+  mode_flag = roscopter_msgs::Command::MODE_NVEL_EVEL_DVEL_YAWRATE;
+}
+
+  if(mode_flag == roscopter_msgs::Command::MODE_NVEL_EVEL_DVEL_YAWRATE)
+  {
+    // Compute desired accelerations (in terms of g's) in the vehicle 1 frame
+    // Rotate body frame velocities to vehicle 1 frame velocities
+    double sinp = sin(xhat_.phi);
+    double cosp = cos(xhat_.phi);
+    double sint = sin(xhat_.theta);
+    double cost = cos(xhat_.theta);
+    double pxdot =
+        cost * xhat_.u + sinp * sint * xhat_.v + cosp * sint * xhat_.w;
+    double pydot = cosp * xhat_.v - sinp * xhat_.w;
+    double pddot =
+        -sint * xhat_.u + sinp * cost * xhat_.v + cosp * cost * xhat_.w;
+
+    xc_.ax = PID_x_dot_.computePID(xc_.x_dot, pxdot, dt);
+    xc_.ay = PID_y_dot_.computePID(xc_.y_dot, pydot, dt);
+    xc_.az = PID_z_dot_.computePID(xc_.z_dot, pddot, dt);
+
+    mode_flag = roscopter_msgs::Command::MODE_NACC_EACC_DACC_YAWRATE;
   }
 
   if(mode_flag == roscopter_msgs::Command::MODE_NVEL_EVEL_DPOS_YAWRATE)
