@@ -8,7 +8,8 @@ from std_msgs.msg import Float64
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Pose
 from sensor_msgs.msg import Imu
-from rosflight_msgs.msg import Command
+from rosflight_msgs.msg import Command as RFCommand
+from roscopter_msgs.msg import Command as RCCommand
 
 # Enable antialiasing for prettier plots
 pg.setConfigOptions(antialias=True)
@@ -27,13 +28,13 @@ class Plotter:
         rospy.Subscriber('estimate', Odometry, self.estimateCallback)
         rospy.Subscriber('estimate/bias', Imu, self.biasCallback)
         rospy.Subscriber('estimate/drag', Float64, self.dragCallback)
-        rospy.Subscriber('ground_truth/odometry', Odometry, self.truthCallback)
+        rospy.Subscriber('truth', Odometry, self.truthCallback)
 
         # Add Commands
-        rospy.Subscriber('high_level_command', Command, self.highLevelCallback)
-        rospy.Subscriber('command', Command, self.commandCallback)
-        rospy.Subscriber('command/vel', Command, self.vel_commandCallback)
-        rospy.Subscriber('command/acc', Command, self.acc_commandCallback)
+        rospy.Subscriber('high_level_command', RCCommand, self.highLevelCallback)
+        rospy.Subscriber('command', RFCommand, self.commandCallback)
+        rospy.Subscriber('command/vel', RFCommand, self.vel_commandCallback)
+        rospy.Subscriber('command/acc', RFCommand, self.acc_commandCallback)
         rospy.Subscriber('/relative_pose', Pose, self.relativePoseCallback)
 
         # initialize Qt gui application and window
@@ -330,9 +331,9 @@ class Plotter:
         qz = msg.pose.pose.orientation.z
 
         # Convert to Euler angles from quaternion
-        self.phi_t = np.arctan2(2*(qw*qx + qy*qz), (qw**2 + qz**2 - qx**2 - qy**2))
-        self.theta_t = np.arcsin(2*(qw*qy - qx*qz))
-        self.psi_t = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
+        self.phi_e = np.arctan2(2*(qw*qx + qy*qz), (qw**2 + qz**2 - qx**2 - qy**2))
+        self.theta_e = np.arcsin(2*(qw*qy - qx*qz))
+        self.psi_e = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
 
         # unpack angular velocities
         self.p_e = msg.twist.twist.angular.x
@@ -358,20 +359,20 @@ class Plotter:
         self.mu_e = msg.data
 
     def highLevelCallback(self, msg):
-        if msg.mode == Command.MODE_XPOS_YPOS_YAW_ALTITUDE:
-            self.pn_c = msg.x
-            self.pe_c = msg.y
-            self.psi_c = msg.z
-            # self.pd_c = msg.F
-        if msg.mode == Command.MODE_XVEL_YVEL_YAWRATE_ALTITUDE:
-            self.u_c = msg.x
-            self.v_c = msg.y
-            self.r_c = msg.z
-            self.pd_c = msg.F
-        self.time_c = msg.header.stamp.to_sec() - self.time0
+        if msg.mode == RCCommand.MODE_NPOS_EPOS_DPOS_YAW:
+            self.pn_c = msg.cmd1
+            self.pe_c = msg.cmd2
+            self.psi_c = msg.cmd4
+            self.pd_c = msg.cmd3
+        if msg.mode == RCCommand.MODE_NVEL_EVEL_DPOS_YAWRATE:
+            self.u_c = msg.cmd1
+            self.v_c = msg.cmd2
+            self.r_c = msg.cmd4
+            self.pd_c = msg.cmd3
+        self.time_c = msg.stamp.to_sec() - self.time0
 
     def commandCallback(self, msg):
-        if msg.mode == Command.MODE_ROLL_PITCH_YAWRATE_THROTTLE:
+        if msg.mode == RFCommand.MODE_ROLL_PITCH_YAWRATE_THROTTLE:
             self.phi_c = msg.x
             self.theta_c = msg.y
             self.r_c = msg.z
@@ -379,7 +380,7 @@ class Plotter:
         self.time_c = msg.header.stamp.to_sec() - self.time0
 
     def vel_commandCallback(self, msg):
-        if msg.mode == Command.MODE_XVEL_YVEL_YAWRATE_ALTITUDE:
+        if msg.mode == RFCommand.MODE_XVEL_YVEL_YAWRATE_ALTITUDE:
             self.u_c = msg.x
             self.v_c = msg.y
             self.r_c = msg.z
@@ -387,7 +388,7 @@ class Plotter:
         self.time_c = msg.header.stamp.to_sec() - self.time0
 
     def acc_commandCallback(self, msg):
-        if msg.mode == Command.MODE_XACC_YACC_YAWRATE_AZ:
+        if msg.mode == RFCommand.MODE_XACC_YACC_YAWRATE_AZ:
             # self.u_c = msg.x
             # self.v_c = msg.y
             self.w_c = msg.z

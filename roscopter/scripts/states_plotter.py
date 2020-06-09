@@ -26,7 +26,7 @@ class Plotter:
         rospy.Subscriber('estimate/bias', Imu, self.biasCallback)
         rospy.Subscriber('estimate/drag', Float64, self.dragCallback)
         rospy.Subscriber('estimate/accel', Imu, self.accelCallback)
-        rospy.Subscriber('ground_truth/odometry/NED', Odometry, self.truthCallback)
+        rospy.Subscriber('truth', Odometry, self.truthCallback)
         rospy.Subscriber('imu/gyro_bias', Vector3Stamped, self.gyroBiasCallback)
         rospy.Subscriber('imu/acc_bias', Vector3Stamped, self.accBiasCallback)
 
@@ -285,9 +285,9 @@ class Plotter:
         qz = msg.pose.pose.orientation.z
 
         # Convert to Euler angles from quaternion
-        self.phi_t = np.arctan2(2*(qw*qx + qy*qz), (qw**2 + qz**2 - qx**2 - qy**2))
-        self.theta_t = np.arcsin(2*(qw*qy - qx*qz))
-        self.psi_t = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
+        self.phi_e = np.arctan2(2*(qw*qx + qy*qz), (qw**2 + qz**2 - qx**2 - qy**2))
+        self.theta_e = np.arcsin(2*(qw*qy - qx*qz))
+        self.psi_e = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
 
         # unpack angular velocities
         self.p_e = msg.twist.twist.angular.x
