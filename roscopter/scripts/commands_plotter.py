@@ -217,6 +217,8 @@ class Plotter:
         # self.mu_c = 0
         self.throttle_c = 0
 
+        self.time_max = 0
+
         # truth/estimate/commands storage lists
         self.estimates = []
         self.truths = []
@@ -236,7 +238,7 @@ class Plotter:
         # pack stored data into lists
         self.truths.append([self.time_t, self.pn_t, self.pe_t, self.pd_t, self.phi_t, self.theta_t, self.psi_t, self.u_t, self.v_t, self.w_t, self.p_t, self.q_t, self.r_t, self.rx_t, self.ry_t, self.rz_t, self.rphi_t, self.rtheta_t, self.rpsi_t])
         self.estimates.append([self.time_e, self.pn_e, self.pe_e, self.pd_e, self.phi_e, self.theta_e, self.psi_e, self.u_e, self.v_e, self.w_e, self.p_e, self.q_e, self.r_e, self.mu_e])
-        self.commands.append([self.time_e, self.pn_c, self.pe_c, self.pd_c, self.phi_c, self.theta_c, self.psi_c, self.u_c, self.v_c, self.w_c, self.r_c, self.throttle_c])
+        self.commands.append([self.time_c, self.pn_c, self.pe_c, self.pd_c, self.phi_c, self.theta_c, self.psi_c, self.u_c, self.v_c, self.w_c, self.r_c, self.throttle_c])
 
         # discard data outside desired plot time window
         for i in range(0,1000):
@@ -247,9 +249,12 @@ class Plotter:
             if self.commands[0][0] < self.commands[-1][0] - self.t_win:
                 self.commands.pop(0)
 
+        # find the maximum time forward
+        self.time_max=np.amax([self.estimates[-1][0], self.commands[-1][0]])
+
         # set the window widths
         for i in range(0,len(self.p_list)):
-        	self.p_list[i].setLimits(xMin=self.estimates[-1][0] - self.t_win, xMax=self.estimates[-1][0])
+        	self.p_list[i].setLimits(xMin=self.time_max - self.t_win, xMax=self.time_max)
 
         # stack the data lists
         truths_array = np.vstack(self.truths)
