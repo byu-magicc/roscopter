@@ -7,7 +7,7 @@ import csv
 # from geometry_msgs import Vector3Stamped
 from nav_msgs.msg import Odometry
 from roscopter_msgs.msg import Command, PoseEuler
-from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile, ListWaypoints, ClearWaypoints, Hold, Release
+from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile, ListWaypoints, ClearWaypoints, Hold, Release, Land
 
 
 class WaypointManager():
@@ -54,6 +54,7 @@ class WaypointManager():
         self.clear_waypoints_service = rospy.Service('clear_waypoints', ClearWaypoints, self.clearWaypointsCallback)
         self.hold_service = rospy.Service('hold', Hold, self.holdCallback)
         self.release_service = rospy.Service('release', Release, self.releaseCallback)
+        self.land_service = rospy.Service('land', Land, self.landCallback)
 
         # Set Up Publishers and Subscribers
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
@@ -202,6 +203,23 @@ class WaypointManager():
             self.publish_command(current_waypoint)
             rospy.loginfo("[waypoint_manager] Released hold - Multirotor path in progress")
             return True
+
+    def landCallback(self, req):
+        # land the multirotor in place
+        self.cmd_msg.stamp = rospy.Time.now()
+        self.cmd_msg.cmd1 = self.n
+        self.cmd_msg.cmd2 = self.e
+        self.cmd_msg.cmd4 = self.psi
+        while self.d < 1:
+            if self.d < -1:
+                self.cmd_msg.cmd3 = .8 #ZVEL
+            elif self.d >= 0:
+                self.cmd_msg.cmd3 = 100
+            else:
+                self.cmd_msg.cmd3 = -.6*(self.d-0.2)
+            self.cmd_msg.mode = Command.MODE_NPOS_EPOS_DVEL_YAW
+            self.waypoint_cmd_pub_.publish(self.cmd_msg)
+        return True
 
     def odometryCallback(self, msg):
         ###### Retrieve and Publish the Current Pose ######
