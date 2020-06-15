@@ -29,7 +29,7 @@ use_mocap: false
 use_gnss: true
 use_baro: true
 use_range: false
-use_zero_vel: true
+use_zero_vel: true #publishes zeros for the estimator until the quad starts flying, prevents drift before flight
 
 R_zero_vel: [0.001, 0.001, 0.001, # vel
               0.001] # Altitude
