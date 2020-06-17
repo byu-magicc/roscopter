@@ -108,4 +108,4 @@ Removes all waypoints. Because the multirotor needs at least 1 waypoint to be co
 
 7. Create a failsafe mode so the quadrotor can have a safe landing. Use cases include when RC connection is lost.
 
-10. Improve flight performance in windy conditions. Most accurate solution is to incorporate wind estimation. This is possible without air sensors if you can estimate parameters of the flight vehicle such as drag and thrust coefficients.
+8. Improve flight performance in windy conditions. Most accurate solution is to incorporate wind estimation. This is possible without air sensors if you can estimate parameters of the flight vehicle such as drag and thrust coefficients.
