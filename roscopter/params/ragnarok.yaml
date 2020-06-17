@@ -12,8 +12,8 @@ waypoints:
 
 threshold: 0.5,
 landing_threshold: 0.1,
-cycle: True,
-auto_land: False,
+cycle: False,
+auto_land: True,
 begin_descent_height: 1.5,
 begin_landing_height: 0.2,
 }

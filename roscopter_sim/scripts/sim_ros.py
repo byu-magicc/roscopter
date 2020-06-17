@@ -37,15 +37,17 @@ class SimManager():
 
     def pltOdomCallback(self, msg):
         # Get error between waypoint and current state
+        #convert from gazebo NWU to NED
         self.plt_pos = np.array([msg.pose.pose.position.x,
-                                     msg.pose.pose.position.y,
+                                     -msg.pose.pose.position.y,
                                      -msg.pose.pose.position.z])
 
 
     def droneOdomCallback(self, msg):
         # Get error between waypoint and current state
+        #convert from gazebo NWU to NED
         self.drone_pos = np.array([msg.pose.pose.position.x,
-                                     msg.pose.pose.position.y,
+                                     -msg.pose.pose.position.y,
                                      -msg.pose.pose.position.z])
 
     def gnssCallback(self, msg):

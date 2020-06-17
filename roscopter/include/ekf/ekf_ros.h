@@ -49,6 +49,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/Vector3Stamped.h>
+#include <geometry_msgs/PointStamped.h>
 #include <std_msgs/Bool.h>
 
 #ifdef UBLOX
@@ -118,7 +119,7 @@ private:
   std_msgs::Bool is_flying_msg_;
   geometry_msgs::PoseWithCovariance gps_ned_cov_msg_;
   geometry_msgs::PoseWithCovariance gps_ecef_cov_msg_; 
-  geometry_msgs::PoseStamped base_relPos_msg_;
+  geometry_msgs::PointStamped base_relPos_msg_;
 
 #ifdef UBLOX
   ros::Subscriber ublox_gnss_sub_;

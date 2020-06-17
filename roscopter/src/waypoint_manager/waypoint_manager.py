@@ -11,6 +11,8 @@ from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Pose
+from geometry_msgs.msg import PointStamped
+# from ublox.msg import RelPos
 
 
 class WaypointManager():
@@ -30,6 +32,8 @@ class WaypointManager():
         self.plt_prev_odom = np.array([0.0,
                                        0.0,
                                        0.0])
+        self.drone_odom = np.zeros(3)
+        self.plt_pos = np.zeros(3)
                                        
         self.len_wps = len(self.waypoint_list)
         self.current_waypoint_index = 0
@@ -74,6 +78,8 @@ class WaypointManager():
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
         self.plt_odom_sub_ = rospy.Subscriber('platform_odom', Odometry, self.pltOdomCallback, queue_size=5)
         self.plt_pose_sub_ = rospy.Subscriber('platform_pose', PoseStamped, self.pltPoseCallback, queue_size=5)
+        self.plt_relPos_sub_ = rospy.Subscriber('plt_relPos', PointStamped, self.pltRelPosCallback, queue_size=5)
+        # self.drone_odom_sub_ = rospy.Subscriber('drone_odom', Odometry, self.droneOdomCallback, queue_size=5)
 
         # Wait a second before we publish the first waypoint
         rospy.sleep(2)
@@ -121,6 +127,9 @@ class WaypointManager():
 
     def odometryCallback(self, msg):
         # Get error between waypoint and current state
+        self.drone_odom = np.array([msg.pose.pose.position.x,
+                                    msg.pose.pose.position.y,
+                                    msg.pose.pose.position.z])
         current_position = np.array([msg.pose.pose.position.x,
                                      msg.pose.pose.position.y,
                                      -msg.pose.pose.position.z])
@@ -184,7 +193,7 @@ class WaypointManager():
 
         self.auto_land_pub_.publish(True) #this will signal the controller to include the velocity feed forward term from the barge
 
-        waypoint = self.plt_odom + np.array([0.0, 0.0, self.begin_descent_height])
+        waypoint = self.plt_pos + np.array([0.0, 0.0, self.begin_descent_height])
         error = np.linalg.norm(current_position - waypoint)
         self.publish_error(current_position, waypoint)
 
@@ -196,7 +205,7 @@ class WaypointManager():
 
     def descend(self, current_position):
 
-        waypoint = self.plt_odom + np.array([0.0, 0.0, self.begin_landing_height])
+        waypoint = self.plt_pos + np.array([0.0, 0.0, self.begin_landing_height])
         error = np.linalg.norm(current_position - waypoint)
         self.publish_error(current_position, waypoint)
 
@@ -208,7 +217,7 @@ class WaypointManager():
 
     def land(self, current_position):
 
-        waypoint =self.plt_odom
+        waypoint =self.plt_pos
         if self.is_landing == 0:
             self.new_waypoint(waypoint)
             self.is_landing = 1
@@ -267,6 +276,20 @@ class WaypointManager():
         x.twist.twist.linear.y = -velocity[1]
         x.twist.twist.linear.z = velocity[2]
         self.platform_virtual_odom_pub_.publish(x)
+
+    def pltRelPosCallback(self, msg):
+        #TODO: implement time for the plt_relPos message?
+
+        #flip to NEU
+        self.plt_pos[0] = msg.point.x + self.drone_odom[0]
+        self.plt_pos[1] = msg.point.y + self.drone_odom[1]
+        self.plt_pos[2] = -msg.point.z - self.drone_odom[2]
+        print('platform global position = ', self.plt_pos)
+
+    # def droneOdomCallback(self, msg):
+    #     self.drone_odom = np.array([msg.pose.pose.position.x,
+    #                                 msg.pose.pose.position.y,
+    #                                 msg.pose.pose.position.z])        
 
     def publish_error(self, current_position, current_waypoint):
         error_msg = Pose()

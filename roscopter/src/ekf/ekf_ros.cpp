@@ -68,7 +68,7 @@ void EKF_ROS::initROS()
   gps_ned_cov_pub_ = nh_.advertise<geometry_msgs::PoseWithCovariance>("gps_ned_cov", 1);
   gps_ecef_cov_pub_ = nh_.advertise<geometry_msgs::PoseWithCovariance>("gps_ecef_cov", 1);
   is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1);
-  base_relPos_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("base_relPos", 1);
+  base_relPos_pub_ = nh_.advertise<geometry_msgs::PointStamped>("base_relPos", 1);
 
   //sets up subscriptions.  Number referes to queue size
   //with subscription, the callbacks are "listening for messages, and they are the next step in the code"
@@ -483,11 +483,11 @@ void EKF_ROS::gnssCallbackRelPos(const ublox::RelPosConstPtr &msg)
 {
   //TODO:: put in logic to only use measurements if a flag of 311, 279, 271, or ... xxx, is found
   //TODO:: maybe put in logic to only move forward if in a landing state
-  std::cerr << "in relpos callback \n";
-  base_relPos_msg_.header.stamp = msg->header.stamp;
-  base_relPos_msg_.pose.position.x = msg->relPosNED[0];
-  base_relPos_msg_.pose.position.y = msg->relPosNED[1];
-  base_relPos_msg_.pose.position.z = msg->relPosNED[2];  
+  base_relPos_msg_.header = msg->header;
+  // negate relPos message to go from rover to base rather than base to rover
+  base_relPos_msg_.point.x = -msg->relPosNED[0];
+  base_relPos_msg_.point.y = -msg->relPosNED[1];
+  base_relPos_msg_.point.z = -msg->relPosNED[2];  
   //TODO:: could add in the high precision (portion less than a mm)
   //TODO:: could add in the accuracy of the NED measurment to update covariance
 
