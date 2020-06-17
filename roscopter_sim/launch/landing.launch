@@ -42,6 +42,16 @@
     <arg name="color"               value="$(arg color)"/>
   </include>
 
+  <!-- simulation specific ros handling -->
+  <node name="sim_manager" pkg="roscopter_sim" type="sim_ros.py" output="screen">
+    <!-- Inputs -->
+    <remap from="drone_odom" to="$(arg mav_name)/odom"/>  
+    <remap from="platform_odom" to="$(arg target_name)/odom"/> 
+    <remap from="gnss" to="$(arg mav_name)/gps/data"/> 
+    <!-- Outputs -->
+    <remap from="relpos" to="sim/relpos"/>
+  </node>
+
   <!-- Platform Movement-->
   <group ns="$(arg target_name)">
     <!-- Load common parameters -->
@@ -90,6 +100,7 @@
       <remap from="imu" to="imu/data"/>
       <remap from="reference" to="ground_truth/odometry/NED_throttled"/>
       <remap from="gnss" to="gps/data"/>
+      <remap from="ublox_relpos" to="/sim/relpos"/>
       <!--Outputs-->
       <remap from="is_flying" to="not_for_sim"/>
     </node>

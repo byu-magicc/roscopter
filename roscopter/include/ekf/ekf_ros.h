@@ -53,6 +53,7 @@
 
 #ifdef UBLOX
 #include "ublox/PosVelEcef.h"
+#include "ublox/RelPos.h"
 #endif
 
 #ifdef INERTIAL_SENSE
@@ -81,6 +82,7 @@ public:
 
 #ifdef UBLOX
   void gnssCallbackUblox(const ublox::PosVelEcefConstPtr& msg);
+  void gnssCallbackRelPos(const ublox::RelPosConstPtr& msg);
 #endif
 
 #ifdef INERTIAL_SENSE
@@ -115,10 +117,13 @@ private:
   geometry_msgs::Vector3Stamped euler_msg_;
   std_msgs::Bool is_flying_msg_;
   geometry_msgs::PoseWithCovariance gps_ned_cov_msg_;
-  geometry_msgs::PoseWithCovariance gps_ecef_cov_msg_;  
+  geometry_msgs::PoseWithCovariance gps_ecef_cov_msg_; 
+  geometry_msgs::PoseStamped base_relPos_msg_;
 
 #ifdef UBLOX
   ros::Subscriber ublox_gnss_sub_;
+  ros::Subscriber ublox_relpos_sub_;
+  ros::Publisher base_relPos_pub_;
 #endif
 
 #ifdef INERTIAL_SENSE
