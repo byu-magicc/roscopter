@@ -5,7 +5,7 @@
 #        or: xvel, yvel, zpos, yaw_rate
 # low level: xacc, yacc, zacc, yaw_acc
 
-# uint8 MODE_NORTH_EAST_DOWN_YAW = 0
+# uint8 MODE_NORTH_EAST_DOWN_HEADING
 uint8 MODE_NPOS_EPOS_DPOS_YAW = 0
 uint8 MODE_NVEL_EVEL_DPOS_YAWRATE = 1
 uint8 MODE_NACC_EACC_DACC_YAWRATE = 2
