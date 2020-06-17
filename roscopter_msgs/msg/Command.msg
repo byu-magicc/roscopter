@@ -1,9 +1,10 @@
 # roscopter commands
 # can be used for any level of command:
-# high level: n,e,d,psi
-# mid level: xvel, yvel, zvel, yaw_rate
-#        or: xvel, yvel, zpos, yaw_rate
-# low level: xacc, yacc, zacc, yaw_acc
+# high level: n_pos, e_pos, d_pos, yaw
+# mid level: n_pos, e_pos, d_vel, yaw
+#        or: n_vel, e_vel, d_pos, yaw_rate
+#        or: n_vel, e_vel, d_vel, yaw_rate
+# low level: n_acc, e_acc, d_acc, yaw_acc
 
 # uint8 MODE_NORTH_EAST_DOWN_HEADING
 uint8 MODE_NPOS_EPOS_DPOS_YAW = 0
