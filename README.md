@@ -94,23 +94,18 @@ Removes all waypoints. Because the multirotor needs at least 1 waypoint to be co
 
 # TODO: #
 
+1. Develop and document process noise std tuning methods.
 
-1. Develop and document GPS noise std tuning methods. Fix issues with covariance calculations. Ensure that covariance is  used properly in estimation.
+2. Develop and document a tuning procedure for the multirotor. This includes tuning all the gain parameters for the flight vehicle.
 
-2. Develop and document process noise std tuning methods.
+3. Standardize the flight controller board. Board sensor suite needs to include an IMU, barometer and magnetometer. Current board and sensor combination is becoming obsolete.
 
-3. Fix issues with altitude estimates when calibrating the IMU and Barometer at startup. Altitude estimate occasionally spikes, and or inverts after calibration and initial movement.
+4. Implement a trajectory follower control node. Should recieve inertial position, velocity, acceleration and heading, and output angular rate and throttle.
 
-4. Develop and document a tuning procedure for the multirotor. This includes tuning all the gain parameters for the flight vehicle.
+5. Develop and document a magnetometer calibration routine and incorporate magnetometer measurements to the estimator. This would enable accurate heading estimates at initialization and during hover flight.
 
-5. Standardize the flight controller board. Board sensor suite needs to include an IMU, barometer and magnetometer. Current board and sensor combination is becoming obsolete.
+6. Support an additional altitude sensor for landing. Possible options include sonar, laser, or camera.
 
-6. Create a velocity follower node.
-
-7. Develop and document a magnetometer calibration routine and incorporate magnetometer measurements to the estimator. This would enable accurate heading estimates at initialization and during hover flight.
-
-8. Support an additional altitude sensor for landing. Possible options include sonar, laser, or camera.
-
-9. Create a failsafe mode so the quadrotor can have a safe landing. Use cases include when RC connection is lost, or quad trespasses a geofence.
+7. Create a failsafe mode so the quadrotor can have a safe landing. Use cases include when RC connection is lost.
 
 10. Improve flight performance in windy conditions. Most accurate solution is to incorporate wind estimation. This is possible without air sensors if you can estimate parameters of the flight vehicle such as drag and thrust coefficients.
