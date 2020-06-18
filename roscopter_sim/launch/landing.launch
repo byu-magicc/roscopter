@@ -43,14 +43,14 @@
   </include>
 
   <!-- simulation specific ros handling -->
-  <node name="sim_manager" pkg="roscopter_sim" type="sim_ros.py" output="screen">
-    <!-- Inputs -->
-    <remap from="drone_odom" to="$(arg mav_name)/ground_truth/odometry/NWU"/>  
-    <remap from="platform_odom" to="$(arg target_name)/odom"/> 
-    <remap from="gnss" to="$(arg mav_name)/gps/data"/> 
-    <!-- Outputs -->
-    <remap from="relpos" to="sim/relpos"/>
-  </node>
+  <group ns="sim">
+    <node name="sim_manager" pkg="roscopter_sim" type="sim_ros.py" output="screen">
+      <!-- Inputs -->
+      <remap from="drone_odom" to="/$(arg mav_name)/ground_truth/odometry/NWU"/>  
+      <remap from="platform_odom" to="/$(arg target_name)/odom"/> 
+      <remap from="gnss" to="/$(arg mav_name)/gps/data"/>
+    </node>
+  </group>
 
   <!-- Platform Movement-->
   <group ns="$(arg target_name)">
@@ -82,7 +82,7 @@
 
     <!-- PID Position Controller -->
     <node name="controller" pkg="roscopter" type="controller" output="screen">
-      <remap from="platform_odom" to="/$(arg mav_name)/platform_virtual_odometry"/>
+      <remap from="platform_Vel" to="base_vel"/>
       <remap from="estimate" to="odom"/>
     </node>
 
@@ -101,7 +101,8 @@
       <remap from="imu" to="imu/data"/>
       <remap from="reference" to="ground_truth/odometry/NED_throttled"/>
       <remap from="gnss" to="gps/data"/>
-      <remap from="ublox_relpos" to="/sim/relpos"/>
+      <remap from="ublox_relpos" to="/sim/rover_relpos"/>
+      <remap from="ublox_posvelecef" to="/sim/base_PosVelEcef"/>
       <!--Outputs-->
       <remap from="is_flying" to="not_for_sim"/>
     </node>

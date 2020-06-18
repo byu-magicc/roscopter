@@ -11,7 +11,7 @@ waypoints:
  # [0., -4.5, 5.5, 1.57]],
 
 threshold: 0.5,
-landing_threshold: 0.1,
+landing_threshold: 0.3,
 cycle: False,
 auto_land: True,
 begin_descent_height: 1.5,

@@ -26,12 +26,13 @@ class WaypointManager():
             rospy.signal_shutdown('Parameters not set')
 
         #initialize platform location
-        self.plt_odom = np.array([0.0,
-                                  0.0,
-                                  0.0])
-        self.plt_prev_odom = np.array([0.0,
-                                       0.0,
-                                       0.0])
+        # self.plt_odom = np.array([0.0,
+        #                           0.0,
+        #                           0.0])
+        # self.plt_prev_odom = np.array([0.0,
+        #                                0.0,
+        #                                0.0])
+
         self.drone_odom = np.zeros(3)
         self.plt_pos = np.zeros(3)
                                        
@@ -59,7 +60,6 @@ class WaypointManager():
         self.current_waypoint_index = 0
 
         # set up Services
-        
         self.add_waypoint_service = rospy.Service('add_waypoint', AddWaypoint, self.addWaypointCallback)
         self.remove_waypoint_service = rospy.Service('remove_waypoint', RemoveWaypoint, self.addWaypointCallback)
         self.set_waypoint_from_file_service = rospy.Service('set_waypoints_from_file', SetWaypointsFromFile, self.addWaypointCallback)
@@ -73,14 +73,13 @@ class WaypointManager():
         self.auto_land_pub_ = rospy.Publisher('auto_land', Bool, queue_size=5, latch=True)
         self.is_landing_pub_ = rospy.Publisher('is_landing', Bool, queue_size=5, latch=True)
         self.landed_pub_ = rospy.Publisher('landed', Bool, queue_size=5, latch=True)
-        self.platform_virtual_odom_pub_ = rospy.Publisher('platform_virtual_odometry', Odometry, queue_size=5, latch=True)
-        self.error_pub_ = rospy.Publisher('error', Pose, queue_size=5, latch=True)        
+        # self.platform_virtual_odom_pub_ = rospy.Publisher('platform_virtual_odometry', Odometry, queue_size=5, latch=True)
+        self.error_pub_ = rospy.Publisher('error', Pose, queue_size=5, latch=True)
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
         self.plt_odom_sub_ = rospy.Subscriber('platform_odom', Odometry, self.pltOdomCallback, queue_size=5)
         self.plt_pose_sub_ = rospy.Subscriber('platform_pose', PoseStamped, self.pltPoseCallback, queue_size=5)
         self.plt_relPos_sub_ = rospy.Subscriber('plt_relPos', PointStamped, self.pltRelPosCallback, queue_size=5)
         # self.drone_odom_sub_ = rospy.Subscriber('drone_odom', Odometry, self.droneOdomCallback, queue_size=5)
-
         # Wait a second before we publish the first waypoint
         rospy.sleep(2)
 
@@ -256,26 +255,28 @@ class WaypointManager():
         self.pltPoseCallback(x)
 
     def pltPoseCallback(self, msg):
-        current_time = msg.header.stamp.secs+msg.header.stamp.nsecs*1e-9
-        dt = current_time - self.plt_prev_time
-        self.plt_prev_time = current_time
-        self.plt_odom = np.array([msg.pose.position.x,
-                                    msg.pose.position.y,
-                                    -msg.pose.position.z])
+        ############################3start here to figure out what is going wrong!!! The quad isn't landing on the platform correctly anymore.  This function did publish the virtual odom message.
+        a = 1
+        # current_time = msg.header.stamp.secs+msg.header.stamp.nsecs*1e-9
+        # dt = current_time - self.plt_prev_time
+        # self.plt_prev_time = current_time
+        # self.plt_odom = np.array([msg.pose.position.x,
+        #                             msg.pose.position.y,
+        #                             -msg.pose.position.z])
 
-        #numerical differentiation to get velocity
-        velocity = (self.plt_odom - self.plt_prev_odom)/dt
-        self.plt_prev_odom = self.plt_odom
+        # #numerical differentiation to get velocity
+        # velocity = (self.plt_odom - self.plt_prev_odom)/dt
+        # self.plt_prev_odom = self.plt_odom
 
-        x = Odometry()
-        x.header.stamp = msg.header.stamp
-        x.pose.pose.position.x = self.plt_odom[0]
-        x.pose.pose.position.y = -self.plt_odom[1]
-        x.pose.pose.position.z = self.plt_odom[2]
-        x.twist.twist.linear.x = velocity[0]
-        x.twist.twist.linear.y = -velocity[1]
-        x.twist.twist.linear.z = velocity[2]
-        self.platform_virtual_odom_pub_.publish(x)
+        # x = Odometry()
+        # x.header.stamp = msg.header.stamp
+        # x.pose.pose.position.x = self.plt_odom[0]
+        # x.pose.pose.position.y = -self.plt_odom[1]
+        # x.pose.pose.position.z = self.plt_odom[2]
+        # x.twist.twist.linear.x = velocity[0]
+        # x.twist.twist.linear.y = -velocity[1]
+        # x.twist.twist.linear.z = velocity[2]
+        # self.platform_virtual_odom_pub_.publish(x)
 
     def pltRelPosCallback(self, msg):
         #TODO: implement time for the plt_relPos message?
@@ -284,7 +285,6 @@ class WaypointManager():
         self.plt_pos[0] = msg.point.x + self.drone_odom[0]
         self.plt_pos[1] = msg.point.y + self.drone_odom[1]
         self.plt_pos[2] = -msg.point.z - self.drone_odom[2]
-        print('platform global position = ', self.plt_pos)
 
     # def droneOdomCallback(self, msg):
     #     self.drone_odom = np.array([msg.pose.pose.position.x,

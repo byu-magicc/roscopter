@@ -48,8 +48,8 @@ Controller::Controller() :
   cmd_sub_ =
       nh_.subscribe("high_level_command", 1, &Controller::cmdCallback, this);
   status_sub_ = nh_.subscribe("status", 1, &Controller::statusCallback, this);
-  pltOdom_sub_ =
-    nh_.subscribe("platform_odom", 1, &Controller::pltOdomCallback, this);
+  pltVel_sub_ =
+    nh_.subscribe("platform_Vel", 1, &Controller::pltVelCallback, this);
 
   command_pub_ = nh_.advertise<rosflight_msgs::Command>("command", 1);
   auto_land_sub_ = nh_.subscribe("auto_land", 1, &Controller::autoLandCallback, this);
@@ -155,7 +155,7 @@ void Controller::cmdCallback(const rosflight_msgs::CommandConstPtr &msg)
     received_cmd_ = true;
 }
 
-void Controller::pltOdomCallback(const nav_msgs::OdometryConstPtr &msg)
+void Controller::pltVelCallback(const geometry_msgs::TwistStampedConstPtr &msg)
 {
 
   // // Convert Quaternion to RPY
@@ -167,14 +167,14 @@ void Controller::pltOdomCallback(const nav_msgs::OdometryConstPtr &msg)
   // double sinp = sin(plt_hat_.psi);
   // double cosp = cos(plt_hat_.psi);
 
-  double u = msg->twist.twist.linear.x;
-  double v = -msg->twist.twist.linear.y; //have to negate to go from NWU to NE altitude frame
-  double w = msg->twist.twist.linear.z;
+  double u = msg->twist.linear.x;
+  double v = msg->twist.linear.y; //have to negate to go from NWU to NE altitude frame
+  double w = msg->twist.linear.z;
 
   plt_hat_.u = u;
   plt_hat_.v = v;
 
-  plt_hat_.r = -msg->twist.twist.angular.z; //have to negate to go from Counter Clockwise positive rotation to Clockwise
+  plt_hat_.r = -msg->twist.angular.z; //have to negate to go from Counter Clockwise positive rotation to Clockwise
 
 }
 

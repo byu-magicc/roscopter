@@ -6,6 +6,7 @@
 #include <rosflight_msgs/Status.h>
 #include <controller/simple_pid.h>
 #include <nav_msgs/Odometry.h>
+#include <geometry_msgs/TwistStamped.h>
 #include <std_msgs/Bool.h>
 #include <tf/tf.h>
 #include <stdint.h>
@@ -86,7 +87,7 @@ private:
   ros::Subscriber is_flying_sub_;
   ros::Subscriber cmd_sub_;
   ros::Subscriber status_sub_;
-  ros::Subscriber pltOdom_sub_;
+  ros::Subscriber pltVel_sub_;
   ros::Subscriber is_landing_sub_;
   ros::Subscriber auto_land_sub_;
   ros::Subscriber landed_sub_;
@@ -138,7 +139,7 @@ private:
   void isFlyingCallback(const std_msgs::BoolConstPtr &msg);
   void cmdCallback(const rosflight_msgs::CommandConstPtr &msg);
   void statusCallback(const rosflight_msgs::StatusConstPtr &msg);
-  void pltOdomCallback(const nav_msgs::OdometryConstPtr &msg);
+  void pltVelCallback(const geometry_msgs::TwistStampedConstPtr &msg);
   void autoLandCallback(const std_msgs::BoolConstPtr &msg);
   void isLandingCallback(const std_msgs::BoolConstPtr &msg);
   void landedCallback(const std_msgs::BoolConstPtr &msg);
