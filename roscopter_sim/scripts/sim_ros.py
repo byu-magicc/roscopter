@@ -76,7 +76,7 @@ class SimManager():
     def gnssCallback(self, msg):
         # Callback is just used to publish all gps data at the same rate
         self.publish_virtual_rover_PosVelEcef(msg)
-        self.publish_virtual_rover_relPos()
+        self.publish_virtual_rover_relPos(msg.header)
         self.publish_virtual_base_PosVelEcef()
 
     def gnssRawCallback(self, msg):
@@ -98,8 +98,10 @@ class SimManager():
         self.rover_PosVelEcef_pub_.publish(self.rover_PosVelEcef)
 
 
-    def publish_virtual_rover_relPos(self):
+    def publish_virtual_rover_relPos(self, gnss_header):
         relPos_array = self.drone_pos - self.plt_pos
+
+        self.relPos.header = gnss_header
         self.relPos.relPosNED[0] = relPos_array[0]
         self.relPos.relPosNED[1] = relPos_array[1]
         self.relPos.relPosNED[2] = relPos_array[2]
