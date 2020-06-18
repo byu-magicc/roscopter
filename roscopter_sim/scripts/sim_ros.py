@@ -26,12 +26,15 @@ class SimManager():
         self.plt_prev_time = 0.0
         self.plt_vel = np.zeros(3)
         self.drone_pos = np.zeros(3)
+        self.lla = np.zeros(3)
         self.relPos = RelPos()
+        self.rover_PosVelEcef = PosVelEcef()
         self.base_PosVelEcef = PosVelEcef()
 
         # Set Up Publishers and Subscribers
         self.platform_virtual_odom_pub_ = rospy.Publisher('platform_virtual_odometry', Odometry, queue_size=5, latch=True)
         self.relpos_pub_ = rospy.Publisher('rover_relpos', RelPos, queue_size=5, latch=True)  
+        self.rover_PosVelEcef_pub_ = rospy.Publisher('rover_PosVelEcef', PosVelEcef, queue_size=5, latch=True)
         self.base_PosVelEcef_pub_ = rospy.Publisher('base_PosVelEcef', PosVelEcef, queue_size=5, latch=True)
         self.plt_odom_sub_ = rospy.Subscriber('platform_odom', Odometry, self.pltOdomCallback, queue_size=5)
         self.drone_odom_sub_ = rospy.Subscriber('drone_odom', Odometry, self.droneOdomCallback, queue_size=5)
@@ -72,10 +75,30 @@ class SimManager():
 
     def gnssCallback(self, msg):
         # Callback is just used to publish all gps data at the same rate
-        self.publish_virtual_relPos()
+        self.publish_virtual_rover_PosVelEcef(msg)
+        self.publish_virtual_rover_relPos()
         self.publish_virtual_base_PosVelEcef()
 
-    def publish_virtual_relPos(self):
+    def gnssRawCallback(self, msg):
+        self.lla[0] = msg.lon
+        self.lla[1] = msg.lat
+        self.lla[2] = msg.height
+
+    def publish_virtual_rover_PosVelEcef(self, msg):
+        
+        self.rover_PosVelEcef.header = msg.header
+        self.rover_PosVelEcef.fix = msg.fix
+        self.rover_PosVelEcef.lla = self.lla
+        self.rover_PosVelEcef.position = msg.position
+        self.rover_PosVelEcef.horizontal_accuracy = msg.horizontal_accuracy
+        self.rover_PosVelEcef.vertical_accuracy = msg.vertical_accuracy
+        self.rover_PosVelEcef.velocity = msg.velocity
+        self.rover_PosVelEcef.speed_accuracy = msg.speed_accuracy
+
+        self.rover_PosVelEcef_pub_.publish(self.rover_PosVelEcef)
+
+
+    def publish_virtual_rover_relPos(self):
         relPos_array = self.drone_pos - self.plt_pos
         self.relPos.relPosNED[0] = relPos_array[0]
         self.relPos.relPosNED[1] = relPos_array[1]

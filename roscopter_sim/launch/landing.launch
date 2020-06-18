@@ -99,8 +99,9 @@
       <param name="param_filename" value="$(find roscopter_sim)/params/ekf.yaml"/>
       <!--Inputs-->
       <remap from="imu" to="imu/data"/>
-      <remap from="reference" to="ground_truth/odometry/NED_throttled"/>
-      <remap from="gnss" to="gps/data"/>
+      <!-- <remap from="reference" to="ground_truth/odometry/NED_throttled"/> -->
+      <!-- <remap from="gnss" to="gps/data"/> -->
+      <remap from="ublox_gnss" to="/sim/rover_PosVelEcef"/>
       <remap from="ublox_relpos" to="/sim/rover_relpos"/>
       <remap from="ublox_posvelecef" to="/sim/base_PosVelEcef"/>
       <!--Outputs-->
