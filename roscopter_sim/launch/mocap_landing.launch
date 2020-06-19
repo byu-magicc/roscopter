@@ -51,6 +51,13 @@
     </node>
   </group>
 
+
+  <group ns="m2u"> <!--m2u = motion capture to ublox conversion-->
+    <node name="mocap2ublox" pkg="roscopter" type="mocap2ublox_ros.py" output="screen">
+    </node>
+  </group>
+
+
   <!-- Platform Movement-->
   <group ns="$(arg target_name)">
     <!-- Load common parameters -->
