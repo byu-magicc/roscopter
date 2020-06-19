@@ -33,7 +33,6 @@ class SimManager():
         self.base_odom_sub_ = rospy.Subscriber('platform_odom', Odometry, self.baseOdomCallback, queue_size=5)
         self.rover_odom_sub_ = rospy.Subscriber('drone_odom', Odometry, self.roverOdomCallback, queue_size=5)
         self.rover_gnss_sub_ = rospy.Subscriber("gnss", GNSS, self.roverGnssCallback, queue_size=5)
-        self.rover_gnss_raw_sub_ = rospy.Subscriber("gnss_raw", GNSSRaw, self.roverGnssRawCallback, queue_size=5)
 
         
         while not rospy.is_shutdown():
@@ -72,7 +71,7 @@ class SimManager():
         
         self.rover_PosVelEcef.header = msg.header
         self.rover_PosVelEcef.fix = msg.fix
-        self.rover_PosVelEcef.lla = self.rover_lla
+        # self.rover_PosVelEcef.lla = self.rover_lla  #lla is not currently being used
         self.rover_PosVelEcef.position = msg.position
         self.rover_PosVelEcef.horizontal_accuracy = msg.horizontal_accuracy
         self.rover_PosVelEcef.vertical_accuracy = msg.vertical_accuracy
