@@ -31,8 +31,9 @@ class Mocap2Ublox():
         self.rover_relPos = RelPos()
         
         self.rover_virtual_relpos_pub_ = rospy.Publisher('rover_relpos', RelPos, queue_size=5, latch=True)  
-        self.rover_virtual_PosVelEcef_pub_ = rospy.Publisher('rover_PosVelEcef', PosVelEcef, queue_size=5, latch=True)        self.rover_mocap_ned_sub_ = rospy.Subscriber('rover_mocap', PoseStamped, self.roverMocapNedCallback, queue_size=5)
+        self.rover_virtual_PosVelEcef_pub_ = rospy.Publisher('rover_PosVelEcef', PosVelEcef, queue_size=5, latch=True)
         self.base_virtual_PosVelEcef_pub_ = rospy.Publisher('base_PosVelEcef', PosVelEcef, queue_size=5, latch=True)
+        self.rover_mocap_ned_sub_ = rospy.Subscriber('rover_mocap', PoseStamped, self.roverMocapNedCallback, queue_size=5)
         self.base_mocap_ned_sub_ = rospy.Subscriber('base_mocap', PoseStamped, self.baseMocapNedCallback, queue_size=5)
         self.ublox_rate_timer_ = rospy.Timer(rospy.Duration(1.0/ublox_frequency), self.ubloxRateCallback)
 
@@ -79,7 +80,7 @@ class Mocap2Ublox():
         rover_vel_noise_d = self.add_noise(rover_vel[2], self.global_speed_accuracy)
         rover_vel_noise = np.array([rover_vel_noise_n, rover_vel_noise_e, rover_vel_noise_d])
 
-        self.rover_PosVelEcef.fix = 3.0
+        self.rover_PosVelEcef.fix = 3
         # self.rover_PosVelEcef.lla = self.rover_lla  #lla is not currently being used
         self.rover_PosVelEcef.position = rover_ned_noise
         self.rover_PosVelEcef.horizontal_accuracy = self.global_horizontal_accuracy
@@ -122,7 +123,7 @@ class Mocap2Ublox():
         base_vel_noise_d = self.add_noise(base_vel[2], self.global_speed_accuracy)
         base_vel_noise = np.array([base_vel_noise_n, base_vel_noise_e, base_vel_noise_d])
 
-        self.base_PosVelEcef.fix = 3.0
+        self.base_PosVelEcef.fix = 3
         # self.base_PosVelEcef.lla = self.base_lla  #lla is not currently being used
         self.base_PosVelEcef.position = base_ned_noise
         self.base_PosVelEcef.horizontal_accuracy = self.global_horizontal_accuracy
