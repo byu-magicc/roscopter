@@ -91,7 +91,6 @@
     <node name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
       <remap from="waypoint" to="high_level_command"/>
       <remap from="state" to="odom"/>
-      <remap from="platform_odom" to="/$(arg target_name)/odom"/>
       <remap from="plt_relPos" to="base_relPos"/>
     </node>
 

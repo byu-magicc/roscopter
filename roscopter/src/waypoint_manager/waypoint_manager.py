@@ -76,8 +76,6 @@ class WaypointManager():
         # self.platform_virtual_odom_pub_ = rospy.Publisher('platform_virtual_odometry', Odometry, queue_size=5, latch=True)
         self.error_pub_ = rospy.Publisher('error', Pose, queue_size=5, latch=True)
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
-        self.plt_odom_sub_ = rospy.Subscriber('platform_odom', Odometry, self.pltOdomCallback, queue_size=5)
-        self.plt_pose_sub_ = rospy.Subscriber('platform_pose', PoseStamped, self.pltPoseCallback, queue_size=5)
         self.plt_relPos_sub_ = rospy.Subscriber('plt_relPos', PointStamped, self.pltRelPosCallback, queue_size=5)
         # self.drone_odom_sub_ = rospy.Subscriber('drone_odom', Odometry, self.droneOdomCallback, queue_size=5)
         # Wait a second before we publish the first waypoint
@@ -243,40 +241,6 @@ class WaypointManager():
         self.cmd_msg.mode = Command.MODE_XPOS_YPOS_YAW_ALTITUDE
         self.waypoint_pub_.publish(self.cmd_msg)
 
-    def pltOdomCallback(self, msg):
-        x = PoseStamped()
-
-        x.header = msg.header
-        #convert positions to NED from NWU
-        x.pose.position.x = msg.pose.pose.position.x
-        x.pose.position.y = -msg.pose.pose.position.y
-        x.pose.position.z = -msg.pose.pose.position.z
-
-        self.pltPoseCallback(x)
-
-    def pltPoseCallback(self, msg):
-        ############################3start here to figure out what is going wrong!!! The quad isn't landing on the platform correctly anymore.  This function did publish the virtual odom message.
-        a = 1
-        # current_time = msg.header.stamp.secs+msg.header.stamp.nsecs*1e-9
-        # dt = current_time - self.plt_prev_time
-        # self.plt_prev_time = current_time
-        # self.plt_odom = np.array([msg.pose.position.x,
-        #                             msg.pose.position.y,
-        #                             -msg.pose.position.z])
-
-        # #numerical differentiation to get velocity
-        # velocity = (self.plt_odom - self.plt_prev_odom)/dt
-        # self.plt_prev_odom = self.plt_odom
-
-        # x = Odometry()
-        # x.header.stamp = msg.header.stamp
-        # x.pose.pose.position.x = self.plt_odom[0]
-        # x.pose.pose.position.y = -self.plt_odom[1]
-        # x.pose.pose.position.z = self.plt_odom[2]
-        # x.twist.twist.linear.x = velocity[0]
-        # x.twist.twist.linear.y = -velocity[1]
-        # x.twist.twist.linear.z = velocity[2]
-        # self.platform_virtual_odom_pub_.publish(x)
 
     def pltRelPosCallback(self, msg):
         #TODO: implement time for the plt_relPos message?

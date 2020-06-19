@@ -11,6 +11,7 @@ class Mocap2Ublox():
 
     def __init__(self):
 
+        print('init')
         #parameters
         ublox_frequency = 5.0 #hz
         self.global_horizontal_accuracy = 0.4
@@ -42,12 +43,14 @@ class Mocap2Ublox():
             rospy.spin()
 
     def roverMocapNedCallback(self, msg):
+        print('rover mocap ned')
         self.rover_ned = np.array([msg.pose.position.x,
                                    msg.pose.position.y,
                                    msg.pose.position.z])
 
 
     def baseMocapNedCallback(self, msg):
+        print('base mocap ned')
         self.base_ned = np.array([msg.pose.position.x,
                                   msg.pose.position.y,
                                   msg.pose.position.z])
@@ -55,6 +58,7 @@ class Mocap2Ublox():
 
     def ubloxRateCallback(self, event):
 
+        print('rate callback')
         self.publish_rover_virtual_PosVelEcef()
         self.publish_rover_virtual_relPos()
         self.publish_base_virtual_PosVelEcef()
@@ -62,6 +66,7 @@ class Mocap2Ublox():
 
     def publish_rover_virtual_PosVelEcef(self):
 
+        print('publish rover posvelecef')
         self.rover_PosVelEcef.header.stamp = rospy.Time.now()
 
         rover_ned_noise_n = self.add_noise(self.rover_ned[0], self.global_horizontal_accuracy)
@@ -94,6 +99,7 @@ class Mocap2Ublox():
 
 
     def publish_rover_virtual_relPos(self):
+        print('rover relpos')
         relPos_array = self.rover_ned - self.base_ned
 
         self.rover_relPos.header.stamp = rospy.Time.now()
@@ -105,6 +111,7 @@ class Mocap2Ublox():
 
     def publish_base_virtual_PosVelEcef(self):
 
+        print('base posvelecef')
         self.base_PosVelEcef.header.stamp = rospy.Time.now()
 
         base_ned_noise_n = self.add_noise(self.base_ned[0], self.global_horizontal_accuracy)
@@ -136,6 +143,7 @@ class Mocap2Ublox():
         self.base_virtual_PosVelEcef_pub_.publish(self.base_PosVelEcef)
     
     def add_noise(self, value, std_dev):
+        print('add noise')
         # print('value = ', value)
         value_w_noise = np.random.normal(value, std_dev, value.shape)
         # print('value with noise = ', value_w_noise)
@@ -144,6 +152,7 @@ class Mocap2Ublox():
 
 if __name__ == '__main__':
 
+    print("in mocap2ublox")
     rospy.init_node('mocap2ublox', anonymous=True)
     try:
         mocap2ublox = Mocap2Ublox()
