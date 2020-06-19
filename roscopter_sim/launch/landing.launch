@@ -49,6 +49,7 @@
       <remap from="drone_odom" to="/$(arg mav_name)/ground_truth/odometry/NWU"/>  
       <remap from="platform_odom" to="/$(arg target_name)/odom"/> 
       <remap from="gnss" to="/$(arg mav_name)/gps/data"/>
+      <!-- <remap from="gnss_raw" to="/$(arg mav_name)/" -->
     </node>
   </group>
 

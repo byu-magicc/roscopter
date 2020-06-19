@@ -3,17 +3,11 @@
 import numpy as np
 import rospy
 
-from std_msgs.msg import Bool
 from nav_msgs.msg import Odometry
-from rosflight_msgs.msg import Command
-from rosflight_msgs.msg import GNSS
-from roscopter_msgs.msg import RelativePose
-from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
-from ublox.msg import RelPos
-from geometry_msgs.msg import Twist
-from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Pose
-from nav_msgs.msg import Odometry
+from rosflight_msgs.msg import GNSS
+from rosflight_msgs.msg import GNSSRaw
+from ublox.msg import RelPos
 from ublox.msg import PosVelEcef
 
 
@@ -21,107 +15,97 @@ class SimManager():
 
     def __init__(self):
 
-        self.plt_pos = np.zeros(3)
-        self.plt_prev_pos = np.zeros(3)
-        self.plt_prev_time = 0.0
-        self.plt_vel = np.zeros(3)
-        self.drone_pos = np.zeros(3)
-        self.lla = np.zeros(3)
-        self.relPos = RelPos()
+        self.base_pos = np.zeros(3)
+        self.base_prev_pos = np.zeros(3)
+        self.base_prev_time = 0.0
+        self.base_vel = np.zeros(3)
+        self.rover_pos = np.zeros(3)
+        self.rover_lla = np.zeros(3)
+        self.rover_relPos = RelPos()
         self.rover_PosVelEcef = PosVelEcef()
         self.base_PosVelEcef = PosVelEcef()
 
         # Set Up Publishers and Subscribers
-        self.platform_virtual_odom_pub_ = rospy.Publisher('platform_virtual_odometry', Odometry, queue_size=5, latch=True)
-        self.relpos_pub_ = rospy.Publisher('rover_relpos', RelPos, queue_size=5, latch=True)  
-        self.rover_PosVelEcef_pub_ = rospy.Publisher('rover_PosVelEcef', PosVelEcef, queue_size=5, latch=True)
-        self.base_PosVelEcef_pub_ = rospy.Publisher('base_PosVelEcef', PosVelEcef, queue_size=5, latch=True)
-        self.plt_odom_sub_ = rospy.Subscriber('platform_odom', Odometry, self.pltOdomCallback, queue_size=5)
-        self.drone_odom_sub_ = rospy.Subscriber('drone_odom', Odometry, self.droneOdomCallback, queue_size=5)
-        self.gnss_sub_ = rospy.Subscriber("gnss", GNSS, self.gnssCallback, queue_size=5)
+        self.base_virtual_odom_pub_ = rospy.Publisher('platform_virtual_odometry', Odometry, queue_size=5, latch=True)
+        self.rover_virtual_relpos_pub_ = rospy.Publisher('rover_relpos', RelPos, queue_size=5, latch=True)  
+        self.rover_virtual_PosVelEcef_pub_ = rospy.Publisher('rover_PosVelEcef', PosVelEcef, queue_size=5, latch=True)
+        self.base_virtual_PosVelEcef_pub_ = rospy.Publisher('base_PosVelEcef', PosVelEcef, queue_size=5, latch=True)
+        self.base_odom_sub_ = rospy.Subscriber('platform_odom', Odometry, self.baseOdomCallback, queue_size=5)
+        self.rover_odom_sub_ = rospy.Subscriber('drone_odom', Odometry, self.roverOdomCallback, queue_size=5)
+        self.rover_gnss_sub_ = rospy.Subscriber("gnss", GNSS, self.roverGnssCallback, queue_size=5)
+        self.rover_gnss_raw_sub_ = rospy.Subscriber("gnss_raw", GNSSRaw, self.roverGnssRawCallback, queue_size=5)
 
         
         while not rospy.is_shutdown():
             # wait for new messages and call the callback when they arrive
             rospy.spin()
 
-    def pltOdomCallback(self, msg):
+    def baseOdomCallback(self, msg):
         # Get error between waypoint and current state
         #convert from gazebo NWU to NED
-        self.plt_pos = np.array([msg.pose.pose.position.x,
+        self.base_pos = np.array([msg.pose.pose.position.x,
                                      -msg.pose.pose.position.y,
                                      -msg.pose.pose.position.z])
 
         
-        self.plt_vel = self.calc_base_velocity(msg.header.stamp)
+        self.base_vel = self.calc_base_velocity(msg.header.stamp)
 
-        # #Todo: switch message type to be the same as coming from UBLOX
-        # x = Odometry()
-        # x.header.stamp = msg.header.stamp
-        # x.pose.pose.position.x = self.plt_pos[0]
-        # x.pose.pose.position.y = -self.plt_pos[1]
-        # x.pose.pose.position.z = self.plt_pos[2]
-        # x.twist.twist.linear.x = self.plt_vel[0]
-        # x.twist.twist.linear.y = -self.plt_vel[1] #should this negative be kept?
-        # x.twist.twist.linear.z = self.plt_vel[2]
-        # self.platform_virtual_odom_pub_.publish(x)
-
-    def droneOdomCallback(self, msg):
+    def roverOdomCallback(self, msg):
         # Get error between waypoint and current state
         #convert from gazebo NWU to NED
-        self.drone_pos = np.array([msg.pose.pose.position.x,
+        self.rover_pos = np.array([msg.pose.pose.position.x,
                                      -msg.pose.pose.position.y,
                                      -msg.pose.pose.position.z])
 
-    def gnssCallback(self, msg):
+    def roverGnssCallback(self, msg):
         # Callback is just used to publish all gps data at the same rate
-        self.publish_virtual_rover_PosVelEcef(msg)
-        self.publish_virtual_rover_relPos(msg.header)
-        self.publish_virtual_base_PosVelEcef()
+        self.publish_rover_virtual_PosVelEcef(msg)
+        self.publish_rover_virtual_relPos(msg.header)
+        self.publish_base_virtual_PosVelEcef()
 
-    def gnssRawCallback(self, msg):
-        self.lla[0] = msg.lon
-        self.lla[1] = msg.lat
-        self.lla[2] = msg.height
+    def roverGnssRawCallback(self, msg):
+        self.rover_lla[0] = msg.lon
+        self.rover_lla[1] = msg.lat
+        self.rover_lla[2] = msg.height
 
-    def publish_virtual_rover_PosVelEcef(self, msg):
+    def publish_rover_virtual_PosVelEcef(self, msg):
         
         self.rover_PosVelEcef.header = msg.header
         self.rover_PosVelEcef.fix = msg.fix
-        self.rover_PosVelEcef.lla = self.lla
+        self.rover_PosVelEcef.lla = self.rover_lla
         self.rover_PosVelEcef.position = msg.position
         self.rover_PosVelEcef.horizontal_accuracy = msg.horizontal_accuracy
         self.rover_PosVelEcef.vertical_accuracy = msg.vertical_accuracy
         self.rover_PosVelEcef.velocity = msg.velocity
         self.rover_PosVelEcef.speed_accuracy = msg.speed_accuracy
 
-        self.rover_PosVelEcef_pub_.publish(self.rover_PosVelEcef)
+        self.rover_virtual_PosVelEcef_pub_.publish(self.rover_PosVelEcef)
 
 
-    def publish_virtual_rover_relPos(self, gnss_header):
-        relPos_array = self.drone_pos - self.plt_pos
+    def publish_rover_virtual_relPos(self, gnss_header):
+        relPos_array = self.rover_pos - self.base_pos
 
-        self.relPos.header = gnss_header
-        self.relPos.relPosNED[0] = relPos_array[0]
-        self.relPos.relPosNED[1] = relPos_array[1]
-        self.relPos.relPosNED[2] = relPos_array[2]
+        self.rover_relPos.header = gnss_header
+        self.rover_relPos.relPosNED[0] = relPos_array[0]
+        self.rover_relPos.relPosNED[1] = relPos_array[1]
+        self.rover_relPos.relPosNED[2] = relPos_array[2]
 
-        self.relpos_pub_.publish(self.relPos)
+        self.rover_virtual_relpos_pub_.publish(self.rover_relPos)
 
-    def publish_virtual_base_PosVelEcef(self):
+    def publish_base_virtual_PosVelEcef(self):
 
-        self.base_PosVelEcef.velocity = self.plt_vel
+        self.base_PosVelEcef.velocity = self.base_vel
 
-        self.base_PosVelEcef_pub_.publish(self.base_PosVelEcef)
+        self.base_virtual_PosVelEcef_pub_.publish(self.base_PosVelEcef)
 
     def calc_base_velocity(self, stamp_msg):
         current_time = stamp_msg.secs+stamp_msg.nsecs*1e-9
-        dt = current_time - self.plt_prev_time
-        self.plt_prev_time = current_time
+        dt = current_time - self.base_prev_time
+        self.base_prev_time = current_time
 
         #numerical differentiation to get velocity
-        velocity = (self.plt_pos - self.plt_prev_pos)/dt
-        self.plt_prev_pos = self.plt_pos
+        velocity = (self.base_pos - self.base_prev_pos)/dt
+        self.base_prev_pos = self.base_pos
 
         return velocity
 
