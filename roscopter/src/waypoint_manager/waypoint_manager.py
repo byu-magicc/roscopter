@@ -68,27 +68,6 @@ class WaypointManager():
         while (rospy.Time.now() < rospy.Time(2.)):
             pass
 
-        # Set Up Publishers and Subscribers
-        self.waypoint_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
-        self.auto_land_pub_ = rospy.Publisher('auto_land', Bool, queue_size=5, latch=True)
-        self.is_landing_pub_ = rospy.Publisher('is_landing', Bool, queue_size=5, latch=True)
-        self.landed_pub_ = rospy.Publisher('landed', Bool, queue_size=5, latch=True)
-        # self.platform_virtual_odom_pub_ = rospy.Publisher('platform_virtual_odometry', Odometry, queue_size=5, latch=True)
-        self.error_pub_ = rospy.Publisher('error', Pose, queue_size=5, latch=True)
-        self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
-        self.plt_relPos_sub_ = rospy.Subscriber('plt_relPos', PointStamped, self.pltRelPosCallback, queue_size=5)
-        # self.drone_odom_sub_ = rospy.Subscriber('drone_odom', Odometry, self.droneOdomCallback, queue_size=5)
-        # Wait a second before we publish the first waypoint
-        rospy.sleep(2)
-
-        # Create the initial relPose estimate message
-        # relativePose_msg = RelativePose()
-        # relativePose_msg.x = 0
-        # relativePose_msg.y = 0
-        # relativePose_msg.z = 0
-        # relativePose_msg.F = 0
-        # self.relPose_pub_.publish(relativePose_msg)
-
         # Create the initial command message
         self.cmd_msg = Command()
         
@@ -104,6 +83,28 @@ class WaypointManager():
         else:
             self.cmd_msg.z = 0.
         self.cmd_msg.mode = Command.MODE_XPOS_YPOS_YAW_ALTITUDE
+
+        # Set Up Publishers and Subscribers
+        self.waypoint_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
+        self.auto_land_pub_ = rospy.Publisher('auto_land', Bool, queue_size=5, latch=True)
+        self.is_landing_pub_ = rospy.Publisher('is_landing', Bool, queue_size=5, latch=True)
+        self.landed_pub_ = rospy.Publisher('landed', Bool, queue_size=5, latch=True)
+        # self.platform_virtual_odom_pub_ = rospy.Publisher('platform_virtual_odometry', Odometry, queue_size=5, latch=True)
+        self.error_pub_ = rospy.Publisher('error', Pose, queue_size=5, latch=True)
+        self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
+        self.plt_relPos_sub_ = rospy.Subscriber('plt_relPos', PointStamped, self.pltRelPosCallback, queue_size=5)
+        # self.drone_odom_sub_ = rospy.Subscriber('drone_odom', Odometry, self.droneOdomCallback, queue_size=5)
+        # Wait a second before we publish the first waypoint
+        # rospy.sleep(2)
+
+        # Create the initial relPose estimate message
+        # relativePose_msg = RelativePose()
+        # relativePose_msg.x = 0
+        # relativePose_msg.y = 0
+        # relativePose_msg.z = 0
+        # relativePose_msg.F = 0
+        # self.relPose_pub_.publish(relativePose_msg)
+
         self.waypoint_pub_.publish(self.cmd_msg)
         
         while not rospy.is_shutdown():

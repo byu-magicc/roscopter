@@ -103,7 +103,7 @@
       <!-- <remap from="gnss" to="gps/data"/> -->
       <remap from="ublox_gnss" to="/sim/rover_PosVelEcef"/>
       <remap from="ublox_relpos" to="/sim/rover_relpos"/>
-      <remap from="ublox_posvelecef" to="/sim/base_PosVelEcef"/>
+      <remap from="ublox_base_posvelecef" to="/sim/base_PosVelEcef"/>
       <!--Outputs-->
       <remap from="is_flying" to="not_for_sim"/>
     </node>

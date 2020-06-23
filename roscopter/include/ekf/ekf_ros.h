@@ -127,7 +127,7 @@ private:
 #ifdef UBLOX
   ros::Subscriber ublox_gnss_sub_;
   ros::Subscriber ublox_relpos_sub_;
-  ros::Subscriber ublox_posvelecef_sub_;
+  ros::Subscriber ublox_base_posvelecef_sub_;
   ros::Publisher base_relPos_pub_;
   ros::Publisher base_Vel_pub_;
 #endif

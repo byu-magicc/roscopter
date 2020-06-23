@@ -84,7 +84,7 @@ void EKF_ROS::initROS()
 #ifdef UBLOX
   ublox_gnss_sub_ = nh_.subscribe("ublox_gnss", 10, &EKF_ROS::gnssCallbackUblox, this);
   ublox_relpos_sub_ = nh_.subscribe("ublox_relpos", 10, &EKF_ROS::gnssCallbackRelPos, this);
-  ublox_posvelecef_sub_ = nh_.subscribe("ublox_posvelecef", 10, &EKF_ROS::gnssCallbackBasevel, this);
+  ublox_base_posvelecef_sub_ = nh_.subscribe("ublox_base_posvelecef", 10, &EKF_ROS::gnssCallbackBasevel, this);
   base_relPos_pub_ = nh_.advertise<geometry_msgs::PointStamped>("base_relPos", 1);
   base_Vel_pub_ = nh_.advertise<geometry_msgs::TwistStamped>("base_vel", 1);
   std::cerr << "UBLOX is defined \n";
