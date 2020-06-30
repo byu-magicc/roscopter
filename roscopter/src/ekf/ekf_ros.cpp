@@ -65,7 +65,7 @@ void EKF_ROS::initROS()
   odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odom", 1);
   euler_pub_ = nh_.advertise<geometry_msgs::Vector3Stamped>("euler_degrees", 1);
   imu_bias_pub_ = nh_.advertise<sensor_msgs::Imu>("imu_bias", 1);
-  gps_ned_cov_pub_ = nh_.advertise<geometry_msgs::PoseWithCovariance>("gps_ned_cov", 1);
+  gps_ned_cov_pub_ = nh_.advertise<geometry_msgs::PoseWithCovariance>("gps_ned_cov", 1); //Maybe remove these covariance publishers at some point.
   gps_ecef_cov_pub_ = nh_.advertise<geometry_msgs::PoseWithCovariance>("gps_ecef_cov", 1);
   is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1);
 
@@ -86,7 +86,7 @@ void EKF_ROS::initROS()
   ublox_relpos_sub_ = nh_.subscribe("ublox_relpos", 10, &EKF_ROS::gnssCallbackRelPos, this);
   ublox_base_posvelecef_sub_ = nh_.subscribe("ublox_base_posvelecef", 10, &EKF_ROS::gnssCallbackBasevel, this);
   base_relPos_pub_ = nh_.advertise<geometry_msgs::PointStamped>("base_relPos", 1);
-  base_Vel_pub_ = nh_.advertise<geometry_msgs::TwistStamped>("base_vel", 1);
+  base_vel_pub_ = nh_.advertise<geometry_msgs::TwistStamped>("base_vel", 1);
   std::cerr << "UBLOX is defined \n";
 #endif
 #ifdef INERTIAL_SENSE
@@ -481,6 +481,7 @@ void EKF_ROS::gnssCallbackUblox(const ublox::PosVelEcefConstPtr &msg)
 
 void EKF_ROS::gnssCallbackRelPos(const ublox::RelPosConstPtr &msg)
 {
+  //This message is used in the waypoint manager
   //TODO:: put in logic to only use measurements if a flag of 311, 279, 271, or ... xxx, is found
   //TODO:: maybe put in logic to only move forward if in a landing state
   base_relPos_msg_.header = msg->header;
@@ -496,11 +497,12 @@ void EKF_ROS::gnssCallbackRelPos(const ublox::RelPosConstPtr &msg)
 
 void EKF_ROS::gnssCallbackBasevel(const ublox::PosVelEcefConstPtr &msg)
 {
-  base_Vel_msg_.twist.linear.x = msg->velocity[0];
-  base_Vel_msg_.twist.linear.y = msg->velocity[1];
-  base_Vel_msg_.twist.linear.z = msg->velocity[2];
+  //This message is used by the controller for the feed forward term
+  base_vel_msg_.twist.linear.x = msg->velocity[0];
+  base_vel_msg_.twist.linear.y = msg->velocity[1];
+  base_vel_msg_.twist.linear.z = msg->velocity[2];
 
-  base_Vel_pub_.publish(base_Vel_msg_);
+  base_vel_pub_.publish(base_vel_msg_);
 }
 #endif
 

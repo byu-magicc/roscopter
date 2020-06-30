@@ -87,9 +87,9 @@ private:
   ros::Subscriber is_flying_sub_;
   ros::Subscriber cmd_sub_;
   ros::Subscriber status_sub_;
-  ros::Subscriber pltVel_sub_;
+  ros::Subscriber base_vel_sub_;
   ros::Subscriber is_landing_sub_;
-  ros::Subscriber auto_land_sub_;
+  ros::Subscriber use_feed_forward_sub_;
   ros::Subscriber landed_sub_;
 
   ros::Publisher command_pub_;
@@ -105,7 +105,7 @@ private:
   bool is_flying_;
   bool armed_;
   bool received_cmd_;
-  bool auto_land_ = false;
+  bool use_feed_forward_ = false;
   bool is_landing_ = false;
   bool landed_ = false;
 
@@ -127,7 +127,7 @@ private:
 
   // Memory for sharing information between functions
   state_t xhat_ = {}; // estimate
-  state_t plt_hat_ = {}; //platform(frame) state
+  state_t base_hat_ = {}; //base(frame) state
   max_t max_ = {};
   rosflight_msgs::Command command_;
   command_t xc_ = {}; // command
@@ -139,8 +139,8 @@ private:
   void isFlyingCallback(const std_msgs::BoolConstPtr &msg);
   void cmdCallback(const rosflight_msgs::CommandConstPtr &msg);
   void statusCallback(const rosflight_msgs::StatusConstPtr &msg);
-  void pltVelCallback(const geometry_msgs::TwistStampedConstPtr &msg);
-  void autoLandCallback(const std_msgs::BoolConstPtr &msg);
+  void baseVelCallback(const geometry_msgs::TwistStampedConstPtr &msg);
+  void useFeedForwardCallback(const std_msgs::BoolConstPtr &msg);
   void isLandingCallback(const std_msgs::BoolConstPtr &msg);
   void landedCallback(const std_msgs::BoolConstPtr &msg);
 

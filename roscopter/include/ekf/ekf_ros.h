@@ -122,14 +122,14 @@ private:
   geometry_msgs::PoseWithCovariance gps_ned_cov_msg_;
   geometry_msgs::PoseWithCovariance gps_ecef_cov_msg_; 
   geometry_msgs::PointStamped base_relPos_msg_;
-  geometry_msgs::TwistStamped base_Vel_msg_;
+  geometry_msgs::TwistStamped base_vel_msg_;
 
 #ifdef UBLOX
   ros::Subscriber ublox_gnss_sub_;
   ros::Subscriber ublox_relpos_sub_;
   ros::Subscriber ublox_base_posvelecef_sub_;
   ros::Publisher base_relPos_pub_;
-  ros::Publisher base_Vel_pub_;
+  ros::Publisher base_vel_pub_;
 #endif
 
 #ifdef INERTIAL_SENSE

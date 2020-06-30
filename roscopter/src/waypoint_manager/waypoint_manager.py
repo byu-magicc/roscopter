@@ -9,119 +9,59 @@ from rosflight_msgs.msg import Command
 from roscopter_msgs.msg import RelativePose
 from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile
 from geometry_msgs.msg import Twist
-from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Pose
 from geometry_msgs.msg import PointStamped
-# from ublox.msg import RelPos
 
 
 class WaypointManager():
 
     def __init__(self):
-        # get parameters
-        try:
-            self.waypoint_list = rospy.get_param('~waypoints') #params are loaded in launch file
-        except KeyError:
-            rospy.logfatal('waypoints not set')
-            rospy.signal_shutdown('Parameters not set')
 
-        #initialize platform location
-        # self.plt_odom = np.array([0.0,
-        #                           0.0,
-        #                           0.0])
-        # self.plt_prev_odom = np.array([0.0,
-        #                                0.0,
-        #                                0.0])
+        #load parameters
+        self.load_set_parameters()
 
-        self.drone_odom = np.zeros(3)
-        self.plt_pos = np.zeros(3)
-                                       
-        self.len_wps = len(self.waypoint_list)
-        self.current_waypoint_index = 0
-
-        # how close does the MAV need to get before going to the next waypoint?
-
-        self.threshold = rospy.get_param('~threshold', 5)
-        self.landing_threshold = rospy.get_param('~landing_threshold', 1)
-        self.begin_descent_height = rospy.get_param('~begin_descent_height', 2)
-        self.begin_landing_height = rospy.get_param('~begin_landing_height', 0.2)
-        self.cyclical_path = rospy.get_param('~cycle', False)
-        self.auto_land = rospy.get_param('~auto_land', False)
-        self.print_wp_reached = rospy.get_param('~print_wp_reached', True)
-
-        self.mission_state = 0 #0: mission
-                               #1: rendevous
-                               #2: descend
-                               #3: land
-
-        self.prev_time = rospy.Time.now()
-        self.plt_prev_time = 0.0
-        self.is_landing = 0
-        self.current_waypoint_index = 0
-
-        # set up Services
+        # Services
         self.add_waypoint_service = rospy.Service('add_waypoint', AddWaypoint, self.addWaypointCallback)
         self.remove_waypoint_service = rospy.Service('remove_waypoint', RemoveWaypoint, self.addWaypointCallback)
         self.set_waypoint_from_file_service = rospy.Service('set_waypoints_from_file', SetWaypointsFromFile, self.addWaypointCallback)
 
+        # Publishers
+        self.waypoint_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
+        self.use_feed_forward_pub_ = rospy.Publisher('use_base_feed_forward_vel', Bool, queue_size=5, latch=True)
+        self.is_landing_pub_ = rospy.Publisher('is_landing', Bool, queue_size=5, latch=True)
+        self.landed_pub_ = rospy.Publisher('landed', Bool, queue_size=5, latch=True)
+        self.error_pub_ = rospy.Publisher('error', Pose, queue_size=5, latch=True)
+
+        #Subscribers
+        self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
+        self.plt_relPos_sub_ = rospy.Subscriber('plt_relPos', PointStamped, self.pltRelPosCallback, queue_size=5)
+        
         # Wait a second before we publish the first waypoint
         while (rospy.Time.now() < rospy.Time(2.)):
             pass
 
-        # Create the initial command message
-        self.cmd_msg = Command()
-        
+        # publish first waypoint
         current_waypoint = np.array(self.waypoint_list[0])
+        self.new_waypoint(current_waypoint)
 
-        self.cmd_msg.header.stamp = rospy.Time.now()
-        self.cmd_msg.x = current_waypoint[0]
-        self.cmd_msg.y = current_waypoint[1]
-        self.cmd_msg.F = current_waypoint[2]
-
-        if len(current_waypoint) > 3:
-            self.cmd_msg.z = current_waypoint[3]
-        else:
-            self.cmd_msg.z = 0.
-        self.cmd_msg.mode = Command.MODE_XPOS_YPOS_YAW_ALTITUDE
-
-        # Set Up Publishers and Subscribers
-        self.waypoint_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
-        self.auto_land_pub_ = rospy.Publisher('auto_land', Bool, queue_size=5, latch=True)
-        self.is_landing_pub_ = rospy.Publisher('is_landing', Bool, queue_size=5, latch=True)
-        self.landed_pub_ = rospy.Publisher('landed', Bool, queue_size=5, latch=True)
-        # self.platform_virtual_odom_pub_ = rospy.Publisher('platform_virtual_odometry', Odometry, queue_size=5, latch=True)
-        self.error_pub_ = rospy.Publisher('error', Pose, queue_size=5, latch=True)
-        self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
-        self.plt_relPos_sub_ = rospy.Subscriber('plt_relPos', PointStamped, self.pltRelPosCallback, queue_size=5)
-        # self.drone_odom_sub_ = rospy.Subscriber('drone_odom', Odometry, self.droneOdomCallback, queue_size=5)
-        # Wait a second before we publish the first waypoint
-        # rospy.sleep(2)
-
-        # Create the initial relPose estimate message
-        # relativePose_msg = RelativePose()
-        # relativePose_msg.x = 0
-        # relativePose_msg.y = 0
-        # relativePose_msg.z = 0
-        # relativePose_msg.F = 0
-        # self.relPose_pub_.publish(relativePose_msg)
-
-        self.waypoint_pub_.publish(self.cmd_msg)
-        
         while not rospy.is_shutdown():
-            # wait for new messages and call the callback when they arrive
             rospy.spin()
+
 
     #TODO: Need to set up these services
     def addWaypointCallback(req):
         print("addwaypoints")
         
+
     def removeWaypointCallback(self, req):
         #TODO
         print("[waypoint_manager] remove Waypoints (NOT IMPLEMENTED)")
 
+
     def setWaypointsFromFile(self, req):
         #TODO
         print("[waypoint_manager] set Waypoints from File (NOT IMPLEMENTED)")
+
 
     def odometryCallback(self, msg):
         # Get error between waypoint and current state
@@ -189,7 +129,7 @@ class WaypointManager():
 
     def rendevous(self, current_position):
 
-        self.auto_land_pub_.publish(True) #this will signal the controller to include the velocity feed forward term from the barge
+        self.use_feed_forward_pub_.publish(True) #this will signal the controller to include the velocity feed forward term from the barge
 
         waypoint = self.plt_pos + np.array([0.0, 0.0, self.begin_descent_height])
         error = np.linalg.norm(current_position - waypoint)
@@ -262,6 +202,41 @@ class WaypointManager():
         error_msg.position.y = current_position[1] - current_waypoint[1]
         error_msg.position.z = current_position[2] - current_waypoint[2]
         self.error_pub_.publish(error_msg)
+
+    
+    def load_set_parameters(self):
+        
+        try:
+            self.waypoint_list = rospy.get_param('~waypoints') #params are loaded in launch file
+        except KeyError:
+            rospy.logfatal('waypoints not set')
+            rospy.signal_shutdown('Parameters not set')
+        self.threshold = rospy.get_param('~threshold', 5)
+        self.landing_threshold = rospy.get_param('~landing_threshold', 1)
+        self.begin_descent_height = rospy.get_param('~begin_descent_height', 2)
+        self.begin_landing_height = rospy.get_param('~begin_landing_height', 0.2)
+        self.cyclical_path = rospy.get_param('~cycle', False)
+        self.auto_land = rospy.get_param('~auto_land', False)
+        self.print_wp_reached = rospy.get_param('~print_wp_reached', True)
+
+        #calculate parameters
+        self.len_wps = len(self.waypoint_list)
+        self.prev_time = rospy.Time.now()
+
+        #other variables and arrays
+        self.drone_odom = np.zeros(3)
+        self.plt_pos = np.zeros(3)
+        self.current_waypoint_index = 0
+        self.mission_state = 0 #0: mission
+                               #1: rendevous
+                               #2: descend
+                               #3: land
+        self.plt_prev_time = 0.0
+        self.is_landing = 0
+        self.current_waypoint_index = 0
+
+        #message types
+        self.cmd_msg = Command()
 
 if __name__ == '__main__':
     rospy.init_node('waypoint_manager', anonymous=True)

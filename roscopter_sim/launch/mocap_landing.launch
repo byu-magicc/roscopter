@@ -93,7 +93,7 @@
 
     <!-- PID Position Controller -->
     <node name="controller" pkg="roscopter" type="controller" output="screen">
-      <remap from="platform_Vel" to="base_vel"/>
+      <remap from="base_vel" to="base_vel"/>
       <remap from="estimate" to="odom"/>
     </node>
 
