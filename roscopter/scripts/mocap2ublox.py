@@ -6,7 +6,7 @@ import numpy as np
 class Mocap2Ublox():
     
 
-    def __init__(self, Ts, gha, gva, gsa, rha, rva, rsa, rl, srp, srv, srr, sbp, sbv, A, B):
+    def __init__(self, Ts, gha, gva, gsa, rha, rva, rsa, no, rl, srp, srv, srr, sbp, sbv, lo, A, B):
 
         #parameters
         self.Ts = Ts
@@ -16,12 +16,14 @@ class Mocap2Ublox():
         self.relative_horizontal_accuracy = rha
         self.relative_vertical_accuracy = rva
         self.relative_speed_accuracy = rsa
+        self.noise_on = no
         self.ref_lla = rl
         self.sigma_rover_pos = srp 
         self.sigma_rover_vel = srv
         self.sigma_rover_relpos = srr
         self.sigma_base_pos = sbp
         self.sigma_base_vel = sbv
+        self.lpf_on = lo
         self.A = A
         self.B = B
 
@@ -114,20 +116,26 @@ class Mocap2Ublox():
 
     def add_noise_3d(self, value, std_dev):
         
-        value_w_noise_1 = np.random.normal(value[0], std_dev[0])
-        value_w_noise_2 = np.random.normal(value[1], std_dev[1])
-        value_w_noise_3 = np.random.normal(value[2], std_dev[2])
-        value_w_noise = np.array([value_w_noise_1, value_w_noise_2, value_w_noise_3])
-        
-        return value_w_noise
+        if self.noise_on:
+            value_w_noise_1 = np.random.normal(value[0], std_dev[0])
+            value_w_noise_2 = np.random.normal(value[1], std_dev[1])
+            value_w_noise_3 = np.random.normal(value[2], std_dev[2])
+            value_w_noise = np.array([value_w_noise_1, value_w_noise_2, value_w_noise_3])
+            return value_w_noise
+
+        else:
+            return value
 
 
     def lpf(self, xt, x_prev, dt, sigma):
         
         #low pass filter
-        x_lpf = xt*dt/(sigma+dt) + x_prev*sigma/(sigma+dt)
+        if self.lpf_on:
+            x_lpf = xt*dt/(sigma+dt) + x_prev*sigma/(sigma+dt)
+            return x_lpf
         
-        return x_lpf
+        else:
+            return xt
 
 
     def lla2ecef(self, lla):
