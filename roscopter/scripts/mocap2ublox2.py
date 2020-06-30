@@ -24,6 +24,9 @@ class Mocap2Ublox():
         self.relative_vertical_accuracy = 0.06
         self.relative_speed_accuracy = 0.02
         self.ref_lla = np.array([40.267320, -111.635629, 1387.0])
+        self.sigma_pos = 1.0 #TODO: tune this
+        self.sigma_vel = 1.0 #TODO: tune this
+        self.Ts = 1.0/ublox_frequency
 
         #calc ref_ecef from ref_lla
         self.A = 6378137.0       # WGS-84 Earth semimajor axis (m)
@@ -39,7 +42,9 @@ class Mocap2Ublox():
 
         #other needed variables
         self.rover_ned = np.zeros(3)
-        self.rover_prev_ned = np.zeros(3)
+        self.rover_ned_prev = np.zeros(3)
+        self.rover_ned_lpf = np.zeros(3)
+        self.rover_vel_lpf = np.zeros(3)
         self.rover_prev_time = 0.0
         self.base_ned = np.zeros(3)
         self.base_prev_ned = np.zeros(3)
@@ -96,7 +101,7 @@ class Mocap2Ublox():
         # self.rover_PosVelEcef_truth = msg.position
         # self.rover_PosVelEcef.horizontal_accuracy = msg.horizontal_accuracy
         # self.rover_PosVelEcef.vertical_accuracy = msg.vertical_accuracy
-        self.rover_PosVelEcef.velocity = msg.velocity
+        # self.rover_PosVelEcef.velocity = msg.velocity
         # self.rover_PosVelEcef.speed_accuracy = msg.speed_accuracy
 
     
@@ -117,23 +122,26 @@ class Mocap2Ublox():
         dt = current_time - self.rover_prev_time
 
         #calculate virtual position in ecef frame with noise
-        rover_ned_noise_n = self.add_noise(self.rover_ned[0], 0.0)#self.global_horizontal_accuracy)
-        rover_ned_noise_e = self.add_noise(self.rover_ned[1], 0.0)#self.global_horizontal_accuracy)
-        rover_ned_noise_d = self.add_noise(self.rover_ned[2], 0.0)#self.global_vertical_accuracy)
+        rover_ned_noise_n = self.add_noise(self.rover_ned[0], self.global_horizontal_accuracy)
+        rover_ned_noise_e = self.add_noise(self.rover_ned[1], self.global_horizontal_accuracy)
+        rover_ned_noise_d = self.add_noise(self.rover_ned[2], self.global_vertical_accuracy)
         rover_ned_noise = np.array([rover_ned_noise_n, rover_ned_noise_e, rover_ned_noise_d])
-        virtual_delta_ecef = self.ned2ecef(rover_ned_noise, self.ref_lla)
+        self.rover_ned_lpf = self.lpf(rover_ned_noise, self.rover_ned_lpf, self.Ts, self.sigma_pos)
+        virtual_delta_ecef = self.ned2ecef(self.rover_ned_lpf, self.ref_lla)
         virtual_pos = self.ref_ecef + virtual_delta_ecef
 
         #calculate virtual velocity in ecef frame with noise
         #make sure we do not divide by zero
         if dt != 0.0:
-            rover_vel = (self.rover_ned - self.rover_prev_ned)/dt
+            # rover_vel = (2.0*self.sigma-self.Ts)/(2.0*self.sigma+self.Ts)*self.rover_vel_prev+2.0/(2.0*self.sigma+self.Ts)*(self.rover_ned - self.rover_ned_prev)
+            rover_vel = (self.rover_ned - self.rover_ned_prev)/dt
         else:
             rover_vel = np.zeros(3)
-        rover_vel_noise_n = self.add_noise(rover_vel[0], self.global_speed_accuracy)
-        rover_vel_noise_e = self.add_noise(rover_vel[1], self.global_speed_accuracy)
-        rover_vel_noise_d = self.add_noise(rover_vel[2], self.global_speed_accuracy)
+        rover_vel_noise_n = self.add_noise(rover_vel[0], 0.0)#self.global_speed_accuracy)
+        rover_vel_noise_e = self.add_noise(rover_vel[1], 0.0)#self.global_speed_accuracy)
+        rover_vel_noise_d = self.add_noise(rover_vel[2], 0.0)#self.global_speed_accuracy)
         rover_vel_noise = np.array([rover_vel_noise_n, rover_vel_noise_e, rover_vel_noise_d])
+        self.rover_vel_lpf = self.lpf(rover_vel_noise, self.rover_vel_lpf, self.Ts, self.sigma_vel)
         rover_vel_ecef = self.ned2ecef(rover_vel_noise, self.ref_lla)
 
         #only for debugging
@@ -150,6 +158,8 @@ class Mocap2Ublox():
         # print('virtual delta ecef = ', virtual_delta_ecef)
         # print('rover_ned_noise = ', rover_ned_noise)
         # print('rover_ned = ', self.rover_ned)
+        # print('rover velocity = ', rover_vel)
+        # print('rover velocity ecef = ', rover_vel_ecef)
 
         #package message
         self.rover_PosVelEcef.header.stamp = time_stamp
@@ -158,12 +168,13 @@ class Mocap2Ublox():
         self.rover_PosVelEcef.position = virtual_pos
         self.rover_PosVelEcef.horizontal_accuracy = self.global_horizontal_accuracy
         self.rover_PosVelEcef.vertical_accuracy = self.global_vertical_accuracy
-        # self.rover_PosVelEcef.velocity = rover_vel_ecef
+        self.rover_PosVelEcef.velocity = rover_vel_ecef
         self.rover_PosVelEcef.speed_accuracy = self.global_speed_accuracy
 
         #update histories
         self.rover_prev_time = current_time
-        self.rover_prev_ned = self.rover_ned
+        self.rover_ned_prev = self.rover_ned
+        self.rover_vel_prev = rover_vel
 
         self.rover_virtual_PosVelEcef_pub_.publish(self.rover_PosVelEcef)
 
@@ -287,6 +298,12 @@ class Mocap2Ublox():
                         [0.0, 0.0, 1.0]])
 
         return rotz
+
+    def lpf(self, xt, x_prev, dt, sigma):
+        
+        x_lpf = xt*dt/(sigma+dt) + x_prev*sigma/(sigma+dt)
+        
+        return x_lpf
         
 
 if __name__ == '__main__':
