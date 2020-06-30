@@ -110,8 +110,8 @@
       <!-- <remap from="reference" to="ground_truth/odometry/NED_throttled"/> -->
       <!-- <remap from="gnss" to="gps/data"/> -->
       <remap from="ublox_gnss" to="/m2u/rover_PosVelEcef"/>
-      <!-- <remap from="ublox_relpos" to="/m2u/rover_relpos"/> -->
-      <!-- <remap from="ublox_base_posvelecef" to="/m2u/base_PosVelEcef"/> -->
+      <remap from="ublox_relpos" to="/m2u/rover_relpos"/>
+      <remap from="ublox_base_posvelecef" to="/m2u/base_PosVelEcef"/>
       <!--Outputs-->
       <remap from="is_flying" to="not_for_sim"/>
     </node>
