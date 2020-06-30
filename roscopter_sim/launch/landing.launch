@@ -42,6 +42,8 @@
     <arg name="color"               value="$(arg color)"/>
   </include>
 
+
+  <!-- <param name="param_filename" value="$(find roscopter_sim)/params/ekf.yaml"/> -->
   <!-- simulation specific ros handling -->
   <group ns="sim">
     <node name="sim_manager" pkg="roscopter_sim" type="sim_ros.py" output="screen">

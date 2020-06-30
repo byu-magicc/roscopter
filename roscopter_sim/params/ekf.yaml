@@ -73,7 +73,8 @@ p_b2g: [0, 0, 0] # position from body frame to gps frame
 
 # Initial State
 manual_ref_lla: true # Use manual ref_lla or use first lla from gps
-ref_lla: [40.267320, -111.635629, 1387.0]
+ref_lla: [40.267320, -111.635629, 1387.0] #for the sim, do not change this#rock canyon park
+# ref_lla: [40.174605, -111.635120, 1387.0] #springville
 ref_heading: 0.0 # reference heading for inertial frame (from north)
 
 x0: [0, 0, 0,       # pos
