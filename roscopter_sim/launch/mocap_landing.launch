@@ -93,7 +93,7 @@
 
     <!-- PID Position Controller -->
     <node name="controller" pkg="roscopter" type="controller" output="screen">
-      <remap from="base_vel" to="base_vel"/>
+      <remap from="base_velocity" to="base_vel"/>
       <remap from="estimate" to="odom"/>
     </node>
 
@@ -101,7 +101,7 @@
     <node name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
       <remap from="waypoint" to="high_level_command"/>
       <remap from="state" to="odom"/>
-      <remap from="plt_relPos" to="base_relPos"/>
+      <remap from="base_relatvie_pos" to="base_relPos"/>
     </node>
 
     <!--Estimator-->

@@ -34,7 +34,7 @@ class WaypointManager():
 
         #Subscribers
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
-        self.plt_relPos_sub_ = rospy.Subscriber('plt_relPos', PointStamped, self.pltRelPosCallback, queue_size=5)
+        self.plt_relPos_sub_ = rospy.Subscriber('base_relative_pos', PointStamped, self.pltRelPosCallback, queue_size=5)
         
         # Wait a second before we publish the first waypoint
         while (rospy.Time.now() < rospy.Time(2.)):
@@ -64,35 +64,27 @@ class WaypointManager():
 
 
     def odometryCallback(self, msg):
+        
         # Get error between waypoint and current state
         self.drone_odom = np.array([msg.pose.pose.position.x,
                                     msg.pose.pose.position.y,
                                     msg.pose.pose.position.z])
-        current_position = np.array([msg.pose.pose.position.x,
+        #waypoints are in neu
+        current_position_neu = np.array([msg.pose.pose.position.x,
                                      msg.pose.pose.position.y,
                                      -msg.pose.pose.position.z])
         
+        #not using orientation right now
         # current_orient = [msg.pose.pose.orientation.x,
         #                     msg.pose.pose.orientation.y,
         #                     msg.pose.pose.orientation.z,
         #                     msg.pose.pose.orientation.w]
-
-        if self.mission_state == 1:
-            self.rendevous(current_position)
-        elif self.mission_state == 2:
-            self.descend(current_position)
-        elif self.mission_state == 3:
-            self.land(current_position)
-        else:
-            self.mission(current_position)           
-
         # # yaw from quaternion
         # qx = current_orient[0]
         # qy = current_orient[1]
         # qz = current_orient[2]
         # qw = current_orient[3]
         # y = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
-
         # #publish the relative pose estimate
         # relativePose_msg = RelativePose()
         # relativePose_msg.x = current_position[0]
@@ -100,8 +92,19 @@ class WaypointManager():
         # relativePose_msg.z = y
         # relativePose_msg.F = current_position[2]
         # self.relPose_pub_.publish(relativePose_msg)
+
+        if self.mission_state == 1:
+            self.rendevous(current_position_neu)
+        elif self.mission_state == 2:
+            self.descend(current_position_neu)
+        elif self.mission_state == 3:
+            self.land(current_position_neu)
+        else:
+            self.mission(current_position_neu)           
+
     
     def mission(self, current_position):
+
         current_waypoint = np.array(self.waypoint_list[self.current_waypoint_index])
 
         self.publish_error(current_position, current_waypoint)

@@ -49,7 +49,7 @@ Controller::Controller() :
       nh_.subscribe("high_level_command", 1, &Controller::cmdCallback, this);
   status_sub_ = nh_.subscribe("status", 1, &Controller::statusCallback, this);
   base_vel_sub_ =
-    nh_.subscribe("base_vel", 1, &Controller::baseVelCallback, this);
+    nh_.subscribe("base_velocity", 1, &Controller::baseVelCallback, this);
 
   command_pub_ = nh_.advertise<rosflight_msgs::Command>("command", 1);
   use_feed_forward_sub_ = nh_.subscribe("use_base_feed_forward_vel", 1, &Controller::useFeedForwardCallback, this);
