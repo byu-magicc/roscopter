@@ -56,7 +56,6 @@
     <!-- Load common parameters -->
     <rosparam command="load" file="$(find roscopter)/params/mocap2ublox.yaml"/>
     <node name="mocap2ublox" pkg="roscopter" type="mocap2ublox_ros.py" output="screen">
-      <remap from="gnss" to="/$(arg mav_name)/gps/data"/>
       <remap from="rover_mocap" to="/sim/rover_mocap"/>
       <remap from="base_mocap" to="/sim/base_mocap"/>
     </node>
@@ -101,7 +100,7 @@
     <node name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
       <remap from="waypoint" to="high_level_command"/>
       <remap from="state" to="odom"/>
-      <remap from="base_relatvie_pos" to="base_relPos"/>
+      <remap from="base_relative_pos" to="base_relPos"/>
     </node>
 
     <!--Estimator-->

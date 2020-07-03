@@ -10,7 +10,7 @@ waypoints:
  # [4.5, -4.5, 4.5, 3.14],
  # [0., -4.5, 5.5, 1.57]],
 
-threshold: 0.5,
+threshold: 0.2,
 landing_threshold: 0.3,
 cycle: False,
 auto_land: True,
