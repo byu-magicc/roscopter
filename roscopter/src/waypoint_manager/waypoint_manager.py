@@ -190,9 +190,9 @@ class WaypointManager():
         #TODO: implement time for the plt_relPos message?
 
         #flip to NEU
-        self.plt_pos[0] = msg.point.x + self.drone_odom[0]
-        self.plt_pos[1] = msg.point.y + self.drone_odom[1]
-        self.plt_pos[2] = -msg.point.z - self.drone_odom[2]
+        self.plt_pos[0] = msg.point.x + self.drone_odom[0] + self.antenna_offset[0]
+        self.plt_pos[1] = msg.point.y + self.drone_odom[1] + self.antenna_offset[1]
+        self.plt_pos[2] = -msg.point.z - self.drone_odom[2] + self.antenna_offset[2]
 
     # def droneOdomCallback(self, msg):
     #     self.drone_odom = np.array([msg.pose.pose.position.x,
@@ -221,6 +221,7 @@ class WaypointManager():
         self.cyclical_path = rospy.get_param('~cycle', False)
         self.auto_land = rospy.get_param('~auto_land', False)
         self.print_wp_reached = rospy.get_param('~print_wp_reached', True)
+        self.antenna_offset = rospy.get_param('~antenna_offset', [0.36, -0.36, -0.12])
 
         #calculate parameters
         self.len_wps = len(self.waypoint_list)
