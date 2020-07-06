@@ -5,6 +5,7 @@ mocap2ublox: {
 
 ublox_frequency: 5.0, #hz
 
+#Should they be less by a factor of 10?
 global_horizontal_accuracy: 0.4, #standard deviations
 global_vertical_accuracy: 0.6,
 global_speed_accuracy: 0.4,
@@ -16,11 +17,11 @@ noise_on: False,
 
 ref_lla: [40.267320, -111.635629, 1387.0],
 
-sigma_rover_pos: 0.5, #TODO: tune this
-sigma_rover_vel: 0.5, #TODO: tune this
+sigma_rover_pos: 5.0, #TODO: tune this
+sigma_rover_vel: 5.0, #TODO: tune this
 sigma_rover_relpos: 0.0, #TODO: tune this
-sigma_base_pos: 0.0, #TODO: tune this
-sigma_base_vel: 0.0, #TODO: tune this
+sigma_base_pos: 5.0, #TODO: tune this
+sigma_base_vel: 5.0, #TODO: tune this
 
 lpf_on: False, #low pass filter of measurements
 
