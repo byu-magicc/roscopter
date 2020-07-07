@@ -23,31 +23,22 @@ EKF::~EKF()
     delete logs_[i];
 }
 
-/////// Used to get parameters.  There is also some converting and intializing going on.  ???There is also a partial update step
-// called from EKF_ROS_init
-// calls EKF::init_log
-//gets parameters from ekf.yaml
 void EKF::load(const std::string &filename)
 {
 
-  // Constant Parameters
-  // These can all be found in the ekf.yaml file
+
   get_yaml_eigen("p_b2g", filename, p_b2g_); //position from body frame to gps frame
   get_yaml_diag("Qx", filename, Qx_); // Additive Process Noise
   get_yaml_diag("P0", filename, P()); // Initial Uncertainty
-  P0_yaw_ = P()(ErrorState::DQ + 2, ErrorState::DQ + 2); //??? ErrorState::DQ is in state.cpp, but I am not sure what it is doing.
-  get_yaml_diag("R_zero_vel", filename, R_zero_vel_); //looks like the noise parameters at no velocity
+  P0_yaw_ = P()(ErrorState::DQ + 2, ErrorState::DQ + 2);
+  get_yaml_diag("R_zero_vel", filename, R_zero_vel_);
 
-  // Partial Update
-  //???why do we partially update?
-  // ???this is used to create a lambda matrix
-  get_yaml_eigen("lambda", filename, lambda_vec_); //an array of partial updates
-  const dxVec ones = dxVec::Constant(1.0); //dxVec defined in state.h, size 1 matrix 
+  get_yaml_eigen("lambda", filename, lambda_vec_);
+  const dxVec ones = dxVec::Constant(1.0);
   lambda_mat_ = ones * lambda_vec_.transpose() + lambda_vec_ * ones.transpose() -
                 lambda_vec_ * lambda_vec_.transpose();
 
   // Measurement Flags
-  //all of these can be seen on the ekf.yaml
   get_yaml_node("enable_partial_update", filename, enable_partial_update_);
   get_yaml_node("enable_out_of_order", filename, enable_out_of_order_);
   get_yaml_node("use_mocap", filename, use_mocap_);
@@ -63,24 +54,22 @@ void EKF::load(const std::string &filename)
   // load initial state
   double ref_heading;
   get_yaml_node("ref_heading", filename, ref_heading);
-  q_n2I_ = quat::Quatd::from_euler(0, 0, M_PI/180.0 * ref_heading); //???this looks like a quaternion from ned to inertial frame?
-
-  ref_lla_set_ = false; //this variable is also used in EKF_ROS::gnssCallback.  If false on receiving a gnss message, it will initialize lla with the first gnss message.
+  q_n2I_ = quat::Quatd::from_euler(0, 0, M_PI/180.0 * ref_heading); 
+  ref_lla_set_ = false; 
   bool manual_ref_lla;
   get_yaml_node("manual_ref_lla", filename, manual_ref_lla);
-  if (manual_ref_lla) //Use manual ref_lla or use first lla from gps
+  if (manual_ref_lla) 
   {
     Vector3d ref_lla;
     get_yaml_eigen("ref_lla", filename, ref_lla);
     std::cout << "Set ref lla: " << ref_lla.transpose() << std::endl;
-    ref_lla.head<2>() *= M_PI/180.0; // convert to rad
-    //x_e2n converts ecef to ned
+    ref_lla.head<2>() *= M_PI/180.0; 
     xform::Xformd x_e2n = x_ecef2ned(lla2ecef(ref_lla));
     x_e2I_.t() = x_e2n.t();
-    x_e2I_.q() = x_e2n.q() * q_n2I_; //??? not sure what this does.
+    x_e2I_.q() = x_e2n.q() * q_n2I_; 
 
     // initialize the estimated ref altitude state
-    x().ref = ref_lla(2); //state x is initialized as a state type in state.h
+    x().ref = ref_lla(2);
     ref_lat_radians_ = ref_lla(0);
     ref_lon_radians_ = ref_lla(1);
 
@@ -97,9 +86,6 @@ void EKF::load(const std::string &filename)
   initLog(filename);
 }
 
-///// Just creates a log if configured to do so in ekf.yaml
-// called from EKF::load
-// gets parameters from ekf.yaml
 void EKF::initLog(const std::string &filename)
 {
   get_yaml_node("enable_log", filename, enable_log_);
@@ -112,34 +98,29 @@ void EKF::initLog(const std::string &filename)
     logs_[i] = new Logger(log_prefix_ + "/" + log_names_[i] + ".bin");
 }
 
-
-///// iniitializes certain states if ref_lla has been set.
-//called by EKF::propagate
 void EKF::initialize(double t)
 {
   x().t = t;
-  x().x = x0_; //from yaml
-  x().v.setZero(); //???
-  x().ba.setZero(); //???
-  x().bg.setZero(); //???
+  x().x = x0_; 
+  x().v.setZero(); 
+  x().ba.setZero(); 
+  x().bg.setZero(); 
   x().bb = 0.; // barometer pressure bias
   if (ref_lla_set_)
-    x().ref = x().ref; //??? why set a variable to itself?
-  else //???if ref_lla has not been set, it is not flying or armed.  A gnss message has not yet been received
+    x().ref = x().ref;
+  else
     x().ref = 0.;
   x().a = -gravity;
   x().w.setZero();
   is_flying_ = false;
   armed_ = false;
-  //???if ref_lla is not set, when are x().t, x, v, ba, bg, bb ever set?
+
 }
 
-/////
-//called by EKF::imuCallback, EKF::update
-//calls EKF::initialize, EKF::dynamics (in dynmaics.cpp)
+
 void EKF::propagate(const double &t, const Vector6d &imu, const Matrix6d &R)
 {
-  //if time t is a nan initialize
+
   if (std::isnan(x().t))
   {
     initialize(t);
@@ -150,12 +131,10 @@ void EKF::propagate(const double &t, const Vector6d &imu, const Matrix6d &R)
   assert(dt >= 0);
   if (dt < 1e-6)
     return;
-  //this function is in dynamics.cpp but it is scopted in the EKF class
   dynamics(x(), imu, dx_, true);
 
 
-  ///////////PART OF ALGORITHM /////////////
-  // do the state propagation
+
   xbuf_.next().x = x() + dx_ * dt;
   xbuf_.next().x.t = t;
   xbuf_.next().x.imu = imu;
@@ -172,7 +151,6 @@ void EKF::propagate(const double &t, const Vector6d &imu, const Matrix6d &R)
   xbuf_.advance();
   Qu_ = R; // copy because we might need it later.
 
-  ///////////END OF ALGORITHM SECTION/////////////
 
   if (enable_log_)
   {
@@ -184,10 +162,7 @@ void EKF::propagate(const double &t, const Vector6d &imu, const Matrix6d &R)
   }
 }
 
-//dont wory about this for now.  It is not being used in current configuration.  It is only used if multithreaded is enabled
-/////It looks like this can be used to run any update function through EKF::update
-//called by EKF::imuCallback(can be if configured enable_out_of_order.  This is used to allow multithreaded)
-//calls EKF::update, EKF::logState (looks like the function has not been created yet), EKF::getOldestNewMeas, 
+
 void EKF::run()
 {
   meas::MeasSet::iterator nmit = getOldestNewMeas();
@@ -212,9 +187,7 @@ void EKF::run()
   logState();
 }
 
-/////This is only used if multithreading is turned on.  It decides which kind of update it is and calls that function
-//called by EKF::run
-//calls EKF::propagate, EKF:: zeroVelUpdate, EKF::gnssUpdate, EKF::mocapUpdate, EKF::cleanUpMeasurmenetsBuffers 
+
 void EKF::update(const meas::Base* m)
 {
   if (m->type == meas::Base::IMU)
@@ -249,8 +222,6 @@ void EKF::update(const meas::Base* m)
   cleanUpMeasurementBuffers();
 }
 
-/////only used if multithreading is used.
-//called by EKF::run
 meas::MeasSet::iterator EKF::getOldestNewMeas()
 {
   meas::MeasSet::iterator it = meas_.begin();
@@ -261,12 +232,9 @@ meas::MeasSet::iterator EKF::getOldestNewMeas()
   return it;
 }
 
-/////
-//called by EKF::zeroVelUpdate, EKF::baroUpdate, EKF::gnssUpdate
 bool EKF::measUpdate(const VectorXd &res, const MatrixXd &R, const MatrixXd &H)
 {
 
-  ///////////PART OF ALGORITHM /////////////
   int size = res.rows();
   auto K = K_.leftCols(size);
 
@@ -296,16 +264,10 @@ bool EKF::measUpdate(const VectorXd &res, const MatrixXd &R, const MatrixXd &H)
   CHECK_NAN(P());
   return true;
 
-  ///////////END OF ALGORITHM SECTION/////////////
-
 }
 
-///// Sets is flying if flying, calls propagation function, and creates logs
-//called from EKF_ROS::imuCallback
-//calls EKF::checkisFlying, can call EKF::run, EKF::propagate, EKF::zeroVelUpdate
 void EKF::imuCallback(const double &t, const Vector6d &z, const Matrix6d &R)
 {
-  //On first update (which is triggered by the first imu message) check if it is flying
   if (!is_flying_)
     checkIsFlying();
 
@@ -332,22 +294,19 @@ void EKF::imuCallback(const double &t, const Vector6d &z, const Matrix6d &R)
 
 }
 
-/////determines if out of order (multithread) is enabled.  If not it calls the baroUpdate
-//called from EKF_ROS::baroCallback
-//calls EKF_baroUpdate, meas::Baro (this is a struct),
 void EKF::baroCallback(const double &t, const double &z, const double &R,
                        const double &temp)
 {
-  //???why does this not get implimented if multithreaded?
+
   if (enable_out_of_order_)
   {
     std::cout << "ERROR OUT OF ORDER BARO NOT IMPLEMENTED" << std::endl;
   }
   else
-    baroUpdate(meas::Baro(t, z, R, temp)); //meas::Baro is a struct
+    baroUpdate(meas::Baro(t, z, R, temp));
 }
 
-//no subscription, but would be called by EKF_ROS::poseCallback
+
 void EKF::rangeCallback(const double& t, const double& z, const double& R)
 {
   if (enable_out_of_order_)
@@ -358,9 +317,7 @@ void EKF::rangeCallback(const double& t, const double& z, const double& R)
     rangeUpdate(meas::Range(t, z, R));
 }
 
-/////determines if out of order (multithread) is enabled.  If not it calls the gnss_Update
-//Called by EKF_ROS::gnssCallback
-//calls gnssUpdate, meas::Gnss(struct)
+
 void EKF::gnssCallback(const double &t, const Vector6d &z, const Matrix6d &R)
 {
   if (!ref_lla_set_)
@@ -368,8 +325,8 @@ void EKF::gnssCallback(const double &t, const Vector6d &z, const Matrix6d &R)
 
   if (enable_out_of_order_)
   {
-    gnss_meas_buf_.push_back(meas::Gnss(t, z, R)); //adds the new measurment?
-    meas_.insert(meas_.end(), &gnss_meas_buf_.back()); //object created in ekf.h from meas::MeasSet, see meas.h
+    gnss_meas_buf_.push_back(meas::Gnss(t, z, R));
+    meas_.insert(meas_.end(), &gnss_meas_buf_.back());
   }
   else
     gnssUpdate(meas::Gnss(t, z, R));
@@ -382,9 +339,7 @@ void EKF::gnssCallback(const double &t, const Vector6d &z, const Matrix6d &R)
   }
 }
 
-/////similar to EKF::gnssCallback
-//called from EKF_ROS::mocapCallback (which comes from odom or pose)
-//calls mocapUpdate
+
 void EKF::mocapCallback(const double& t, const xform::Xformd& z, const Matrix6d& R)
 {
   if (enable_out_of_order_)
@@ -403,9 +358,6 @@ void EKF::mocapCallback(const double& t, const xform::Xformd& z, const Matrix6d&
   }
 }
 
-///// determines if baro needs to be updated.  Converts to appropriate parameters.  ???does this contain some of the algorithm? calculates measurement jacobian
-//called from baroCallback
-//calls this->groundTempPressSet, measUpdate
 void EKF::baroUpdate(const meas::Baro &z)
 {
   //groundTempPressSet returns true if ground temp and pressure are not both 0
@@ -414,8 +366,8 @@ void EKF::baroUpdate(const meas::Baro &z)
   {
     return;
   }
-  else if (!update_baro_ || !is_flying_) //update_baro is set to false in load function.  It is set true later in this function
-  {
+  else if (!update_baro_ || !is_flying_)
+
     // Take the lowest pressure while I'm not flying as ground pressure
     // This has the effect of hopefully underestimating my altitude instead of
     // over estimating.
@@ -449,17 +401,15 @@ void EKF::baroUpdate(const meas::Baro &z)
 
   const double press_hat = ground_pressure_ - rho * g * altitude + baro_bias;
 
-  const Vector1d zhat(press_hat); //???not sure what this function does.  zhat is not defined anywhere.  Maybe this is a way to define it?
+  const Vector1d zhat(press_hat);
   Vector1d r = z.z - zhat;
 
-  ///////////PART OF ALGORITHM /////////////
   typedef ErrorState E;
 
   Matrix<double, 1, E::NDX> H;
   H.setZero();
   H(0, E::DP + 2) = rho * g;
   H(0, E::DBB) = 1.;
-  ///////////END OF ALGORITHM SECTION/////////////
 
   /// TODO: Saturate r
   if (use_baro_)
@@ -474,7 +424,6 @@ void EKF::baroUpdate(const meas::Baro &z)
 
 }
 
-//not called becaues there is no subscription for this.  But all of the functions are set up if subscribed to.
 void EKF::rangeUpdate(const meas::Range &z)
 {
   // Assume that the earth is flat and that the range sensor is rigidly attached
@@ -529,9 +478,6 @@ void EKF::rangeUpdate(const meas::Range &z)
 
 }
 
-///// like baroCallback, but there are a lot of conversions from different frames as well.
-//Called by EKF::gnssCallback, EKF::update
-//calls measUpdate
 void EKF::gnssUpdate(const meas::Gnss &z)
 {
   //calcuate gps (inertial frame) velocities and positions
@@ -541,7 +487,6 @@ void EKF::gnssUpdate(const meas::Gnss &z)
   const Vector3d gps_vel_I = x().q.rota(gps_vel_b);
 
   // Update ref_lla based on current estimate
-  // ???not sure why we would update ref_lla and not sure how this is doing that.
   Vector3d ref_lla(ref_lat_radians_, ref_lon_radians_, x().ref);
   xform::Xformd x_e2n = x_ecef2ned(lla2ecef(ref_lla));
   x_e2I_.t() = x_e2n.t();
@@ -563,7 +508,6 @@ void EKF::gnssUpdate(const meas::Gnss &z)
   const double cos_lon = cos(ref_lon_radians_);
   const Vector3d dpEdRefAlt(cos_lat * cos_lon, cos_lat * sin_lon, sin_lat); // used in jacobian calculation
 
-  ///////////PART OF ALGORITHM /////////////
   typedef ErrorState E;
 
   Matrix<double, 6, E::NDX> H;
@@ -575,7 +519,6 @@ void EKF::gnssUpdate(const meas::Gnss &z)
   H.block<3,3>(3, E::DV) = R_e2b;
   H.block<3,3>(3, E::DBG) = R_e2b * skew(p_b2g_);
 
-  ///////////END OF ALGORITHM SECTION/////////////
   /// TODO: Saturate r
   if (use_gnss_)
     measUpdate(r, z.R, H);
@@ -587,9 +530,6 @@ void EKF::gnssUpdate(const meas::Gnss &z)
   }
 }
 
-/////similar to baroUpdate
-//called by mocapCallback, EKF::update
-//calls EKF::measUpdate
 void EKF::mocapUpdate(const meas::Mocap &z)
 {
   xform::Xformd zhat = x().x;
@@ -622,12 +562,8 @@ void EKF::mocapUpdate(const meas::Mocap &z)
   }
 }
 
-///// calculates jacovians, calls measUpdate, and sets log if enabled.
-//called by EFK::imuCallback, EKF::update
-//calls EKF::measUpdate
 void EKF::zeroVelUpdate(double t)
 {
-  ///////////PART OF ALGORITHM /////////////
   // Update Zero velocity and zero altitude
   typedef ErrorState E;
   Matrix<double, 4, E::NDX> H;
@@ -646,7 +582,6 @@ void EKF::zeroVelUpdate(double t)
   P().block<ErrorState::SIZE, 1>(0, ErrorState::DQ + 2).setZero();
   P().block<1, ErrorState::SIZE>(ErrorState::DQ + 2, 0).setZero();
   P()(ErrorState::DQ + 2, ErrorState::DQ + 2) = P0_yaw_;
-  ///////////END OF ALGORITHM SECTION/////////////
 
   if (enable_log_)
   {
@@ -655,15 +590,13 @@ void EKF::zeroVelUpdate(double t)
   }
 }
 
-/////sets the refference lla
-//called by EKF_ROS::gnssCallback, EKF_ROS::gnssCallbackUblox, EKF_ROS::gnssCallbackInertialSense
 void EKF::setRefLla(Vector3d ref_lla)
 {
   if (ref_lla_set_)
     return;
 
   std::cout << "Set ref lla: " << ref_lla.transpose() << std::endl;
-  ref_lla.head<2>() *= M_PI/180.0; // convert to rad
+  ref_lla.head<2>() *= M_PI/180.0;
   xform::Xformd x_e2n = x_ecef2ned(lla2ecef(ref_lla));
   x_e2I_.t() = x_e2n.t();
   x_e2I_.q() = x_e2n.q() * q_n2I_;
@@ -677,8 +610,6 @@ void EKF::setRefLla(Vector3d ref_lla)
 
 }
 
-/////not used unless multithreading is enabled
-//called by EKF::update
 void EKF::cleanUpMeasurementBuffers()
 {
   // Remove all measurements older than our oldest state in the measurement buffer
@@ -692,16 +623,14 @@ void EKF::cleanUpMeasurementBuffers()
     gnss_meas_buf_.pop_front();
 }
 
-////sets ground temperature and ground pressure on first baroCallback
-//called by EKF_ROS::baroCallback
+
 void EKF::setGroundTempPressure(const double& temp, const double& press)
 {
   ground_temperature_ = temp;
   ground_pressure_ = press;
 }
 
-/////Sets is_flying if it is okay to check and accel exceeds threshold
-//called by EKF::imuCallback
+
 void EKF::checkIsFlying()
 {
   //enable_arm_check_ set in load function and the value is set by the user in ekf.yaml

@@ -47,10 +47,6 @@ EKF_ROS::EKF_ROS() :
 EKF_ROS::~EKF_ROS()
 {}
 
-///////entry point
-//called from ekf_node.cpp int main
-//calls EKF_ROS::init
-//calls callbacks in EKF_ROS through subscription
 void EKF_ROS::initROS()
 {
 
@@ -65,28 +61,17 @@ void EKF_ROS::initROS()
   odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odom", 1);
   euler_pub_ = nh_.advertise<geometry_msgs::Vector3Stamped>("euler_degrees", 1);
   imu_bias_pub_ = nh_.advertise<sensor_msgs::Imu>("imu_bias", 1);
-  gps_ned_cov_pub_ = nh_.advertise<geometry_msgs::PoseWithCovariance>("gps_ned_cov", 1); //Maybe remove these covariance publishers at some point.
-  gps_ecef_cov_pub_ = nh_.advertise<geometry_msgs::PoseWithCovariance>("gps_ecef_cov", 1);
   is_flying_pub_ = nh_.advertise<std_msgs::Bool>("is_flying", 1);
 
-  //sets up subscriptions.  Number referes to queue size
-  //with subscription, the callbacks are "listening for messages, and they are the next step in the code"
-  //all subscriptions are set up to be used in ekf_ros.cpp
-  //callbacks from range and status are set up but not subscribed to here.
   imu_sub_ = nh_.subscribe("imu", 100, &EKF_ROS::imuCallback, this);
   baro_sub_ = nh_.subscribe("baro", 100, &EKF_ROS::baroCallback, this);
   pose_sub_ = nh_.subscribe("pose", 10, &EKF_ROS::poseCallback, this);
   odom_sub_ = nh_.subscribe("reference", 10, &EKF_ROS::odomCallback, this);
   gnss_sub_ = nh_.subscribe("gnss", 10, &EKF_ROS::gnssCallback, this);
 
-// These are defined if found when the project is built.  This can be seen in the CMakeLists.txt
 // Subscribes if found
 #ifdef UBLOX
   ublox_gnss_sub_ = nh_.subscribe("ublox_gnss", 10, &EKF_ROS::gnssCallbackUblox, this);
-  ublox_relpos_sub_ = nh_.subscribe("ublox_relpos", 10, &EKF_ROS::gnssCallbackRelPos, this);
-  ublox_base_posvelecef_sub_ = nh_.subscribe("ublox_base_posvelecef", 10, &EKF_ROS::gnssCallbackBasevel, this);
-  base_relPos_pub_ = nh_.advertise<geometry_msgs::PointStamped>("base_relPos", 1);
-  base_vel_pub_ = nh_.advertise<geometry_msgs::TwistStamped>("base_vel", 1);
   std::cerr << "UBLOX is defined \n";
 #endif
 #ifdef INERTIAL_SENSE
@@ -96,25 +81,16 @@ void EKF_ROS::initROS()
   ros_initialized_ = true;
 }
 
-///////loads noise parameters for propagation and sensor updates, sets start time
-//called from EKF_ROS::initROS
-//calls ekf_.load
-//gets paramters from ekf.yaml
 void EKF_ROS::init(const std::string &param_file)
 {
 
-  //ekf_ object comes from EKF class in ekf.cpp.  Instatiated in header file
-  //../../params/ekf.yaml
   ekf_.load(param_file);
 
   // Load Sensor Noise Parameters
   double acc_stdev, gyro_stdev;
-  //get_yaml_node(stuff in quotes from the param file gets assigned to final variable) not sure where it is defined
   get_yaml_node("accel_noise_stdev", param_file, acc_stdev);
   get_yaml_node("gyro_noise_stdev", param_file, gyro_stdev);
 
-  //R variables are defined in ekf_ros.h and can be accessed by the entire class
-  //R matrix for sensor (in this case imu is actually propagation) noise
   imu_R_.setZero();
   imu_R_.topLeftCorner<3,3>() = acc_stdev * acc_stdev * I_3x3;
   imu_R_.bottomRightCorner<3,3>() = gyro_stdev * gyro_stdev * I_3x3;
@@ -149,18 +125,12 @@ void EKF_ROS::init(const std::string &param_file)
   start_time_.fromSec(0.0);
 }
 
-//////This function is called each time imu is received and publishes odom, 
-//called by EKF_ROS::imuCallback
-//calls EKF::x, EKF::isflying
-//publishes odom, euler, imu_bias, is_flying
 void EKF_ROS::publishEstimates(const sensor_msgs::ImuConstPtr &msg)
 {
 
   // Pub Odom
   odom_msg_.header = msg->header;
 
-  //ekf_.x can be found in ekf.h.  It is a function that returns xbuf.x.  state_est is used throughout the function
-  //xbuf_.x is all the information about the state that we use, it comes from ekf.cpp
   const State state_est = ekf_.x();
   odom_msg_.pose.pose.position.x = state_est.p(0);
   odom_msg_.pose.pose.position.y = state_est.p(1);
@@ -183,7 +153,6 @@ void EKF_ROS::publishEstimates(const sensor_msgs::ImuConstPtr &msg)
 
   // Pub Euler Attitude
   euler_msg_.header = msg->header;
-  //grabs state est.q from above, then converts to euler
   const Eigen::Vector3d euler_angles = state_est.q.euler() * 180. / M_PI;
   euler_msg_.vector.x = euler_angles(0);
   euler_msg_.vector.y = euler_angles(1);
@@ -215,8 +184,7 @@ void EKF_ROS::publishEstimates(const sensor_msgs::ImuConstPtr &msg)
 
   imu_bias_pub_.publish(imu_bias_msg_);
 
-  // Only publish is_flying is true once
-  if (!is_flying_) //set to false in header file.  returns value in isflying variable.  This variable is set in EKF::checkIsFlying 
+  if (!is_flying_)
   {
     is_flying_ = ekf_.isFlying();
     if (is_flying_)
@@ -227,55 +195,15 @@ void EKF_ROS::publishEstimates(const sensor_msgs::ImuConstPtr &msg)
   }
 }
 
-void EKF_ROS::publishGpsCov(Matrix6d sigma_ecef, Vector6d sigma_ned, Vector6d z)
-{
-  // const Eigen::Vector3d& ecef
-  // z_ned = x_ecef2ned(const Eigen::Vector3d& ecef)
-
-  //gps ecef covariance
-  gps_ecef_cov_msg_.covariance[0] = sigma_ecef(0,0);
-  gps_ecef_cov_msg_.covariance[1] = sigma_ecef(0,1);
-  gps_ecef_cov_msg_.covariance[2] = sigma_ecef(0,2);
-  gps_ecef_cov_msg_.covariance[3] = sigma_ecef(1,0);
-  gps_ecef_cov_msg_.covariance[4] = sigma_ecef(1,1);
-  gps_ecef_cov_msg_.covariance[5] = sigma_ecef(1,2);
-  gps_ecef_cov_msg_.covariance[6] = sigma_ecef(2,0);
-  gps_ecef_cov_msg_.covariance[7] = sigma_ecef(2,1);
-  gps_ecef_cov_msg_.covariance[8] = sigma_ecef(2,2);
-
-  // gps ned covariance
-  gps_ned_cov_msg_.covariance[0] = sigma_ned[0];
-  gps_ned_cov_msg_.covariance[1] = sigma_ned[1];
-  gps_ned_cov_msg_.covariance[2] = sigma_ned[2];
-  gps_ned_cov_msg_.covariance[3] = sigma_ned[3];
-  gps_ned_cov_msg_.covariance[4] = sigma_ned[4];
-  gps_ned_cov_msg_.covariance[5] = sigma_ned[5];
-
-  //convert z to ned frame
-  Vector3d z_lla = ecef2lla(z.head<3>());
-  Vector3d ref_lla(ekf_.ref_lat_radians_, ekf_.ref_lon_radians_, ekf_.x().ref);
-  Vector3d z_ned = lla2ned(ref_lla, z_lla);
-
-  //get gps ned position
-  gps_ned_cov_msg_.pose.position.x = z_ned[0];
-  gps_ned_cov_msg_.pose.position.y = z_ned[1];
-  gps_ned_cov_msg_.pose.position.z = z_ned[2];
-
-  gps_ned_cov_pub_.publish(gps_ned_cov_msg_);
-  gps_ecef_cov_pub_.publish(gps_ecef_cov_msg_);
-}
 
 void EKF_ROS::imuCallback(const sensor_msgs::ImuConstPtr &msg)
 {
-  //initializes time on first imu callback
   if (start_time_.sec == 0)
   {
     start_time_ = msg->header.stamp;
   }
 
-  //I'd assume Vector 6d is a type defined somewhere, but I couldn't find it
   Vector6d z;
-  //Assigning elements of the imu message to z.
   z << msg->linear_acceleration.x,
        msg->linear_acceleration.y,
        msg->linear_acceleration.z,
@@ -284,15 +212,12 @@ void EKF_ROS::imuCallback(const sensor_msgs::ImuConstPtr &msg)
        msg->angular_velocity.z;
 
   double t = (msg->header.stamp - start_time_).toSec();
-  ekf_.imuCallback(t, z, imu_R_); //time, measurment, and noise
+  ekf_.imuCallback(t, z, imu_R_);
 
-  if(ros_initialized_) //flag set true in EKF_ROS::initRos
+  if(ros_initialized_)
     publishEstimates(msg);
 }
 
-//////similar to imuCallback
-//Called from EKF_ROS::initRos through subscription
-//calls EKF::groundTempPressSet, EKF::setGroundTempPressure, EKF::baroCallback
 void EKF_ROS::baroCallback(const rosflight_msgs::BarometerConstPtr& msg)
 {
 
@@ -300,11 +225,10 @@ void EKF_ROS::baroCallback(const rosflight_msgs::BarometerConstPtr& msg)
   const double temperature_meas = msg->temperature;
 
   // if statement sets ground pressure and temperature if not already set
-  if (!ekf_.groundTempPressSet()) //function contained in ekf.h, returns true if ground pressure and groudn temperature are not equal to 0.
+  if (!ekf_.groundTempPressSet())
   {
     std::cout << "Set ground pressure and temp" << std::endl;
     std::cout << "press: " << pressure_meas << std::endl;
-    //sets ground temperature and ground pressure on first baroCallback
     ekf_.setGroundTempPressure(temperature_meas, pressure_meas);
   }
 
@@ -315,7 +239,6 @@ void EKF_ROS::baroCallback(const rosflight_msgs::BarometerConstPtr& msg)
   ekf_.baroCallback(t, pressure_meas, baro_R_, temperature_meas);
 }
 
-//no subscription to range_Callback
 void EKF_ROS::rangeCallback(const sensor_msgs::RangeConstPtr& msg)
 {
   if (start_time_.sec == 0)
@@ -329,12 +252,8 @@ void EKF_ROS::rangeCallback(const sensor_msgs::RangeConstPtr& msg)
   }
 }
 
-//////similar to imuCallback
-//Called from EKF_ROS::initRos through subscription
-//calls mocapCallback
 void EKF_ROS::poseCallback(const geometry_msgs::PoseStampedConstPtr &msg)
 {
-  //xform is from geometry/xform.h
   xform::Xformd z;
   z.arr_ << msg->pose.position.x,
           msg->pose.position.y,
@@ -347,9 +266,6 @@ void EKF_ROS::poseCallback(const geometry_msgs::PoseStampedConstPtr &msg)
   mocapCallback(msg->header.stamp, z);
 }
 
-//////just like poseCallLback
-//Called from EKF_ROS::initRos through subscription
-//calls mocapCallback
 void EKF_ROS::odomCallback(const nav_msgs::OdometryConstPtr &msg)
 {
   
@@ -365,9 +281,6 @@ void EKF_ROS::odomCallback(const nav_msgs::OdometryConstPtr &msg)
   mocapCallback(msg->header.stamp, z);
 }
 
-//both odometry and pose can be used for mocap
-//Called from EKF_ROS::poseCallback and EKF_ROS::odomCallback
-//calls EKF::mocapCallback
 void EKF_ROS::mocapCallback(const ros::Time &time, const xform::Xformd &z)
 {
   if (start_time_.sec == 0)
@@ -377,7 +290,6 @@ void EKF_ROS::mocapCallback(const ros::Time &time, const xform::Xformd &z)
   ekf_.mocapCallback(t, z, mocap_R_);
 }
 
-//no subscription 
 void EKF_ROS::statusCallback(const rosflight_msgs::StatusConstPtr &msg)
 {
   if (msg->armed)
@@ -390,9 +302,6 @@ void EKF_ROS::statusCallback(const rosflight_msgs::StatusConstPtr &msg)
   }
 }
 
-//similar to EKF_ROS::imuCallback, but it also sets the original lla and converts to ecef
-//Called from EKF_ROS::initRos through subscription, EKF_ROS::gnssCallbackUBLOX, EKF_ROS::gnssCallbackInertialSense
-//calls EKF::refLlaSet, EKF::setRefLlla, EKF::gnssCallback
 void EKF_ROS::gnssCallback(const rosflight_msgs::GNSSConstPtr &msg)
 {
 
@@ -406,7 +315,7 @@ void EKF_ROS::gnssCallback(const rosflight_msgs::GNSSConstPtr &msg)
 
   // rotate covariance into the ECEF frame
   Vector6d Sigma_diag_NED;
-  if (manual_gps_noise_) //comes from ekf.yaml
+  if (manual_gps_noise_)
   {
     Sigma_diag_NED << gps_horizontal_stdev_,
                       gps_horizontal_stdev_,
@@ -437,14 +346,10 @@ void EKF_ROS::gnssCallback(const rosflight_msgs::GNSSConstPtr &msg)
 
   if (!ekf_.refLlaSet())
   {
-    // set ref lla to first gps position
     Eigen::Vector3d ref_lla = ecef2lla(z.head<3>());
-    // Convert radians to degrees
     ref_lla.head<2>() *= 180. / M_PI;
     ekf_.setRefLla(ref_lla);
   }
-
-  publishGpsCov(Sigma_ecef, Sigma_diag_NED, z); //delete this later
 
   if (start_time_.sec == 0)
     return;
@@ -453,10 +358,6 @@ void EKF_ROS::gnssCallback(const rosflight_msgs::GNSSConstPtr &msg)
   ekf_.gnssCallback(t, z, Sigma_ecef);
 }
 
-/////Grabs needed values from ublox ecef message and puts it in a rosflight GNSS message
-//Called from EKF_ROS::initRos through subscription if UBLOX found
-//calls EKF_Ros::gnssCallback
-//???it looks like the reference lla is not set in here.
 #ifdef UBLOX
 void EKF_ROS::gnssCallbackUblox(const ublox::PosVelEcefConstPtr &msg)
 {
@@ -479,37 +380,8 @@ void EKF_ROS::gnssCallbackUblox(const ublox::PosVelEcefConstPtr &msg)
   }
 }
 
-void EKF_ROS::gnssCallbackRelPos(const ublox::RelPosConstPtr &msg)
-{
-  //This message is used in the waypoint manager
-  //TODO:: put in logic to only use measurements if a flag of 311, 279, 271, or ... xxx, is found
-  //TODO:: maybe put in logic to only move forward if in a landing state
-  base_relPos_msg_.header = msg->header;
-  // negate relPos message to go from rover to base rather than base to rover
-  base_relPos_msg_.point.x = -msg->relPosNED[0];
-  base_relPos_msg_.point.y = -msg->relPosNED[1];
-  base_relPos_msg_.point.z = -msg->relPosNED[2];  
-  //TODO:: could add in the high precision (portion less than a mm)
-  //TODO:: could add in the accuracy of the NED measurment to update covariance
-  base_relPos_pub_.publish(base_relPos_msg_);
-
-}
-
-void EKF_ROS::gnssCallbackBasevel(const ublox::PosVelEcefConstPtr &msg)
-{
-  //This message is used by the controller for the feed forward term
-  base_vel_msg_.twist.linear.x = msg->velocity[0];
-  base_vel_msg_.twist.linear.y = msg->velocity[1];
-  base_vel_msg_.twist.linear.z = msg->velocity[2];
-
-  base_vel_pub_.publish(base_vel_msg_);
-}
 #endif
 
-/////simialr to EKF::ROS::gnssCallbackUblox
-//Called from EKF_ROS::initRos through subscription if Inertial Sense found
-//calls EKF_Ros::gnssCallback
-//???it looks like the reference lla is not set in here.
 #ifdef INERTIAL_SENSE
 void EKF_ROS::gnssCallbackInertialSense(const inertial_sense::GPSConstPtr &msg)
 {

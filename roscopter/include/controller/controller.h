@@ -87,10 +87,6 @@ private:
   ros::Subscriber is_flying_sub_;
   ros::Subscriber cmd_sub_;
   ros::Subscriber status_sub_;
-  ros::Subscriber base_vel_sub_;
-  ros::Subscriber is_landing_sub_;
-  ros::Subscriber use_feed_forward_sub_;
-  ros::Subscriber landed_sub_;
 
   ros::Publisher command_pub_;
 
@@ -105,9 +101,6 @@ private:
   bool is_flying_;
   bool armed_;
   bool received_cmd_;
-  bool use_feed_forward_ = false;
-  bool is_landing_ = false;
-  bool landed_ = false;
 
 
   // PID Controllers
@@ -139,10 +132,6 @@ private:
   void isFlyingCallback(const std_msgs::BoolConstPtr &msg);
   void cmdCallback(const rosflight_msgs::CommandConstPtr &msg);
   void statusCallback(const rosflight_msgs::StatusConstPtr &msg);
-  void baseVelCallback(const geometry_msgs::TwistStampedConstPtr &msg);
-  void useFeedForwardCallback(const std_msgs::BoolConstPtr &msg);
-  void isLandingCallback(const std_msgs::BoolConstPtr &msg);
-  void landedCallback(const std_msgs::BoolConstPtr &msg);
 
   void computeControl(double dt);
   void resetIntegrators();

@@ -49,12 +49,8 @@ Controller::Controller() :
       nh_.subscribe("high_level_command", 1, &Controller::cmdCallback, this);
   status_sub_ = nh_.subscribe("status", 1, &Controller::statusCallback, this);
   base_vel_sub_ =
-    nh_.subscribe("base_velocity", 1, &Controller::baseVelCallback, this);
 
   command_pub_ = nh_.advertise<rosflight_msgs::Command>("command", 1);
-  use_feed_forward_sub_ = nh_.subscribe("use_base_feed_forward_vel", 1, &Controller::useFeedForwardCallback, this);
-  is_landing_sub_ = nh_.subscribe("is_landing", 1, &Controller::isLandingCallback, this);
-  landed_sub_ = nh_.subscribe("landed", 1, &Controller::landedCallback, this);
 }
 
 
@@ -155,43 +151,6 @@ void Controller::cmdCallback(const rosflight_msgs::CommandConstPtr &msg)
     received_cmd_ = true;
 }
 
-void Controller::baseVelCallback(const geometry_msgs::TwistStampedConstPtr &msg)
-{
-
-  // // Convert Quaternion to RPY
-  // tf::Quaternion tf_quat;
-  // tf::quaternionMsgToTF(msg->pose.pose.orientation, tf_quat);
-  // tf::Matrix3x3(tf_quat).getRPY(base_hat_.phi, base_hat_.theta, base_hat_.psi);
-  // base_hat_.psi = -base_hat_.psi; //have to negate to go from Counter Clockwise positive rotation to Clockwise;
-
-  // double sinp = sin(base_hat_.psi);
-  // double cosp = cos(base_hat_.psi);
-
-  double u = msg->twist.linear.x;
-  double v = msg->twist.linear.y;
-  double w = msg->twist.linear.z;
-
-  base_hat_.u = u;
-  base_hat_.v = v;
-
-  base_hat_.r = -msg->twist.angular.z; //have to negate to go from Counter Clockwise positive rotation to Clockwise
-
-}
-
-void Controller::useFeedForwardCallback(const std_msgs::BoolConstPtr &msg)
-{
-  use_feed_forward_ = msg->data;
-}
-
-void Controller::isLandingCallback(const std_msgs::BoolConstPtr &msg)
-{
-  is_landing_ = msg->data;
-}
-
-void Controller::landedCallback(const std_msgs::BoolConstPtr &msg)
-{
-  landed_ = msg->data;
-}
 
 void Controller::reconfigure_callback(roscopter::ControllerConfig& config,
                                       uint32_t level)
@@ -285,14 +244,6 @@ void Controller::computeControl(double dt)
 
     xc_.x_dot = pndot_c*cos(xhat_.psi) + pedot_c*sin(xhat_.psi);
     xc_.y_dot = -pndot_c*sin(xhat_.psi) + pedot_c*cos(xhat_.psi);
-
-    if(use_feed_forward_)
-    {
-      // Only using feed forward on 2d plane right now
-      xc_.x_dot = xc_.x_dot + base_hat_.u; //feed forward the base velocity
-      xc_.y_dot = xc_.y_dot + base_hat_.v;
-      xc_.r = xc_.r+base_hat_.r;
-    }
 
     mode_flag = rosflight_msgs::Command::MODE_XVEL_YVEL_YAWRATE_ALTITUDE;
   }

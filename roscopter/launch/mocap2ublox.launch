@@ -3,7 +3,6 @@
 <launch>
 
   <arg name="drone_name"            value="ragnarok"/>
-  <arg name="target_name"         value="boat_landing_platform"/>
   <arg name="f4_serial_port" default="/dev/ttyACM0"/>
 
    <!-- FCU communication -->
@@ -21,7 +20,6 @@
     <rosparam command="load" file="$(find roscopter)/params/mocap2ublox.yaml"/>
     <node name="mocap2ublox" pkg="roscopter" type="mocap2ublox_ros.py" output="screen">
       <remap from="rover_mocap" to="/$(arg drone_name)_ned"/>
-      <remap from="base_mocap" to="/$(arg target_name)_ned"/>
     </node>
   </group>
 
@@ -30,7 +28,6 @@
 
   <!-- PID Position Controller -->
   <node name="controller" pkg="roscopter" type="controller">
-    <remap from="base_velocity" to="base_vel"/>
     <remap from="estimate" to="odom"/>
   </node>
 
@@ -40,17 +37,12 @@
     <remap from="imu" to="/imu/data"/>
     <remap from="baro" to="/baro"/>
     <remap from="ublox_gnss" to="/m2u/rover_PosVelEcef"/>
-    <remap from="ublox_relpos" to="/m2u/rover_relpos"/>
-    <remap from="ublox_basevel" to="/m2u/base_PosVelEcef"/>
   </node>
 
   <!-- Waypoint Manager -->
   <node name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
     <remap from="waypoint" to="high_level_command"/>
     <remap from="state" to="odom"/>
-    <remap from="base_relative_pos" to="base_relPos"/>
   </node>
-
-  <node pkg="rosbag" type="record" name="record" output="screen" args="-o ../data/m2u --all"/>
-
+  
 </launch>

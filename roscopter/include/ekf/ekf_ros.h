@@ -55,7 +55,6 @@
 
 #ifdef UBLOX
 #include "ublox/PosVelEcef.h"
-#include "ublox/RelPos.h"
 #endif
 
 #ifdef INERTIAL_SENSE
@@ -84,8 +83,6 @@ public:
 
 #ifdef UBLOX
   void gnssCallbackUblox(const ublox::PosVelEcefConstPtr& msg);
-  void gnssCallbackRelPos(const ublox::RelPosConstPtr& msg);
-  void gnssCallbackBasevel(const ublox::PosVelEcefConstPtr& msg);
 #endif
 
 #ifdef INERTIAL_SENSE
@@ -111,25 +108,15 @@ private:
   ros::Publisher odometry_pub_;
   ros::Publisher euler_pub_;
   ros::Publisher imu_bias_pub_;
-  ros::Publisher gps_ned_cov_pub_;
-  ros::Publisher gps_ecef_cov_pub_;
   ros::Publisher is_flying_pub_;
 
   sensor_msgs::Imu imu_bias_msg_;
   nav_msgs::Odometry odom_msg_;
   geometry_msgs::Vector3Stamped euler_msg_;
   std_msgs::Bool is_flying_msg_;
-  geometry_msgs::PoseWithCovariance gps_ned_cov_msg_;
-  geometry_msgs::PoseWithCovariance gps_ecef_cov_msg_; 
-  geometry_msgs::PointStamped base_relPos_msg_;
-  geometry_msgs::TwistStamped base_vel_msg_;
 
 #ifdef UBLOX
   ros::Subscriber ublox_gnss_sub_;
-  ros::Subscriber ublox_relpos_sub_;
-  ros::Subscriber ublox_base_posvelecef_sub_;
-  ros::Publisher base_relPos_pub_;
-  ros::Publisher base_vel_pub_;
 #endif
 
 #ifdef INERTIAL_SENSE

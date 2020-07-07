@@ -6,23 +6,17 @@ import numpy as np
 class Mocap2Ublox():
     
 
-    def __init__(self, Ts, gha, gva, gsa, rha, rva, rsa, no, rl, srp, srv, srr, sbp, sbv, lo, A, B):
+    def __init__(self, Ts, gha, gva, gsa, no, rl, srp, srv, lo, A, B):
 
         #parameters
         self.Ts = Ts
         self.global_horizontal_accuracy = gha
         self.global_vertical_accuracy = gva
         self.global_speed_accuracy = gsa
-        self.relative_horizontal_accuracy = rha
-        self.relative_vertical_accuracy = rva
-        self.relative_speed_accuracy = rsa
         self.noise_on = no
         self.ref_lla = rl
         self.sigma_rover_pos = srp 
         self.sigma_rover_vel = srv
-        self.sigma_rover_relpos = srr
-        self.sigma_base_pos = sbp
-        self.sigma_base_vel = sbv
         self.lpf_on = lo
         self.A = A
         self.B = B
@@ -38,7 +32,6 @@ class Mocap2Ublox():
         #combine standard deviations
         self.ned_std_dev_3d = [self.global_horizontal_accuracy, self.global_horizontal_accuracy, self.global_vertical_accuracy]
         self.vel_std_dev_3d = [self.global_speed_accuracy, self.global_speed_accuracy, self.global_speed_accuracy]
-        self.relpos_std_dev_3d = [self.relative_horizontal_accuracy, self.relative_horizontal_accuracy, self.relative_vertical_accuracy]
         self.white_noise_3d = [self.eta_h, self.eta_h, self.eta_a]
 
         #other needed variables and arrays
@@ -47,25 +40,13 @@ class Mocap2Ublox():
         self.rover_ned_lpf = np.zeros(3)
         self.rover_vel_lpf = np.zeros(3)
         self.rover_prev_time = 0.0
-        self.rover_relpos_lpf = np.zeros(3)
-        self.base_ned = np.zeros(3)
-        self.base_ned_prev = np.zeros(3)
-        self.base_ned_lpf = np.zeros(3)
-        self.base_vel_lpf = np.zeros(3)
-        self.base_prev_time = 0.0
         self.rover_ned_noise = np.zeros(3)
         self.rover_vel_noise = np.zeros(3)
         self.rover_vel_noise_prev = np.zeros(3)
-        self.base_ned_noise = np.zeros(3)
-        self.base_vel_noise = np.zeros(3)
-        self.base_vel_noise_prev = np.zeros(3)
 
         #Outputs
         self.rover_virtual_pos_ecef = np.zeros(3)
         self.rover_virtual_vel_ecef = np.zeros(3)
-        self.rover_virtual_relpos = np.zeros(3)
-        self.base_virtual_pos_ecef = np.zeros(3)
-        self.base_virtual_vel_ecef = np.zeros(3)
 
 
     def update_rover_virtual_PosVelEcef(self, dt):
@@ -91,42 +72,6 @@ class Mocap2Ublox():
         self.rover_ned_prev = self.rover_ned
         self.rover_vel_prev = rover_vel
         self.rover_vel_noise_prev = self.rover_vel_noise
-
-
-
-    def update_rover_virtual_relPos(self):
-
-        #calculate virtual relative position of the rover with respect to the base in ned frame with noise.
-        relpos_array = self.rover_ned - self.base_ned
-        rover_relpos_noise = self.add_noise_3d(relpos_array, self.relpos_std_dev_3d)
-        self.rover_relpos_lpf = self.lpf(rover_relpos_noise, self.rover_relpos_lpf, self.Ts, self.sigma_rover_relpos)
-
-        self.rover_virtual_relpos = self.rover_relpos_lpf
-
-
-    def update_base_virtual_PosVelEcef(self, dt):
-
-        #calculate virtual position in ecef frame with noise
-        self.base_ned_noise = self.add_gps_noise(self.white_noise_3d, self.base_ned_noise, self.sigma_base_pos)
-        base_ned_w_noise = self.base_ned + self.base_ned_noise
-        virtual_delta_ecef = self.ned2ecef(base_ned_w_noise, self.ref_lla)
-        self.base_virtual_pos_ecef = self.ref_ecef + virtual_delta_ecef
-
-        #calculate virtual velocity in ecef frame with noise
-        #make sure we do not divide by zero
-        if dt != 0.0:
-            base_vel = (self.base_ned - self.base_ned_prev)/dt
-        else:
-            base_vel = np.zeros(3)
-        self.base_vel_noise = self.add_noise_3d(np.zeros(3), self.white_noise_3d)
-        self.base_vel_lpf = self.lpf(self.base_vel_noise, self.base_vel_noise_prev, self.Ts, self.sigma_base_vel)
-        base_vel_w_noise = base_vel + self.base_vel_lpf
-        self.base_virtual_vel_ecef = self.ned2ecef(base_vel_w_noise, self.ref_lla)
-
-        #update histories
-        self.base_ned_prev = self.base_ned
-        self.base_vel_prev = base_vel
-        self.base_vel_noise_prev = self.base_vel_noise
 
 
     def add_noise_3d(self, value, std_dev):
