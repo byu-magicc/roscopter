@@ -102,6 +102,7 @@ private:
   ros::Subscriber odom_sub_;
   ros::Subscriber gnss_sub_;
   ros::Subscriber status_sub_;
+  ros::Subscriber range_sub_;
 
   ros::Publisher odometry_pub_;
   ros::Publisher euler_pub_;
