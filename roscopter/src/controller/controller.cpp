@@ -48,7 +48,6 @@ Controller::Controller() :
   cmd_sub_ =
       nh_.subscribe("high_level_command", 1, &Controller::cmdCallback, this);
   status_sub_ = nh_.subscribe("status", 1, &Controller::statusCallback, this);
-  base_vel_sub_ =
 
   command_pub_ = nh_.advertise<rosflight_msgs::Command>("command", 1);
 }
@@ -297,31 +296,13 @@ void Controller::computeControl(double dt)
 
   if(mode_flag == rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE)
   {
-    // Pack up and send the command
-    if(landed_ == true)
-    {
-      command_.F = 0.0;
-      command_.x = 0.0;
-      command_.y = 0.0;
-      command_.z = 0.0;
-    }
-    else if(is_landing_ == true) //this is for the mission state "land"
-    {
-      command_.mode = rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE;
-      command_.F = throttle_down_ * command_.F;
-      command_.x = saturate(xc_.phi, max_.roll, -max_.roll);
-      command_.y = saturate(xc_.theta, max_.pitch, -max_.pitch);
-      command_.z = saturate(xc_.r, max_.yaw_rate, -max_.yaw_rate);
-      // std::cerr << "throttle = " << command_.F << "\n"; //good for testing the throttle_down_ multiplier
-    }
-    else
-    {
-      command_.mode = rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE;
-      command_.F = saturate(xc_.throttle, max_.throttle, 0.0);
-      command_.x = saturate(xc_.phi, max_.roll, -max_.roll);
-      command_.y = saturate(xc_.theta, max_.pitch, -max_.pitch);
-      command_.z = saturate(xc_.r, max_.yaw_rate, -max_.yaw_rate);
-    }
+
+    command_.mode = rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE;
+    command_.F = saturate(xc_.throttle, max_.throttle, 0.0);
+    command_.x = saturate(xc_.phi, max_.roll, -max_.roll);
+    command_.y = saturate(xc_.theta, max_.pitch, -max_.pitch);
+    command_.z = saturate(xc_.r, max_.yaw_rate, -max_.yaw_rate);
+
     if (-xhat_.pd < min_altitude_)
     {
       command_.x = 0.;

@@ -5,11 +5,8 @@ import rospy
 import std_msgs.msg
 
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import Pose
 from geometry_msgs.msg import PoseStamped
 from rosflight_msgs.msg import GNSS
-from rosflight_msgs.msg import GNSSRaw
-from ublox.msg import RelPos
 from ublox.msg import PosVelEcef
 
 
@@ -19,6 +16,7 @@ class MocapSimManager():
     def __init__(self):
 
         self.rover_pos = np.zeros(3)
+        self.rover_virtual_mocap_ned = PoseStamped()
 
         self.origin_set = False
         self.origin = np.zeros(3)

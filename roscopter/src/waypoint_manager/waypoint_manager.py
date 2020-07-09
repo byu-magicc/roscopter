@@ -59,10 +59,6 @@ class WaypointManager():
 
     def odometryCallback(self, msg):
         
-        # Get error between waypoint and current state
-        self.drone_odom = np.array([msg.pose.pose.position.x,
-                                    msg.pose.pose.position.y,
-                                    msg.pose.pose.position.z])
         #waypoints are in neu
         current_position_neu = np.array([msg.pose.pose.position.x,
                                      msg.pose.pose.position.y,
@@ -144,7 +140,6 @@ class WaypointManager():
         self.prev_time = rospy.Time.now()
 
         #other variables and arrays
-        self.drone_odom = np.zeros(3)
         self.current_waypoint_index = 0
         self.current_waypoint_index = 0
 

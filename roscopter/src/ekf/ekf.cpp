@@ -367,6 +367,7 @@ void EKF::baroUpdate(const meas::Baro &z)
     return;
   }
   else if (!update_baro_ || !is_flying_)
+  {
 
     // Take the lowest pressure while I'm not flying as ground pressure
     // This has the effect of hopefully underestimating my altitude instead of
