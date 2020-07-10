@@ -16,7 +16,7 @@ class WaypointManager():
     def __init__(self):
 
         # get parameters
-        try:
+        try: #TODO: Do we need this try except? Or can we start without waypoints?
             self.waypoint_list = rospy.get_param('~waypoints')
         except KeyError:
             rospy.logfatal('[waypoint_manager] waypoints not set')
@@ -36,8 +36,6 @@ class WaypointManager():
         self.landing = False
         self.landed = False
         self.ready_to_land = False
-        self.min_landing_alt = -6 # TODO Positive or Negative?
-        self.max_landing_alt = -8 # TODO Positive or Negative?
 
         # Create the initial poseEuler estimate message
         self.poseEuler_msg = PoseEuler()
@@ -52,6 +50,14 @@ class WaypointManager():
         self.cyclical_path = rospy.get_param('~cycle', True)
         self.print_wp_reached = rospy.get_param('~print_wp_reached', True)
 
+        # Landing Params
+        self.min_landing_alt = rospy.get_param('~min_landing_alt', -1)
+        self.max_landing_alt = rospy.get_param('~max_landing_alt', -6)
+        self.approach_vel = rospy.get_param('~approach_vel', 0.8)
+        self.landing_vel = rospy.get_param('~landing_vel', 0.4)
+        self.slow_alt = rospy.get_param('~slow_alt', -1.2)
+        self.stop_alt = rospy.get_param('~stop_alt', -0.05)
+
         # Set up Services
         self.add_waypoint_service = rospy.Service('add_waypoint', AddWaypoint, self.addWaypointCallback)
         self.remove_waypoint_service = rospy.Service('remove_waypoint', RemoveWaypoint, self.removeWaypointCallback)
@@ -62,7 +68,7 @@ class WaypointManager():
         self.release_service = rospy.Service('release', Release, self.releaseCallback)
         self.land_service = rospy.Service('land', Land, self.landCallback)
         self.fly_service = rospy.Service('fly', Fly, self.flyCallback)
-        self.rtb_service = rospy.Service('return_to_base', ReturnToBase, self.returnToBaseCallback)
+        self.returntobase_service = rospy.Service('return_to_base', ReturnToBase, self.returnToBaseCallback)
 
         # Set Up Publishers and Subscribers
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
@@ -246,29 +252,23 @@ class WaypointManager():
         return
 
     def land(self):
-        #TODO: Make these into params
-        approach_vel = 0.8 # m/s, velocity before reaching the slow_d
-        landing_vel = 0.4 # m/s, velocity when hitting the ground
-        slow_d = -1.2 # The altitude to start slowing the quad
-        stop_d = -0.05 # The altitude to stop the quad at
-
         self.cmd_msg.stamp = rospy.Time.now()
         self.cmd_msg.cmd1 = self.landing_pose[0]
         self.cmd_msg.cmd2 = self.landing_pose[1]
         self.cmd_msg.cmd4 = self.landing_pose[3]
-        if self.d < stop_d:
-            if self.d < slow_d:
-                self.cmd_msg.cmd3 = approach_vel
+        if self.d < self.stop_alt:
+            if self.d < self.slow_alt:
+                self.cmd_msg.cmd3 = self.approach_vel
             else:
-                self.cmd_msg.cmd3 = -approach_vel/(1 + landing_vel/approach_vel/(-landing_vel/approach_vel + 1) \
-                                    + np.exp(10/(slow_d-stop_d)*(self.d - (slow_d+stop_d)/2))) + approach_vel
+                self.cmd_msg.cmd3 = -self.approach_vel/(1 + self.landing_vel/self.approach_vel/(-self.landing_vel/self.approach_vel + 1) \
+                                    + np.exp(10/(self.slow_alt-self.stop_alt)*(self.d - (self.slow_alt+self.stop_alt)/2))) + self.approach_vel
             self.cmd_msg.mode = Command.MODE_NPOS_EPOS_DVEL_YAW
             self.waypoint_cmd_pub_.publish(self.cmd_msg)
         elif self.landed == False:
             self.cmd_msg.mode = Command.MODE_NACC_EACC_DACC_YAWRATE
             self.cmd_msg.cmd1 = 0.0
             self.cmd_msg.cmd2 = 0.0
-            self.cmd_msg.cmd3 = 10
+            self.cmd_msg.cmd3 = 1.0
             self.cmd_msg.cmd4 = 0.0
             self.waypoint_cmd_pub_.publish(self.cmd_msg)
             self.landed = True

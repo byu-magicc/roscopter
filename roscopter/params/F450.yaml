@@ -8,7 +8,15 @@ waypoints:
   [0, -1, 1.5, -1.57]],
 
 threshold: 0.1,
-cycle: True
+cycle: True,
+
+# Landing
+min_landing_alt: -1, # m; will start to land from at least this height
+max_landing_alt: -6, # m; will start to land from at most this height
+approach_vel: 0.8, # m/s; velocity before reaching the slow_alt
+landing_vel: 0.4, # m/s; velocity when hitting the ground (stop_alt)
+slow_alt: -1.2, # m; the altitude to start slowing the copter
+stop_alt: -0.05 # m; the altitude to stop the quad at
 }
 
 ### Controller Parameters

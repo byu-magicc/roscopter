@@ -25,6 +25,7 @@
   <node name="estimator" type="ekf_node" pkg="roscopter" output="screen">
     <remap from="imu" to="/imu/data"/>
     <remap from="pose" to="/MOTIONCAPTUREASSET_ned"/>
+    <!-- <remap from="range" to=<RANGE_TOPIC> /> -->
   </node>
 
   <!-- Waypoint Manager -->
