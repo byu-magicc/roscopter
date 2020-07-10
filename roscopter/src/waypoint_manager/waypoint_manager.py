@@ -7,7 +7,8 @@ import csv
 # from geometry_msgs import Vector3Stamped
 from nav_msgs.msg import Odometry
 from roscopter_msgs.msg import Command, PoseEuler
-from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile, ListWaypoints, ClearWaypoints, Hold, Release, Land, Fly
+from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile, ListWaypoints, \
+                               ClearWaypoints, Hold, Release, Land, Fly, ReturnToBase
 
 
 class WaypointManager():
@@ -34,6 +35,9 @@ class WaypointManager():
         self.halt_waypoint = [0, 0, 0, 0]
         self.landing = False
         self.landed = False
+        self.ready_to_land = False
+        self.min_landing_alt = -6 # TODO Positive or Negative?
+        self.max_landing_alt = -8 # TODO Positive or Negative?
 
         # Create the initial poseEuler estimate message
         self.poseEuler_msg = PoseEuler()
@@ -58,6 +62,7 @@ class WaypointManager():
         self.release_service = rospy.Service('release', Release, self.releaseCallback)
         self.land_service = rospy.Service('land', Land, self.landCallback)
         self.fly_service = rospy.Service('fly', Fly, self.flyCallback)
+        self.rtb_service = rospy.Service('return_to_base', ReturnToBase, self.returnToBaseCallback)
 
         # Set Up Publishers and Subscribers
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
@@ -213,12 +218,35 @@ class WaypointManager():
         if self.hold == True:
             rospy.loginfo("[waypoint_manager] Releasing hold to land")
             self.hold == False
-        rospy.loginfo("[waypoint_manager] Landing at coordinates {} {}".format(self.n,self.e))
-        self.landing_pose = [self.n, self.e, self.psi]
+        rospy.loginfo("[waypoint_manager] Preparing to land at coordinates [{} {}]".format(self.n,self.e))
+        landing_alt = min(max(self.d, self.max_landing_alt),self.min_landing_alt)
+        self.landing_pose = [self.n, self.e, landing_alt, self.psi]
         self.landing = True
         return True
 
+    def returnToBaseCallback(self, req):
+        if self.hold == True:
+            rospy.loginfo("[waypoint_manager] Releasing hold to return to base")
+            self.hold == False
+        rospy.loginfo("[waypoint_manager] Preparing to land at base coordinates [0 0]")
+        landing_alt = min(max(self.d, self.max_landing_alt),self.min_landing_alt)
+        self.landing_pose = [0, 0, landing_alt, 0]
+        self.landing = True
+        return True
+
+    def prepare_to_land(self):
+        current_position = np.array([self.n, self.e, self.d])
+        position_error = np.linalg.norm(self.landing_pose[0:3] - current_position)
+        heading_error = np.abs(self.wrap(self.landing_pose[3] - self.psi))
+        if position_error < self.pos_threshold and heading_error < self.heading_threshold:
+            self.ready_to_land = True
+            rospy.loginfo("[waypoint_manager] Landing at coordinates [{} {}]".format(self.landing_pose[0], self.landing_pose[1]))
+        else:
+            self.publish_command(self.landing_pose)
+        return
+
     def land(self):
+        #TODO: Make these into params
         approach_vel = 0.8 # m/s, velocity before reaching the slow_d
         landing_vel = 0.4 # m/s, velocity when hitting the ground
         slow_d = -1.2 # The altitude to start slowing the quad
@@ -227,12 +255,13 @@ class WaypointManager():
         self.cmd_msg.stamp = rospy.Time.now()
         self.cmd_msg.cmd1 = self.landing_pose[0]
         self.cmd_msg.cmd2 = self.landing_pose[1]
-        self.cmd_msg.cmd4 = self.landing_pose[2]
+        self.cmd_msg.cmd4 = self.landing_pose[3]
         if self.d < stop_d:
             if self.d < slow_d:
                 self.cmd_msg.cmd3 = approach_vel
             else:
-                self.cmd_msg.cmd3 = -approach_vel/(1 + landing_vel/approach_vel/(-landing_vel/approach_vel + 1) + np.exp(10/(slow_d-stop_d)*(self.d - (slow_d+stop_d)/2))) + approach_vel
+                self.cmd_msg.cmd3 = -approach_vel/(1 + landing_vel/approach_vel/(-landing_vel/approach_vel + 1) \
+                                    + np.exp(10/(slow_d-stop_d)*(self.d - (slow_d+stop_d)/2))) + approach_vel
             self.cmd_msg.mode = Command.MODE_NPOS_EPOS_DVEL_YAW
             self.waypoint_cmd_pub_.publish(self.cmd_msg)
         elif self.landed == False:
@@ -250,15 +279,13 @@ class WaypointManager():
         if self.landing == False:
             rospy.loginfo("[waypoint_manager] Already Flying")
             return False
+        self.ready_to_land = False
         self.landing = False
         self.landed = False
         rospy.loginfo("[waypoint_manager] Resuming Flight")
         current_waypoint = self.waypoint_list[self.current_waypoint_index]
         self.publish_command(current_waypoint)
         return True
-
-    def returntobaseCallback(self, req):
-        return
 
     def odometryCallback(self, msg):
         ###### Retrieve and Publish the Current Pose ######
@@ -288,7 +315,10 @@ class WaypointManager():
         if self.landing == True:
             if self.landed == False:
                 self.halt_waypoint = [self.n , self.e , self.d , self.psi ]
-                self.land()
+                if self.ready_to_land == False:
+                    self.prepare_to_land()
+                else:
+                    self.land()
             return
 
         ###### Halt Pose - If Hold or No Command ######

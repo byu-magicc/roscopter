@@ -48,6 +48,7 @@ add_service_files(
   Release.srv
   Land.srv
   Fly.srv
+  ReturnToBase.srv
 )
 
 ## Generate actions in the 'action' folder
