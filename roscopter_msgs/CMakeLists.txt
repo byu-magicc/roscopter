@@ -34,6 +34,7 @@ add_message_files(
   FILES
   Command.msg
   PoseEuler.msg
+  Failsafe.msg
 )
 
 # Generate services in the 'srv' folder

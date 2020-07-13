@@ -6,7 +6,7 @@ import csv
 
 # from geometry_msgs import Vector3Stamped
 from nav_msgs.msg import Odometry
-from roscopter_msgs.msg import Command, PoseEuler
+from roscopter_msgs.msg import Command, PoseEuler, Failsafe
 from roscopter_msgs.srv import AddWaypoint, RemoveWaypoint, SetWaypointsFromFile, ListWaypoints, \
                                ClearWaypoints, Hold, Release, Land, Fly, ReturnToBase
 
@@ -36,6 +36,7 @@ class WaypointManager():
         self.landing = False
         self.landed = False
         self.ready_to_land = False
+        self.failsafe = False
 
         # Create the initial poseEuler estimate message
         self.poseEuler_msg = PoseEuler()
@@ -45,7 +46,7 @@ class WaypointManager():
         self.poseEuler_msg.psi = self.psi
 
         # how close does the MAV need to get before going to the next waypoint?
-        self.pos_threshold = rospy.get_param('~threshold', 5)
+        self.pos_threshold = rospy.get_param('~threshold', .5)
         self.heading_threshold = rospy.get_param('~heading_threshold', 0.035)  # radians
         self.cyclical_path = rospy.get_param('~cycle', True)
         self.print_wp_reached = rospy.get_param('~print_wp_reached', True)
@@ -72,6 +73,7 @@ class WaypointManager():
 
         # Set Up Publishers and Subscribers
         self.xhat_sub_ = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
+        self.failsafe_sub_ = rospy.Subscriber('failsafe', Failsafe, self.failsafeCallback, queue_size=10)
         self.waypoint_cmd_pub_ = rospy.Publisher('high_level_command', Command, queue_size=5, latch=True)
         self.poseEuler_pub_ = rospy.Publisher('pose_euler', PoseEuler, queue_size=5, latch=True)
 
@@ -287,6 +289,13 @@ class WaypointManager():
         self.publish_command(current_waypoint)
         return True
 
+    def failsafeCallback(self, msg):
+        if msg.failsafe == False: # or self.failsafe == True ??
+            self.failsafe = False
+        else:
+            self.failsafe = True
+        return
+
     def odometryCallback(self, msg):
         ###### Retrieve and Publish the Current Pose ######
         # get current position
@@ -310,6 +319,10 @@ class WaypointManager():
         self.poseEuler_msg.d = self.d
         self.poseEuler_msg.psi = self.psi
         self.poseEuler_pub_.publish(self.poseEuler_msg)
+
+        # Don't command/track anything if failsafe messages are incoming
+        if self.failsafe == True:
+            return
 
         # Don't command/track waypoints if landing
         if self.landing == True:
