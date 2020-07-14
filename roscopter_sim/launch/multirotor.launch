@@ -63,7 +63,8 @@
       <remap from="estimate" to="odom"/>
     </node>
 
-
+    <!--Geofence-->
+    <node name="geofencing" pkg="geofencing" type="geofencing.py" output="screen"/>
 
     <!--Estimator-->
     <node name="estimator" pkg="roscopter" type="ekf_node" output="screen">

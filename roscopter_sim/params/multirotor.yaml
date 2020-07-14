@@ -60,6 +60,18 @@ slow_alt: -1.2, # m; the altitude to start slowing the copter
 stop_alt: -0.05 # m; the altitude to stop the quad at
 }
 
+geofencing: {
+
+geofence_points:
+  [[-10,-10],
+   [-10,10],
+   [10,10],
+   [10,-10]],
+
+land_delay: 10
+
+  }
+
 ### Controller Parameters
 
 controller: {

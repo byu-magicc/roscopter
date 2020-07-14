@@ -21,8 +21,8 @@ class FailsafeManager():
         self.ext_waypoint_set = False
 
         # Waypoint Variables
-        self.pos_threshold = rospy.get_param('~threshold', .5)
-        self.heading_threshold = rospy.get_param('~heading_threshold', 0.035)  # radians
+        self.pos_threshold = rospy.get_param('~threshold', 1)
+        self.heading_threshold = rospy.get_param('~heading_threshold', 0.35)  # radians
 
         self.ready_to_land = False
         self.landed = False
@@ -89,7 +89,7 @@ class FailsafeManager():
                 landing_alt = min(max(self.d, self.max_landing_alt),self.min_landing_alt)
                 self.ext_landing_pose = [self.n, self.e, landing_alt, self.psi]
             self.ext_waypoint_set = True
-            rospy.loginfo("[failsafe_manager] Following External Failsafe Mode: {}".format(self.ext_landing_pose))
+            rospy.loginfo("[failsafe_manager] Following External Failsafe Mode: {}".format(self.ext_failsafe_mode))
         return
 
     def prepare_to_land(self):
@@ -155,21 +155,21 @@ class FailsafeManager():
         if self.landed == False:
         # ROSflight failsafe takes priority
             if self.rf_failsafe == True:
-                    if self.rf_waypoint_set == False:
-                        self.set_waypoint('rf')
+                if self.rf_waypoint_set == False:
+                    self.set_waypoint('rf')
+                else:
+                    if self.ready_to_land == False:
+                        self.prepare_to_land()
                     else:
-                        if self.ready_to_land == False:
-                            self.prepare_to_land()
-                        else:
-                            self.land()
+                        self.land()
             elif self.ext_failsafe == True:
-                    if self.ext_waypoint_set == False:
-                        self.set_waypoint('ext')
+                if self.ext_waypoint_set == False:
+                    self.set_waypoint('ext')
+                else:
+                    if self.ready_to_land == False:
+                        self.prepare_to_land()
                     else:
-                        if self.ready_to_land == False:
-                            self.prepare_to_land()
-                        else:
-                            self.land()
+                        self.land()
         return
 
     def publish_wp_command(self, current_waypoint):
