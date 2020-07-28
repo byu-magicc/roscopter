@@ -59,8 +59,8 @@ class FailsafeManager():
 
     def failsafeCallback(self, msg):
         if msg.failsafe == False: # or self.failsafe == True ??
-            self.ext_failsafe = False
-            self.ext_waypoint_set = False
+            # self.ext_failsafe = False # Commented out to ensure that the copter will return to base and land.
+            # self.ext_waypoint_set = False
             return
         else:
             self.ext_failsafe = True
