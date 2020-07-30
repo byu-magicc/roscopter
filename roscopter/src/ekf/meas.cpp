@@ -52,6 +52,8 @@ Imu::Imu(double _t, const Vector6d &_z, const Matrix6d &_R)
     type = IMU;
 }
 
+/////
+//called by baroCallback
 Baro::Baro(double _t, const double &_z, const double &_R, const double& _temp)
 {
     t = _t;

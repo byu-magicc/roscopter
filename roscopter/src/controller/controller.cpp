@@ -1,5 +1,10 @@
 #include <controller/controller.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <iostream>
+#include <fstream>
+
+
 
 namespace controller
 {
@@ -144,6 +149,7 @@ void Controller::cmdCallback(const rosflight_msgs::CommandConstPtr &msg)
   if (!received_cmd_)
     received_cmd_ = true;
 }
+
 
 void Controller::reconfigure_callback(roscopter::ControllerConfig& config,
                                       uint32_t level)
@@ -290,7 +296,7 @@ void Controller::computeControl(double dt)
 
   if(mode_flag == rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE)
   {
-    // Pack up and send the command
+
     command_.mode = rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE;
     command_.F = saturate(xc_.throttle, max_.throttle, 0.0);
     command_.x = saturate(xc_.phi, max_.roll, -max_.roll);

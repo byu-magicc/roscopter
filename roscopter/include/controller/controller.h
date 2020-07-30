@@ -6,6 +6,7 @@
 #include <rosflight_msgs/Status.h>
 #include <controller/simple_pid.h>
 #include <nav_msgs/Odometry.h>
+#include <geometry_msgs/TwistStamped.h>
 #include <std_msgs/Bool.h>
 #include <tf/tf.h>
 #include <stdint.h>
@@ -96,9 +97,11 @@ private:
   double max_accel_xy_;
   double max_accel_z_;
   double min_altitude_;
+  float throttle_down_ = 0.99;
   bool is_flying_;
   bool armed_;
   bool received_cmd_;
+
 
   // PID Controllers
   controller::SimplePID PID_x_dot_;
@@ -117,6 +120,7 @@ private:
 
   // Memory for sharing information between functions
   state_t xhat_ = {}; // estimate
+  state_t base_hat_ = {}; //base(frame) state
   max_t max_ = {};
   rosflight_msgs::Command command_;
   command_t xc_ = {}; // command

@@ -25,14 +25,14 @@ EKF::~EKF()
 
 void EKF::load(const std::string &filename)
 {
-  // Constant Parameters
-  get_yaml_eigen("p_b2g", filename, p_b2g_);
-  get_yaml_diag("Qx", filename, Qx_);
-  get_yaml_diag("P0", filename, P());
+
+
+  get_yaml_eigen("p_b2g", filename, p_b2g_); //position from body frame to gps frame
+  get_yaml_diag("Qx", filename, Qx_); // Additive Process Noise
+  get_yaml_diag("P0", filename, P()); // Initial Uncertainty
   P0_yaw_ = P()(ErrorState::DQ + 2, ErrorState::DQ + 2);
   get_yaml_diag("R_zero_vel", filename, R_zero_vel_);
 
-  // Partial Update
   get_yaml_eigen("lambda", filename, lambda_vec_);
   const dxVec ones = dxVec::Constant(1.0);
   lambda_mat_ = ones * lambda_vec_.transpose() + lambda_vec_ * ones.transpose() -
@@ -54,20 +54,19 @@ void EKF::load(const std::string &filename)
   // load initial state
   double ref_heading;
   get_yaml_node("ref_heading", filename, ref_heading);
-  q_n2I_ = quat::Quatd::from_euler(0, 0, M_PI/180.0 * ref_heading);
-
-  ref_lla_set_ = false;
+  q_n2I_ = quat::Quatd::from_euler(0, 0, M_PI/180.0 * ref_heading); 
+  ref_lla_set_ = false; 
   bool manual_ref_lla;
   get_yaml_node("manual_ref_lla", filename, manual_ref_lla);
-  if (manual_ref_lla)
+  if (manual_ref_lla) 
   {
     Vector3d ref_lla;
     get_yaml_eigen("ref_lla", filename, ref_lla);
     std::cout << "Set ref lla: " << ref_lla.transpose() << std::endl;
-    ref_lla.head<2>() *= M_PI/180.0; // convert to rad
+    ref_lla.head<2>() *= M_PI/180.0; 
     xform::Xformd x_e2n = x_ecef2ned(lla2ecef(ref_lla));
     x_e2I_.t() = x_e2n.t();
-    x_e2I_.q() = x_e2n.q() * q_n2I_;
+    x_e2I_.q() = x_e2n.q() * q_n2I_; 
 
     // initialize the estimated ref altitude state
     x().ref = ref_lla(2);
@@ -102,11 +101,11 @@ void EKF::initLog(const std::string &filename)
 void EKF::initialize(double t)
 {
   x().t = t;
-  x().x = x0_;
-  x().v.setZero();
-  x().ba.setZero();
-  x().bg.setZero();
-  x().bb = 0.;
+  x().x = x0_; 
+  x().v.setZero(); 
+  x().ba.setZero(); 
+  x().bg.setZero(); 
+  x().bb = 0.; // barometer pressure bias
   if (ref_lla_set_)
     x().ref = x().ref;
   else
@@ -115,10 +114,13 @@ void EKF::initialize(double t)
   x().w.setZero();
   is_flying_ = false;
   armed_ = false;
+
 }
+
 
 void EKF::propagate(const double &t, const Vector6d &imu, const Matrix6d &R)
 {
+
   if (std::isnan(x().t))
   {
     initialize(t);
@@ -129,10 +131,10 @@ void EKF::propagate(const double &t, const Vector6d &imu, const Matrix6d &R)
   assert(dt >= 0);
   if (dt < 1e-6)
     return;
-
   dynamics(x(), imu, dx_, true);
 
-  // do the state propagation
+
+
   xbuf_.next().x = x() + dx_ * dt;
   xbuf_.next().x.t = t;
   xbuf_.next().x.imu = imu;
@@ -149,6 +151,7 @@ void EKF::propagate(const double &t, const Vector6d &imu, const Matrix6d &R)
   xbuf_.advance();
   Qu_ = R; // copy because we might need it later.
 
+
   if (enable_log_)
   {
     logs_[LOG_STATE]->logVectors(x().arr, x().q.euler());
@@ -158,6 +161,7 @@ void EKF::propagate(const double &t, const Vector6d &imu, const Matrix6d &R)
     logs_[LOG_IMU]->logVectors(imu);
   }
 }
+
 
 void EKF::run()
 {
@@ -182,6 +186,7 @@ void EKF::run()
 
   logState();
 }
+
 
 void EKF::update(const meas::Base* m)
 {
@@ -229,6 +234,7 @@ meas::MeasSet::iterator EKF::getOldestNewMeas()
 
 bool EKF::measUpdate(const VectorXd &res, const MatrixXd &R, const MatrixXd &H)
 {
+
   int size = res.rows();
   auto K = K_.leftCols(size);
 
@@ -257,6 +263,7 @@ bool EKF::measUpdate(const VectorXd &res, const MatrixXd &R, const MatrixXd &H)
 
   CHECK_NAN(P());
   return true;
+
 }
 
 void EKF::imuCallback(const double &t, const Vector6d &z, const Matrix6d &R)
@@ -274,6 +281,7 @@ void EKF::imuCallback(const double &t, const Vector6d &z, const Matrix6d &R)
   else
   {
     propagate(t, z, R);
+    //if it is not flying do a zero velocity update
     if (!is_flying_)
       zeroVelUpdate(t);
   }
@@ -289,6 +297,7 @@ void EKF::imuCallback(const double &t, const Vector6d &z, const Matrix6d &R)
 void EKF::baroCallback(const double &t, const double &z, const double &R,
                        const double &temp)
 {
+
   if (enable_out_of_order_)
   {
     std::cout << "ERROR OUT OF ORDER BARO NOT IMPLEMENTED" << std::endl;
@@ -296,6 +305,7 @@ void EKF::baroCallback(const double &t, const double &z, const double &R,
   else
     baroUpdate(meas::Baro(t, z, R, temp));
 }
+
 
 void EKF::rangeCallback(const double& t, const double& z, const double& R)
 {
@@ -306,6 +316,7 @@ void EKF::rangeCallback(const double& t, const double& z, const double& R)
   else
     rangeUpdate(meas::Range(t, z, R));
 }
+
 
 void EKF::gnssCallback(const double &t, const Vector6d &z, const Matrix6d &R)
 {
@@ -328,6 +339,7 @@ void EKF::gnssCallback(const double &t, const Vector6d &z, const Matrix6d &R)
   }
 }
 
+
 void EKF::mocapCallback(const double& t, const xform::Xformd& z, const Matrix6d& R)
 {
   if (enable_out_of_order_)
@@ -348,12 +360,15 @@ void EKF::mocapCallback(const double& t, const xform::Xformd& z, const Matrix6d&
 
 void EKF::baroUpdate(const meas::Baro &z)
 {
+  //groundTempPressSet returns true if ground temp and pressure are not both 0
+  //return if gound temp and pressure are not yet set.
   if (!this->groundTempPressSet())
   {
     return;
   }
   else if (!update_baro_ || !is_flying_)
   {
+
     // Take the lowest pressure while I'm not flying as ground pressure
     // This has the effect of hopefully underestimating my altitude instead of
     // over estimating.
@@ -466,9 +481,10 @@ void EKF::rangeUpdate(const meas::Range &z)
 
 void EKF::gnssUpdate(const meas::Gnss &z)
 {
-  const Vector3d w = x().w - x().bg;
-  const Vector3d gps_pos_I = x().p + x().q.rota(p_b2g_);
-  const Vector3d gps_vel_b = x().v + w.cross(p_b2g_);
+  //calcuate gps (inertial frame) velocities and positions
+  const Vector3d w = x().w - x().bg; //angluar velocity minus gyro bias
+  const Vector3d gps_pos_I = x().p + x().q.rota(p_b2g_); //I is inertial frame, position plus the orientation rotated into the gps frame
+  const Vector3d gps_vel_b = x().v + w.cross(p_b2g_); //b is body fixed frame, velocity plus the angular velocity crossed with a conversion from 
   const Vector3d gps_vel_I = x().q.rota(gps_vel_b);
 
   // Update ref_lla based on current estimate
@@ -482,6 +498,7 @@ void EKF::gnssUpdate(const meas::Gnss &z)
           x_e2I_.rota(gps_vel_I);
   const Vector6d r = z.z - zhat; // residual
 
+  //creating rotation matrices from inertial, body fixed, and ecef
   const Matrix3d R_I2e = x_e2I_.q().R().T;
   const Matrix3d R_b2I = x().q.R().T;
   const Matrix3d R_e2b = R_I2e * R_b2I;
@@ -490,7 +507,7 @@ void EKF::gnssUpdate(const meas::Gnss &z)
   const double cos_lat = cos(ref_lat_radians_);
   const double sin_lon = sin(ref_lon_radians_);
   const double cos_lon = cos(ref_lon_radians_);
-  const Vector3d dpEdRefAlt(cos_lat * cos_lon, cos_lat * sin_lon, sin_lat);
+  const Vector3d dpEdRefAlt(cos_lat * cos_lon, cos_lat * sin_lon, sin_lat); // used in jacobian calculation
 
   typedef ErrorState E;
 
@@ -521,7 +538,8 @@ void EKF::mocapUpdate(const meas::Mocap &z)
   // TODO Do we need to fix "-" operator for Xformd?
   // Right now using piecewise subtraction
   // on position and attitude separately. This may be correct though because
-  // our state is represented as R^3 x S^3 (position, quaterion) not SE3
+  // our state is represented as R^3 x S^3 (position, quaterion) not SE3.
+  // calculate residual
   Vector6d r;
   r.segment<3>(0) = z.z.t_ - zhat.t_;
   r.segment<3>(3) = z.z.q_ - zhat.q_;
@@ -579,7 +597,7 @@ void EKF::setRefLla(Vector3d ref_lla)
     return;
 
   std::cout << "Set ref lla: " << ref_lla.transpose() << std::endl;
-  ref_lla.head<2>() *= M_PI/180.0; // convert to rad
+  ref_lla.head<2>() *= M_PI/180.0;
   xform::Xformd x_e2n = x_ecef2ned(lla2ecef(ref_lla));
   x_e2I_.t() = x_e2n.t();
   x_e2I_.q() = x_e2n.q() * q_n2I_;
@@ -606,15 +624,22 @@ void EKF::cleanUpMeasurementBuffers()
     gnss_meas_buf_.pop_front();
 }
 
+
 void EKF::setGroundTempPressure(const double& temp, const double& press)
 {
   ground_temperature_ = temp;
   ground_pressure_ = press;
 }
 
+
 void EKF::checkIsFlying()
 {
+  //enable_arm_check_ set in load function and the value is set by the user in ekf.yaml
+  // if enable_arm_check is true, then set okay_to_check to armed_.  If it is false set okay_to_check to true
+  // set_armed and set_disarmed functions are set up in ekf.h, but would need to be called to set armed_.  By default it is false.
   bool okay_to_check = enable_arm_check_ ? armed_ : true;
+  // x().a is -g according to EKF::initialize.  ???is EKF::initialize called?
+  // is_flying_threshold is set in ekf.yaml.  If accel measurment excees this magnitude, set is_flying
   if (okay_to_check && x().a.norm() > is_flying_threshold_)
   {
     std::cout << "Now Flying!  Go Go Go!" << std::endl;
