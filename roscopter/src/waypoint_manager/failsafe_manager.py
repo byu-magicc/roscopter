@@ -97,7 +97,7 @@ class FailsafeManager():
             landing_pose = self.rf_landing_pose
         else:
             landing_pose = self.ext_landing_pose
-        rospy.loginfo("[failsafe_manager] Approaching NED Landing Waypoint [{} {} {}]".format(landing_pose[0],landing_pose[1],landing_pose[2]))
+        rospy.loginfo_once("[failsafe_manager] Approaching NED Landing Waypoint [{} {} {}]".format(landing_pose[0],landing_pose[1],landing_pose[2]))
         current_position = np.array([self.n, self.e, self.d])
         position_error = np.linalg.norm(landing_pose[0:3] - current_position)
         heading_error = np.abs(self.wrap(landing_pose[3] - self.psi))
@@ -112,7 +112,7 @@ class FailsafeManager():
             landing_pose = self.rf_landing_pose
         else:
             landing_pose = self.ext_landing_pose
-        rospy.loginfo("[failsafe_manager] Landing at NE Coordinates [{} {}]".format(landing_pose[0], landing_pose[1]))
+        rospy.loginfo_once("[failsafe_manager] Landing at NE Coordinates [{} {}]".format(landing_pose[0], landing_pose[1]))
         self.cmd_msg.stamp = rospy.Time.now()
         self.cmd_msg.cmd1 = landing_pose[0]
         self.cmd_msg.cmd2 = landing_pose[1]
