@@ -97,12 +97,12 @@ class FailsafeManager():
             landing_pose = self.rf_landing_pose
         else:
             landing_pose = self.ext_landing_pose
+        rospy.loginfo("[failsafe_manager] Approaching NED Landing Waypoint [{} {} {}]".format(landing_pose[0],landing_pose[1],landing_pose[2]))
         current_position = np.array([self.n, self.e, self.d])
         position_error = np.linalg.norm(landing_pose[0:3] - current_position)
         heading_error = np.abs(self.wrap(landing_pose[3] - self.psi))
         if position_error < self.pos_threshold and heading_error < self.heading_threshold:
             self.ready_to_land = True
-            rospy.loginfo("[failsafe_manager] Landing at coordinates [{} {}]".format(landing_pose[0], landing_pose[1]))
         else:
             self.publish_wp_command(landing_pose)
         return
@@ -112,6 +112,7 @@ class FailsafeManager():
             landing_pose = self.rf_landing_pose
         else:
             landing_pose = self.ext_landing_pose
+        rospy.loginfo("[failsafe_manager] Landing at NE Coordinates [{} {}]".format(landing_pose[0], landing_pose[1]))
         self.cmd_msg.stamp = rospy.Time.now()
         self.cmd_msg.cmd1 = landing_pose[0]
         self.cmd_msg.cmd2 = landing_pose[1]
@@ -156,6 +157,7 @@ class FailsafeManager():
             if self.rf_failsafe == True:
                 if self.rf_waypoint_set == False:
                     self.set_waypoint('rf')
+                    rospy.loginfo("[failsafe_manager] ROSflight Failsafe Activated")
                 else:
                     if self.ready_to_land == False:
                         self.prepare_to_land()
@@ -164,6 +166,7 @@ class FailsafeManager():
             elif self.ext_failsafe == True:
                 if self.ext_waypoint_set == False:
                     self.set_waypoint('ext')
+                    rospy.loginfo("[failsafe_manager] External Failsafe Activated")
                 else:
                     if self.ready_to_land == False:
                         self.prepare_to_land()
@@ -185,7 +188,7 @@ class FailsafeManager():
     def publish_command_msg(self):
         if self.rf_failsafe == True:
             self.failsafe_command_pub_.publish(self.cmd_msg)
-        if self.ext_failsafe == True:
+        elif self.ext_failsafe == True:
             self.command_pub_.publish(self.cmd_msg)
         return
 
