@@ -32,7 +32,7 @@
   <group ns="sim">
     <node name="mocap_sim_manager" pkg="roscopter_sim" type="mocap_sim_ros.py" output="screen">
       <!-- Inputs -->
-      <remap from="drone_odom" to="/$(arg mav_name)/ground_truth/odometry/NWU"/>  
+      <remap from="drone_odom" to="/$(arg mav_name)/ground_truth/odometry/NED"/>  
     </node>
   </group>
 
@@ -62,9 +62,10 @@
 
     <!--Estimator-->
     <node name="estimator" pkg="roscopter" type="ekf_node" output="screen">
-      <param name="param_filename" value="$(find roscopter_sim)/params/ekf.yaml"/>
+      <param name="param_filename" value="$(find roscopter)/params/ekf.yaml"/>
       <!--Inputs-->
       <remap from="imu" to="imu/data"/>
+      <!-- be sure to turn on mocap in ekf.yaml -->
       <remap from="pose" to="/sim/rover_mocap"/>
       <!--Outputs-->
       <remap from="is_flying" to="not_for_sim"/>
@@ -73,7 +74,7 @@
   </group>
 
   <!--Throttle ground truth for use in the estimator. Estimator cant handle 1000hz-->
-  <node name="truth_throttler" type="throttle" pkg="topic_tools" args="messages /$(arg drone_name)/ground_truth/odometry/NED 100 /$(arg drone_name)/ground_truth/odometry/NED_throttled" />
+  <node name="truth_throttler" type="throttle" pkg="topic_tools" args="messages /$(arg mav_name)/ground_truth/odometry/NED 100.0" />
 
   <node pkg="rosbag" type="record" name="record" output="screen" args="-O ../data/boatLanding_sim/sim.bag --all"/>
 

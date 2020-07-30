@@ -16,45 +16,43 @@ class MocapSimManager():
     def __init__(self):
 
         self.rover_pos = np.zeros(3)
+        self.rover_orient = np.zeros(4)
         self.rover_virtual_mocap_ned = PoseStamped()
 
         self.origin_set = False
         self.origin = np.zeros(3)
 
-        mocap_rate = 100 #hz        
+        #TODO implement this
+        mocap_rate = 100 #hz 
+        mocap_period = 1.0/mocap_rate       
 
         # # Set Up Publishers and Subscribers
         self.rover_virtual_mocap_ned_pub_ = rospy.Publisher('rover_mocap', PoseStamped, queue_size=5, latch=True)
         self.rover_odom_sub_ = rospy.Subscriber('drone_odom', Odometry, self.roverOdomCallback, queue_size=5)
+
+        # Timer
+        self.mocap_rate_timer_ = rospy.Timer(rospy.Duration(mocap_period), self.mocapRateCallback)
     
-        rate = rospy.Rate(mocap_rate)
         while not rospy.is_shutdown():
             # wait for new messages and call the callback when they arrive
-            # rospy.spin()
-            rate.sleep()
+            rospy.spin()
 
 
     def roverOdomCallback(self, msg):
-        # Get error between waypoint and current state
-        #convert from gazebo NWU to NED
-        self.rover_pos = np.array([msg.pose.pose.position.x,
-                                     -msg.pose.pose.position.y,
-                                     -msg.pose.pose.position.z])
-        if self.origin_set == False:
-            self.origin = self.rover_pos
-            self.origin_set = True
-
-        self.publish_rover_virtual_mocap_ned()
 
 
-    def publish_rover_virtual_mocap_ned(self):
-        rover_virtual_mocap_ned_array = self.rover_pos - self.origin
+        self.rover_virtual_mocap_ned.pose.position.x = msg.pose.pose.position.x
+        self.rover_virtual_mocap_ned.pose.position.y = msg.pose.pose.position.y
+        self.rover_virtual_mocap_ned.pose.position.z = msg.pose.pose.position.z
+        self.rover_virtual_mocap_ned.pose.orientation.x = msg.pose.pose.orientation.x
+        self.rover_virtual_mocap_ned.pose.orientation.y = msg.pose.pose.orientation.y
+        self.rover_virtual_mocap_ned.pose.orientation.z = msg.pose.pose.orientation.z
+        self.rover_virtual_mocap_ned.pose.orientation.w = msg.pose.pose.orientation.w
 
-        self.rover_virtual_mocap_ned.header.stamp = rospy.Time.now()
-        self.rover_virtual_mocap_ned.pose.position.x = rover_virtual_mocap_ned_array[0]
-        self.rover_virtual_mocap_ned.pose.position.y = rover_virtual_mocap_ned_array[1]
-        self.rover_virtual_mocap_ned.pose.position.z = rover_virtual_mocap_ned_array[2]
-                
+    
+    def mocapRateCallback(self, event):
+        
+        self.rover_virtual_mocap_ned.header.stamp = rospy.Time.now()                
         self.rover_virtual_mocap_ned_pub_.publish(self.rover_virtual_mocap_ned)
 
 
