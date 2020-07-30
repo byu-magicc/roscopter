@@ -141,7 +141,6 @@ class FailsafeManager():
         self.n = msg.pose.pose.position.x
         self.e = msg.pose.pose.position.y
         self.d = msg.pose.pose.position.z
-        current_position = np.array([self.n, self.e, self.d])
 
         # orientation in quaternion form
         qw = msg.pose.pose.orientation.w

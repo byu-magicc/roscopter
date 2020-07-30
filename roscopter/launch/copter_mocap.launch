@@ -28,6 +28,16 @@
     <!-- <remap from="range" to=<RANGE_TOPIC> /> -->
   </node>
 
+    <!--Failsafe-->
+  <node name="failsafe_manager" pkg="roscopter" type="failsafe_manager.py" output="screen">
+    <remap from="state" to="odom"/>
+  </node>
+  <node name="failsafe_controller" pkg="roscopter" type="controller" output="screen">
+    <remap from='high_level_command' to="fs_high_level_command"/>
+    <remap from='command' to="failsafe_command"/>
+    <remap from="estimate" to="odom"/>
+  </node>
+
   <!-- Waypoint Manager -->
   <node name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
     <remap from="waypoint" to="high_level_command"/>
