@@ -18,6 +18,7 @@
   <!-- PID Position Controller -->
   <node name="controller" pkg="roscopter" type="controller">
     <remap from="estimate" to="odom"/>
+    <remap from="command" to="normal_command"/>
   </node>
 
   <!-- Estimator -->
@@ -26,6 +27,16 @@
     <remap from="imu" to="/imu/data"/>
     <remap from="pose" to="/MOTIONCAPTUREASSET_ned"/>
     <!-- <remap from="range" to=<RANGE_TOPIC> /> -->
+  </node>
+
+    <!--Failsafe-->
+  <node name="failsafe_manager" pkg="roscopter" type="failsafe_manager.py" output="screen">
+    <remap from="state" to="odom"/>
+  </node>
+  <node name="failsafe_controller" pkg="roscopter" type="controller" output="screen">
+    <remap from='high_level_command' to="fs_high_level_command"/>
+    <remap from='command' to="failsafe_command"/>
+    <remap from="estimate" to="odom"/>
   </node>
 
   <!-- Waypoint Manager -->
