@@ -38,7 +38,7 @@
     <remap from='command' to="failsafe_command"/>
     <remap from="estimate" to="odom"/>
   </node>
-  <node name="fs_multiplexer" pkg="rosflight" type="failsafe_multiplexer" output="screen">
+  <node name="fs_multiplexer" pkg="rosflight" type="failsafe_multiplexer" output="screen"/>
 
   <!-- Waypoint Manager -->
   <node name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
