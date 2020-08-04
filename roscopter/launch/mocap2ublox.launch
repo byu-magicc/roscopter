@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+
+<launch>
+
+  <arg name="drone_name"            value="groot"/>
+  <arg name="f4_serial_port" default="/dev/ttyACM0"/>
+
+   <!-- FCU communication -->
+  <node name="rosflight_io" pkg="rosflight" type="rosflight_io" output="screen">
+    <param name="udp" value="false"/>
+    <param name="port" value="$(arg f4_serial_port)"/>
+  </node>
+
+  <!-- Motion Capture Node-->
+  <node name="node" pkg="optitrack_vrpn" type="node" output="screen"/>
+
+  <!-- Mocap2Ublox Node-->
+  <group ns="m2u">
+    <!-- Load common parameters -->
+    <rosparam command="load" file="$(find roscopter)/params/mocap2ublox.yaml"/>
+    <node name="mocap2ublox" pkg="roscopter" type="mocap2ublox_ros.py" output="screen">
+      <remap from="rover_mocap" to="/$(arg drone_name)_ned"/>
+    </node>
+  </group>
+
+  <!-- Load common parameters -->
+  <rosparam command="load" file="$(find roscopter)/params/$(arg drone_name).yaml"/>
+
+  <!-- PID Position Controller -->
+  <node name="controller" pkg="roscopter" type="controller">
+    <remap from="estimate" to="odom"/>
+  </node>
+
+  <!-- Estimator -->
+  <rosparam command="load" file="$(find roscopter)/params/ekf.yaml" ns="estimator"/>
+  <node name="estimator" type="ekf_node" pkg="roscopter" output="screen">
+    <remap from="imu" to="/imu/data"/>
+    <remap from="baro" to="/baro"/>
+    <remap from="ublox_gnss" to="/m2u/rover_PosVelEcef"/>
+  </node>
+
+  <!-- Waypoint Manager -->
+  <node name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
+    <remap from="waypoint" to="high_level_command"/>
+    <remap from="state" to="odom"/>
+  </node>
+  
+</launch>
