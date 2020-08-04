@@ -23,46 +23,46 @@ EKF::~EKF()
     delete logs_[i];
 }
 
-void EKF::load(const std::string &filename)
+void EKF::load(const std::string &filename, const std::string &param_namespace)
 {
   // Constant Parameters
-  get_yaml_eigen("p_b2g", filename, p_b2g_);
-  get_yaml_diag("Qx", filename, Qx_);
-  get_yaml_diag("P0", filename, P());
+  get_yaml_eigen("p_b2g", filename, p_b2g_, param_namespace);
+  get_yaml_diag("Qx", filename, Qx_, param_namespace);
+  get_yaml_diag("P0", filename, P(), param_namespace);
   P0_yaw_ = P()(ErrorState::DQ + 2, ErrorState::DQ + 2);
-  get_yaml_diag("R_zero_vel", filename, R_zero_vel_);
+  get_yaml_diag("R_zero_vel", filename, R_zero_vel_, param_namespace);
 
   // Partial Update
-  get_yaml_eigen("lambda", filename, lambda_vec_);
+  get_yaml_eigen("lambda", filename, lambda_vec_, param_namespace);
   const dxVec ones = dxVec::Constant(1.0);
   lambda_mat_ = ones * lambda_vec_.transpose() + lambda_vec_ * ones.transpose() -
                 lambda_vec_ * lambda_vec_.transpose();
 
   // Measurement Flags
-  get_yaml_node("enable_partial_update", filename, enable_partial_update_);
-  get_yaml_node("enable_out_of_order", filename, enable_out_of_order_);
-  get_yaml_node("use_mocap", filename, use_mocap_);
-  get_yaml_node("use_gnss", filename, use_gnss_);
-  get_yaml_node("use_baro", filename, use_baro_);
-  get_yaml_node("use_range", filename, use_range_);
-  get_yaml_node("use_zero_vel", filename, use_zero_vel_);
+  get_yaml_node("enable_partial_update", filename, enable_partial_update_, param_namespace);
+  get_yaml_node("enable_out_of_order", filename, enable_out_of_order_, param_namespace);
+  get_yaml_node("use_mocap", filename, use_mocap_, param_namespace);
+  get_yaml_node("use_gnss", filename, use_gnss_, param_namespace);
+  get_yaml_node("use_baro", filename, use_baro_, param_namespace);
+  get_yaml_node("use_range", filename, use_range_, param_namespace);
+  get_yaml_node("use_zero_vel", filename, use_zero_vel_, param_namespace);
 
   // Armed Check
-  get_yaml_node("enable_arm_check", filename, enable_arm_check_);
-  get_yaml_node("is_flying_threshold", filename, is_flying_threshold_);
+  get_yaml_node("enable_arm_check", filename, enable_arm_check_, param_namespace);
+  get_yaml_node("is_flying_threshold", filename, is_flying_threshold_, param_namespace);
 
   // load initial state
   double ref_heading;
-  get_yaml_node("ref_heading", filename, ref_heading);
+  get_yaml_node("ref_heading", filename, ref_heading, param_namespace);
   q_n2I_ = quat::Quatd::from_euler(0, 0, M_PI/180.0 * ref_heading);
 
   ref_lla_set_ = false;
   bool manual_ref_lla;
-  get_yaml_node("manual_ref_lla", filename, manual_ref_lla);
+  get_yaml_node("manual_ref_lla", filename, manual_ref_lla, param_namespace);
   if (manual_ref_lla)
   {
     Vector3d ref_lla;
-    get_yaml_eigen("ref_lla", filename, ref_lla);
+    get_yaml_eigen("ref_lla", filename, ref_lla, param_namespace);
     std::cout << "Set ref lla: " << ref_lla.transpose() << std::endl;
     ref_lla.head<2>() *= M_PI/180.0; // convert to rad
     xform::Xformd x_e2n = x_ecef2ned(lla2ecef(ref_lla));
@@ -80,17 +80,17 @@ void EKF::load(const std::string &filename)
   ground_pressure_ = 0.;
   ground_temperature_ = 0.;
   update_baro_ = false;
-  get_yaml_node("update_baro_velocity_threshold", filename, update_baro_vel_thresh_);
+  get_yaml_node("update_baro_velocity_threshold", filename, update_baro_vel_thresh_, param_namespace);
 
-  get_yaml_eigen("x0", filename, x0_.arr());
+  get_yaml_eigen("x0", filename, x0_.arr(), param_namespace);
 
-  initLog(filename);
+  initLog(filename,param_namespace);
 }
 
-void EKF::initLog(const std::string &filename)
+void EKF::initLog(const std::string &filename, const std::string &param_namespace)
 {
-  get_yaml_node("enable_log", filename, enable_log_);
-  get_yaml_node("log_prefix", filename, log_prefix_);
+  get_yaml_node("enable_log", filename, enable_log_, param_namespace);
+  get_yaml_node("log_prefix", filename, log_prefix_, param_namespace);
 
   std::experimental::filesystem::create_directories(log_prefix_);
 

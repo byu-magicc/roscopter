@@ -59,8 +59,8 @@ public:
   const dxMat& P() const { return xbuf_.P(); }
 
   void initialize(double t);
-  void load(const std::string& filename);
-  void initLog(const std::string& filename);
+  void load(const std::string& filename, const std::string& param_namespace);
+  void initLog(const std::string& filename, const std::string& param_namespace);
 
   void run();
   void update(const meas::Base *m);

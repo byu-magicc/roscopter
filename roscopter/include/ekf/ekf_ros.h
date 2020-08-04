@@ -67,7 +67,7 @@ public:
 
   EKF_ROS();
   ~EKF_ROS();
-  void init(const std::string& param_file);
+  void init(const std::string& param_file, const std::string& param_namespace);
   void initROS();
 
   void imuCallback(const sensor_msgs::ImuConstPtr& msg);

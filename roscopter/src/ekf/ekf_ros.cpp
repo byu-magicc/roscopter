@@ -51,8 +51,9 @@ void EKF_ROS::initROS()
 {
   std::string roscopter_path = ros::package::getPath("roscopter");
   std::string parameter_filename = nh_private_.param<std::string>("param_filename", roscopter_path + "/params/ekf.yaml");
-
-  init(parameter_filename);
+  std::string parameter_namespace = nh_private_.param<std::string>("param_namespace", "");
+  
+  init(parameter_filename, parameter_namespace);
 
   odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odom", 1);
   euler_pub_ = nh_.advertise<geometry_msgs::Vector3Stamped>("euler_degrees", 1);
@@ -75,38 +76,46 @@ void EKF_ROS::initROS()
   ros_initialized_ = true;
 }
 
-void EKF_ROS::init(const std::string &param_file)
+void EKF_ROS::init(const std::string &param_file, const std::string &param_namespace)
 {
-  ekf_.load(param_file);
+  ekf_.load(param_file, param_namespace);
 
-  // Load Sensor Noise Parameters
+  // YAML::Node node;
+  // node = YAML::LoadFile(param_file);
+  // YAML::Node node2;
+  // node2 = node["estimator"];
+  // get_yaml_dictionary_node("estimator", param_file, node2);
+  // double foo;
+  // foo = node2["foo"].as<double>();
+  // std::cout << foo << std::endl;
+  // Load Sensor Noise Parameters;
   double acc_stdev, gyro_stdev;
-  get_yaml_node("accel_noise_stdev", param_file, acc_stdev);
-  get_yaml_node("gyro_noise_stdev", param_file, gyro_stdev);
+  get_yaml_node("accel_noise_stdev", param_file, acc_stdev, param_namespace);
+  get_yaml_node("gyro_noise_stdev", param_file, gyro_stdev, param_namespace);
   imu_R_.setZero();
   imu_R_.topLeftCorner<3,3>() = acc_stdev * acc_stdev * I_3x3;
   imu_R_.bottomRightCorner<3,3>() = gyro_stdev * gyro_stdev * I_3x3;
 
   double pos_stdev, att_stdev;
-  get_yaml_node("position_noise_stdev", param_file, pos_stdev);
-  get_yaml_node("attitude_noise_stdev", param_file, att_stdev);
+  get_yaml_node("position_noise_stdev", param_file, pos_stdev, param_namespace);
+  get_yaml_node("attitude_noise_stdev", param_file, att_stdev, param_namespace);
   mocap_R_ << pos_stdev * pos_stdev * I_3x3,   Matrix3d::Zero(),
       Matrix3d::Zero(),   att_stdev * att_stdev * I_3x3;
 
   double baro_pressure_stdev;
-  get_yaml_node("baro_pressure_noise_stdev", param_file, baro_pressure_stdev);
+  get_yaml_node("baro_pressure_noise_stdev", param_file, baro_pressure_stdev,param_namespace);
   baro_R_ = baro_pressure_stdev * baro_pressure_stdev;
 
   double range_stdev;
-  get_yaml_node("range_noise_stdev", param_file, range_stdev);
+  get_yaml_node("range_noise_stdev", param_file, range_stdev, param_namespace);
   range_R_ = range_stdev * range_stdev;
 
-  get_yaml_node("manual_gps_noise", param_file, manual_gps_noise_);
+  get_yaml_node("manual_gps_noise", param_file, manual_gps_noise_, param_namespace);
   if (manual_gps_noise_)
   {
-    get_yaml_node("gps_horizontal_stdev", param_file, gps_horizontal_stdev_);
-    get_yaml_node("gps_vertical_stdev", param_file, gps_vertical_stdev_);
-    get_yaml_node("gps_speed_stdev", param_file, gps_speed_stdev_);
+    get_yaml_node("gps_horizontal_stdev", param_file, gps_horizontal_stdev_, param_namespace);
+    get_yaml_node("gps_vertical_stdev", param_file, gps_vertical_stdev_, param_namespace);
+    get_yaml_node("gps_speed_stdev", param_file, gps_speed_stdev_, param_namespace);
   }
 
   start_time_.fromSec(0.0);
