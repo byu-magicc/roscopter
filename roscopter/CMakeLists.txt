@@ -20,7 +20,7 @@ find_package(inertial_sense QUIET)
 
 if (${inertial_sense_FOUND})
     message(WARNING "found inertial sense library")
-    add_definitions(-DINERTIAL_SENSE) #defines Intertial Sense
+    add_definitions(-DINERTIAL_SENSE)
 else()
     message(WARNING "Did NOT find inertial sense library")
 endif()
@@ -29,7 +29,7 @@ find_package(ublox QUIET)
 
 if (${ublox_FOUND})
     message(WARNING "found ublox library")
-    add_definitions(-DUBLOX) #defines UBLOX
+    add_definitions(-DUBLOX)
 else()
     message(WARNING "Did NOT find ublox library")
 endif()
@@ -51,7 +51,7 @@ add_definitions(-DROSCOPTER_DIR="${CMAKE_CURRENT_LIST_DIR}")
 ## Build ##
 ###########
 
-include_directories(include
+include_directories(include 
   ${EIGEN3_INCLUDE_DIRS} 
   ${catkin_INCLUDE_DIRS}
   )

@@ -12,12 +12,10 @@ namespace roscopter::ekf
 
 void EKF::dynamics(const State &x, const Vector6d& u, ErrorState &dx, bool calc_jac)
 {
-    //subtract out biases from the inputs coming from the imu (u)
     Vector3d accel = u.head<3>() - x.ba;
     Vector3d omega = u.tail<3>() - x.bg;
 
-    //error states, dx.p = position_dot, dx.q = orientation_dot, dx.v = velocity_dot, dx.ba = accelerometer_bias_dot, dx.bg = gyro_bias_dot, dx.bb = barometer_bias_dot, dx.ref = ref_lla_dot?
-    dx.p = x.q.rota(x.v); //using the orientation x.q, this rotates the velocity to the inertial frame
+    dx.p = x.q.rota(x.v);
     dx.q = omega;
     dx.v = accel + x.q.rotp(gravity) - omega.cross(x.v);
     dx.ba.setZero();

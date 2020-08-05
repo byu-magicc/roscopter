@@ -49,15 +49,11 @@ EKF_ROS::~EKF_ROS()
 
 void EKF_ROS::initROS()
 {
-
-  //sets a variable to the parameter file path and name
   std::string roscopter_path = ros::package::getPath("roscopter");
   std::string parameter_filename = nh_private_.param<std::string>("param_filename", roscopter_path + "/params/ekf.yaml");
 
-  //This gets sensor and propagation noise paramters and assigns them R variables example imu_R_
   init(parameter_filename);
 
-  //sets up publishing. Number referes to queue size.  All publishers are called in ekf_ros.cpp
   odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odom", 1);
   euler_pub_ = nh_.advertise<geometry_msgs::Vector3Stamped>("euler_degrees", 1);
   imu_bias_pub_ = nh_.advertise<sensor_msgs::Imu>("imu_bias", 1);
@@ -69,10 +65,8 @@ void EKF_ROS::initROS()
   odom_sub_ = nh_.subscribe("reference", 10, &EKF_ROS::odomCallback, this);
   gnss_sub_ = nh_.subscribe("gnss", 10, &EKF_ROS::gnssCallback, this);
 
-// Subscribes if found
 #ifdef UBLOX
   ublox_gnss_sub_ = nh_.subscribe("ublox_gnss", 10, &EKF_ROS::gnssCallbackUblox, this);
-  std::cerr << "UBLOX is defined \n";
 #endif
 #ifdef INERTIAL_SENSE
   is_gnss_sub_ = nh_.subscribe("is_gnss", 10, &EKF_ROS::gnssCallbackInertialSense, this);
@@ -83,37 +77,30 @@ void EKF_ROS::initROS()
 
 void EKF_ROS::init(const std::string &param_file)
 {
-
   ekf_.load(param_file);
 
   // Load Sensor Noise Parameters
   double acc_stdev, gyro_stdev;
   get_yaml_node("accel_noise_stdev", param_file, acc_stdev);
   get_yaml_node("gyro_noise_stdev", param_file, gyro_stdev);
-
   imu_R_.setZero();
   imu_R_.topLeftCorner<3,3>() = acc_stdev * acc_stdev * I_3x3;
   imu_R_.bottomRightCorner<3,3>() = gyro_stdev * gyro_stdev * I_3x3;
 
-  // R matrix for mocap sensor noise (Sigma)
   double pos_stdev, att_stdev;
   get_yaml_node("position_noise_stdev", param_file, pos_stdev);
   get_yaml_node("attitude_noise_stdev", param_file, att_stdev);
   mocap_R_ << pos_stdev * pos_stdev * I_3x3,   Matrix3d::Zero(),
       Matrix3d::Zero(),   att_stdev * att_stdev * I_3x3;
 
-  // R matrix for barometer sensor noise (Sigma)
   double baro_pressure_stdev;
   get_yaml_node("baro_pressure_noise_stdev", param_file, baro_pressure_stdev);
   baro_R_ = baro_pressure_stdev * baro_pressure_stdev;
 
-  // R matrix for range sensor noise (Sigma)
   double range_stdev;
   get_yaml_node("range_noise_stdev", param_file, range_stdev);
   range_R_ = range_stdev * range_stdev;
 
-  // R matrix for manual gps sensor noise (Sigma) if not using the values reported from the message topic
-  // This can be set false or true in the param file
   get_yaml_node("manual_gps_noise", param_file, manual_gps_noise_);
   if (manual_gps_noise_)
   {
@@ -127,7 +114,6 @@ void EKF_ROS::init(const std::string &param_file)
 
 void EKF_ROS::publishEstimates(const sensor_msgs::ImuConstPtr &msg)
 {
-
   // Pub Odom
   odom_msg_.header = msg->header;
 
@@ -171,19 +157,9 @@ void EKF_ROS::publishEstimates(const sensor_msgs::ImuConstPtr &msg)
   imu_bias_msg_.linear_acceleration.y = state_est.ba(1);
   imu_bias_msg_.linear_acceleration.z = state_est.ba(2);
 
-  // linear acceleration covariance
-  imu_bias_msg_.linear_acceleration_covariance[0] = imu_R_(0,0);
-  imu_bias_msg_.linear_acceleration_covariance[1] = imu_R_(0,1);
-  imu_bias_msg_.linear_acceleration_covariance[2] = imu_R_(0,2);
-  imu_bias_msg_.linear_acceleration_covariance[3] = imu_R_(1,0);
-  imu_bias_msg_.linear_acceleration_covariance[4] = imu_R_(1,1);
-  imu_bias_msg_.linear_acceleration_covariance[5] = imu_R_(1,2);
-  imu_bias_msg_.linear_acceleration_covariance[6] = imu_R_(2,0);
-  imu_bias_msg_.linear_acceleration_covariance[7] = imu_R_(2,1);
-  imu_bias_msg_.linear_acceleration_covariance[8] = imu_R_(2,2);
-
   imu_bias_pub_.publish(imu_bias_msg_);
 
+  // Only publish is_flying is true once
   if (!is_flying_)
   {
     is_flying_ = ekf_.isFlying();
@@ -194,7 +170,6 @@ void EKF_ROS::publishEstimates(const sensor_msgs::ImuConstPtr &msg)
     }
   }
 }
-
 
 void EKF_ROS::imuCallback(const sensor_msgs::ImuConstPtr &msg)
 {
@@ -220,11 +195,9 @@ void EKF_ROS::imuCallback(const sensor_msgs::ImuConstPtr &msg)
 
 void EKF_ROS::baroCallback(const rosflight_msgs::BarometerConstPtr& msg)
 {
-
   const double pressure_meas = msg->pressure;
   const double temperature_meas = msg->temperature;
 
-  // if statement sets ground pressure and temperature if not already set
   if (!ekf_.groundTempPressSet())
   {
     std::cout << "Set ground pressure and temp" << std::endl;
@@ -268,7 +241,6 @@ void EKF_ROS::poseCallback(const geometry_msgs::PoseStampedConstPtr &msg)
 
 void EKF_ROS::odomCallback(const nav_msgs::OdometryConstPtr &msg)
 {
-  
   xform::Xformd z;
   z.arr_ << msg->pose.pose.position.x,
             msg->pose.pose.position.y,
@@ -304,7 +276,6 @@ void EKF_ROS::statusCallback(const rosflight_msgs::StatusConstPtr &msg)
 
 void EKF_ROS::gnssCallback(const rosflight_msgs::GNSSConstPtr &msg)
 {
-
   Vector6d z;
   z << msg->position[0],
        msg->position[1],
@@ -324,7 +295,7 @@ void EKF_ROS::gnssCallback(const rosflight_msgs::GNSSConstPtr &msg)
                       gps_speed_stdev_,
                       gps_speed_stdev_;
   }
-  else //using reported values from message
+  else
   {
     Sigma_diag_NED << msg->horizontal_accuracy,
                   msg->horizontal_accuracy,
@@ -333,20 +304,19 @@ void EKF_ROS::gnssCallback(const rosflight_msgs::GNSSConstPtr &msg)
                   msg->speed_accuracy,
                   msg->speed_accuracy;
   }
-  //cwiseProduct returns an expression of the Schur product (coefficient wise product) of *this and other
-  //looks like it is just element wise matrix multiplication.  So this is just squaring each element of Sigma_diag_NED. https://eigen.tuxfamily.org/dox/classEigen_1_1MatrixBase.html#title37
-  Sigma_diag_NED = Sigma_diag_NED.cwiseProduct(Sigma_diag_NED);
 
+  Sigma_diag_NED = Sigma_diag_NED.cwiseProduct(Sigma_diag_NED);
   Matrix3d R_e2n = q_e2n(ecef2lla(z.head<3>())).R();
 
-  //using the rotation obtained above from z, rotate the covariance into the ecef frame.  The transposes flip the rotation
   Matrix6d Sigma_ecef;
   Sigma_ecef << R_e2n.transpose() * Sigma_diag_NED.head<3>().asDiagonal() * R_e2n, Matrix3d::Zero(),
                 Matrix3d::Zero(), R_e2n.transpose() *  Sigma_diag_NED.tail<3>().asDiagonal() * R_e2n;
 
   if (!ekf_.refLlaSet())
   {
+    // set ref lla to first gps position
     Eigen::Vector3d ref_lla = ecef2lla(z.head<3>());
+    // Convert radians to degrees
     ref_lla.head<2>() *= 180. / M_PI;
     ekf_.setRefLla(ref_lla);
   }
@@ -361,7 +331,6 @@ void EKF_ROS::gnssCallback(const rosflight_msgs::GNSSConstPtr &msg)
 #ifdef UBLOX
 void EKF_ROS::gnssCallbackUblox(const ublox::PosVelEcefConstPtr &msg)
 {
-  //only uses the data if gnss is fixed as 2D or 3D
   if (msg->fix == ublox::PosVelEcef::FIX_TYPE_2D
       || msg->fix == ublox::PosVelEcef::FIX_TYPE_3D)
   {
@@ -379,7 +348,6 @@ void EKF_ROS::gnssCallbackUblox(const ublox::PosVelEcefConstPtr &msg)
     ROS_WARN_THROTTLE(1., "Ublox GPS not in fix");
   }
 }
-
 #endif
 
 #ifdef INERTIAL_SENSE

@@ -18,29 +18,27 @@
 
 
   <!-- send the robot XML to param server -->
-  <group ns="$(arg mav_name)">
-    <param name="robot_description" command="
-      xacro --inorder '$(arg model)'
-      mav_name:=$(arg mav_name)
-      color:=$(arg color)
-      gazebo_namespace:=$(arg gazebo_namespace)/gazebo
-      robot_namespace:=$(arg robot_namespace)"
-    />
-    <param name="tf_prefix" type="string" value="$(arg tf_prefix)" />
+  <param name="robot_description" command="
+    xacro --inorder '$(arg model)'
+    mav_name:=$(arg mav_name)
+    color:=$(arg color)
+    gazebo_namespace:=$(arg gazebo_namespace)/gazebo
+    robot_namespace:=$(arg robot_namespace)"
+  />
+  <param name="tf_prefix" type="string" value="$(arg tf_prefix)" />
 
-    <!-- push robot_description to factory and spawn robot in gazebo -->
-    <node name="spawn_$(arg mav_name)" pkg="gazebo_ros" type="spawn_model"
-      args="-param robot_description
-            -urdf
-            -x $(arg x)
-            -y $(arg y)
-            -z $(arg z)
-            -Y $(arg yaw)
-            -gazebo_namespace $(arg gazebo_namespace)/gazebo
-            -robot_namespace $(arg robot_namespace)
-            -model $(arg mav_name)"
-      respawn="false" output="screen">
-    </node>
-  </group>
+  <!-- push robot_description to factory and spawn robot in gazebo -->
+  <node name="spawn_$(arg mav_name)" pkg="gazebo_ros" type="spawn_model"
+    args="-param robot_description
+          -urdf
+          -x $(arg x)
+          -y $(arg y)
+          -z $(arg z)
+          -Y $(arg yaw)
+          -gazebo_namespace $(arg gazebo_namespace)/gazebo
+          -robot_namespace $(arg robot_namespace)
+          -model $(arg mav_name)"
+    respawn="false" output="screen">
+  </node>
 
 </launch>
