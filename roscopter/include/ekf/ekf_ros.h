@@ -43,14 +43,12 @@
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/Range.h>
 #include <nav_msgs/Odometry.h>
-#include <geometry_msgs/TwistStamped.h>
 #include <rosflight_msgs/Barometer.h>
 #include <rosflight_msgs/Status.h>
 #include <rosflight_msgs/GNSS.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/Vector3Stamped.h>
-#include <geometry_msgs/PointStamped.h>
 #include <std_msgs/Bool.h>
 
 #ifdef UBLOX
@@ -151,7 +149,6 @@ private:
   double gps_speed_stdev_;
 
   void publishEstimates(const sensor_msgs::ImuConstPtr &msg);
-  void publishGpsCov(Matrix6d sigma_ecef, Vector6d sigma_ned, Vector6d z);
 };
 
 }

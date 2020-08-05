@@ -71,18 +71,18 @@ class State
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-  enum { //triple / are interpretations I made, but I am not sure about them.
-      T = 0, ///time
+  enum {
+      T = 0,
       X = 1, // for Xform access (p, q)
-      P = 1, ///positiion
-      Q = 4, ///orientation
-      V = 8, ///velocity
-      BA = 11, ///accelerometer bias
-      BG = 14, ///gyro bias
-      BB = 17, ///barometer bias
-      REF = 18, ///lla reference
-      A = 19, ///altitude
-      W = 22, ///angular velocity
+      P = 1,
+      Q = 4,
+      V = 8,
+      BA = 11,
+      BG = 14,
+      BB = 17,
+      REF = 18,
+      A = 19,
+      W = 22,
       NX = 18, // number of states
       SIZE = 1 + NX + 6
   };

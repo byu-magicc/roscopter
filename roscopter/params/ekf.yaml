@@ -30,9 +30,9 @@ enable_log: true
 ## Measurement Processing
 enable_partial_update: true
 enable_out_of_order: false # TODO this isnt fully implemented
-use_mocap: false
-use_gnss: true
-use_baro: true
+use_mocap: true
+use_gnss: false
+use_baro: false
 use_range: false
 use_zero_vel: true
 
@@ -68,7 +68,7 @@ lambda: [1.0, 1.0, 1.0,       # pos
          0.5,                 # baro bias
          0.3]                 # reference altitude
 
-# Constant Parameters
+# Constant Parameeters
 p_b2g: [0, 0, 0] # position from body frame to gps frame
 
 # Initial State
@@ -80,15 +80,14 @@ x0: [0, 0, 0,       # pos
      1, 0, 0, 0]    # att
 
 ## Sensor Noise
-accel_noise_stdev: 0.5 #used in propagation model noise
-gyro_noise_stdev: 0.02 #used in propagation model noise
-position_noise_stdev: 0.01 # Mocap # used in sensor model noise
-attitude_noise_stdev: 0.01 # Mocap # used in sensor model noise
-baro_pressure_noise_stdev: 2.0 # used in sensor model noise
-range_noise_stdev: 0.1 # used in sensor model noise
+accel_noise_stdev: 0.5
+gyro_noise_stdev: 0.02
+position_noise_stdev: 0.01 # Mocap
+attitude_noise_stdev: 0.01 # Mocap
+baro_pressure_noise_stdev: 2.0
+range_noise_stdev: 0.1
 
-# used in sensor model noise if set to true
-manual_gps_noise: False # choose noise params for GPS or use the values reported from the message topic
-gps_horizontal_stdev: 0.0135
-gps_vertical_stdev: 0.065
-gps_speed_stdev: 0.02
+manual_gps_noise: false # choose noise params for GPS or use the values reported from the message topic
+gps_horizontal_stdev: 0.021
+gps_vertical_stdev: 0.04
+gps_speed_stdev: 0.2
