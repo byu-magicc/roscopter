@@ -3,7 +3,6 @@
 <launch>
 
   <arg name="drone_name"            value="groot"/>
-  <arg name="target_name"         value="boat_landing_platform"/>
   <arg name="bag"                 value="../data/debug/old_odom2.bag"/>
   
   <!-- play rosbag -->
@@ -24,15 +23,12 @@
     <remap from="imu" to="/imu/data"/>
     <remap from="baro" to="/baro"/>
     <remap from="ublox_gnss" to="/virtual_PosVelEcef"/>
-    <remap from="ublox_relpos" to="/RelPos"/>
-    <remap from="ublox_basevel" to="/base/PosVelEcef"/>
   </node>
 
   <!-- Waypoint Manager -->
   <node name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
     <remap from="waypoint" to="high_level_command"/>
     <remap from="state" to="odom"/>
-    <remap from="base_relative_pos" to="base_relPos"/>
   </node>
 
   <node pkg="rosbag" type="record" name="record" output="screen" args="-O ../data/debug/debug.bag --all"/>
