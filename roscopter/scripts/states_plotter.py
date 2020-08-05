@@ -26,7 +26,7 @@ class Plotter:
         rospy.Subscriber('estimate/bias', Imu, self.biasCallback)
         rospy.Subscriber('estimate/drag', Float64, self.dragCallback)
         rospy.Subscriber('estimate/accel', Imu, self.accelCallback)
-        rospy.Subscriber('ground_truth/odometry/NED', Odometry, self.truthCallback)
+        rospy.Subscriber('truth', Odometry, self.truthCallback)
         rospy.Subscriber('imu/gyro_bias', Vector3Stamped, self.gyroBiasCallback)
         rospy.Subscriber('imu/acc_bias', Vector3Stamped, self.accBiasCallback)
 
@@ -185,6 +185,8 @@ class Plotter:
         self.az_e = 0
         self.mu_e = 0
 
+        self.time_max=0
+
         # truth/estimate storage lists
         self.estimates = []
         self.truths = []
@@ -208,10 +210,13 @@ class Plotter:
                 self.truths.pop(0)
             if self.estimates[0][0] < self.estimates[-1][0] - self.t_win:
                 self.estimates.pop(0)
+        
+        # find the maximum time forward
+        self.time_max=np.amax([self.estimates[-1][0], self.truths[-1][0]])
 
         # set the window widths
         for i in range(0,len(self.p_list)):
-            self.p_list[i].setLimits(xMin=self.estimates[-1][0] - self.t_win, xMax=self.estimates[-1][0])
+            self.p_list[i].setLimits(xMin=self.time_max - self.t_win, xMax=self.time_max)
         
         # stack the data lists
         truths_array = np.vstack(self.truths)
@@ -280,9 +285,9 @@ class Plotter:
         qz = msg.pose.pose.orientation.z
 
         # Convert to Euler angles from quaternion
-        self.phi_t = np.arctan2(2*(qw*qx + qy*qz), (qw**2 + qz**2 - qx**2 - qy**2))
-        self.theta_t = np.arcsin(2*(qw*qy - qx*qz))
-        self.psi_t = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
+        self.phi_e = np.arctan2(2*(qw*qx + qy*qz), (qw**2 + qz**2 - qx**2 - qy**2))
+        self.theta_e = np.arcsin(2*(qw*qy - qx*qz))
+        self.psi_e = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
 
         # unpack angular velocities
         self.p_e = msg.twist.twist.angular.x

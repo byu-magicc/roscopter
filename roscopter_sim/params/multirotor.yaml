@@ -39,9 +39,9 @@ alt_D: 32.0
 waypoint_manager: {
 
 waypoints:
-  [[-2, 3, 4, 3.9], # North, East, Altitude, Yaw (radians)
-  [-3, -4, 7, 5.5],
-  [3, 3, 2, 0.0]],
+  [[-2, 3, -4, 0.5], # North, East, Down, Yaw (radians)
+  [-3, -4, -7, 1.0],
+  [3, 3, -2, 0.0]],
 
 threshold: 0.1,
 cycle: True
@@ -153,9 +153,9 @@ gps: {
 noise_on: true,
 rate: 10.0,
 topic: gps/data,
-north_stdev: 0.021,
-east_stdev: 0.021,
-alt_stdev: 0.040,
+north_stdev: 0.21,
+east_stdev: 0.21,
+alt_stdev: 0.40,
 velocity_stdev: 0.1,
 k_north: 0.0009090909, # 1/1100
 k_east: 0.0009090909, # 1/1100

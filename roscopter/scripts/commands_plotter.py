@@ -8,7 +8,8 @@ from std_msgs.msg import Float64
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Pose
 from sensor_msgs.msg import Imu
-from rosflight_msgs.msg import Command
+from rosflight_msgs.msg import Command as RFCommand
+from roscopter_msgs.msg import Command as RCCommand
 
 # Enable antialiasing for prettier plots
 pg.setConfigOptions(antialias=True)
@@ -27,13 +28,13 @@ class Plotter:
         rospy.Subscriber('estimate', Odometry, self.estimateCallback)
         rospy.Subscriber('estimate/bias', Imu, self.biasCallback)
         rospy.Subscriber('estimate/drag', Float64, self.dragCallback)
-        rospy.Subscriber('ground_truth/odometry', Odometry, self.truthCallback)
+        rospy.Subscriber('truth', Odometry, self.truthCallback)
 
         # Add Commands
-        rospy.Subscriber('high_level_command', Command, self.highLevelCallback)
-        rospy.Subscriber('command', Command, self.commandCallback)
-        rospy.Subscriber('command/vel', Command, self.vel_commandCallback)
-        rospy.Subscriber('command/acc', Command, self.acc_commandCallback)
+        rospy.Subscriber('high_level_command', RCCommand, self.highLevelCallback)
+        rospy.Subscriber('command', RFCommand, self.commandCallback)
+        rospy.Subscriber('command/vel', RFCommand, self.vel_commandCallback)
+        rospy.Subscriber('command/acc', RFCommand, self.acc_commandCallback)
         rospy.Subscriber('/relative_pose', Pose, self.relativePoseCallback)
 
         # initialize Qt gui application and window
@@ -217,6 +218,8 @@ class Plotter:
         # self.mu_c = 0
         self.throttle_c = 0
 
+        self.time_max = 0
+
         # truth/estimate/commands storage lists
         self.estimates = []
         self.truths = []
@@ -236,7 +239,7 @@ class Plotter:
         # pack stored data into lists
         self.truths.append([self.time_t, self.pn_t, self.pe_t, self.pd_t, self.phi_t, self.theta_t, self.psi_t, self.u_t, self.v_t, self.w_t, self.p_t, self.q_t, self.r_t, self.rx_t, self.ry_t, self.rz_t, self.rphi_t, self.rtheta_t, self.rpsi_t])
         self.estimates.append([self.time_e, self.pn_e, self.pe_e, self.pd_e, self.phi_e, self.theta_e, self.psi_e, self.u_e, self.v_e, self.w_e, self.p_e, self.q_e, self.r_e, self.mu_e])
-        self.commands.append([self.time_e, self.pn_c, self.pe_c, self.pd_c, self.phi_c, self.theta_c, self.psi_c, self.u_c, self.v_c, self.w_c, self.r_c, self.throttle_c])
+        self.commands.append([self.time_c, self.pn_c, self.pe_c, self.pd_c, self.phi_c, self.theta_c, self.psi_c, self.u_c, self.v_c, self.w_c, self.r_c, self.throttle_c])
 
         # discard data outside desired plot time window
         for i in range(0,1000):
@@ -247,9 +250,12 @@ class Plotter:
             if self.commands[0][0] < self.commands[-1][0] - self.t_win:
                 self.commands.pop(0)
 
+        # find the maximum time forward
+        self.time_max=np.amax([self.estimates[-1][0], self.commands[-1][0]])
+
         # set the window widths
         for i in range(0,len(self.p_list)):
-        	self.p_list[i].setLimits(xMin=self.estimates[-1][0] - self.t_win, xMax=self.estimates[-1][0])
+        	self.p_list[i].setLimits(xMin=self.time_max - self.t_win, xMax=self.time_max)
 
         # stack the data lists
         truths_array = np.vstack(self.truths)
@@ -325,9 +331,9 @@ class Plotter:
         qz = msg.pose.pose.orientation.z
 
         # Convert to Euler angles from quaternion
-        self.phi_t = np.arctan2(2*(qw*qx + qy*qz), (qw**2 + qz**2 - qx**2 - qy**2))
-        self.theta_t = np.arcsin(2*(qw*qy - qx*qz))
-        self.psi_t = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
+        self.phi_e = np.arctan2(2*(qw*qx + qy*qz), (qw**2 + qz**2 - qx**2 - qy**2))
+        self.theta_e = np.arcsin(2*(qw*qy - qx*qz))
+        self.psi_e = np.arctan2(2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2))
 
         # unpack angular velocities
         self.p_e = msg.twist.twist.angular.x
@@ -353,20 +359,20 @@ class Plotter:
         self.mu_e = msg.data
 
     def highLevelCallback(self, msg):
-        if msg.mode == Command.MODE_XPOS_YPOS_YAW_ALTITUDE:
-            self.pn_c = msg.x
-            self.pe_c = msg.y
-            self.psi_c = msg.z
-            # self.pd_c = msg.F
-        if msg.mode == Command.MODE_XVEL_YVEL_YAWRATE_ALTITUDE:
-            self.u_c = msg.x
-            self.v_c = msg.y
-            self.r_c = msg.z
-            self.pd_c = msg.F
-        self.time_c = msg.header.stamp.to_sec() - self.time0
+        if msg.mode == RCCommand.MODE_NPOS_EPOS_DPOS_YAW:
+            self.pn_c = msg.cmd1
+            self.pe_c = msg.cmd2
+            self.psi_c = msg.cmd4
+            self.pd_c = msg.cmd3
+        if msg.mode == RCCommand.MODE_NVEL_EVEL_DPOS_YAWRATE:
+            self.u_c = msg.cmd1
+            self.v_c = msg.cmd2
+            self.r_c = msg.cmd4
+            self.pd_c = msg.cmd3
+        self.time_c = msg.stamp.to_sec() - self.time0
 
     def commandCallback(self, msg):
-        if msg.mode == Command.MODE_ROLL_PITCH_YAWRATE_THROTTLE:
+        if msg.mode == RFCommand.MODE_ROLL_PITCH_YAWRATE_THROTTLE:
             self.phi_c = msg.x
             self.theta_c = msg.y
             self.r_c = msg.z
@@ -374,7 +380,7 @@ class Plotter:
         self.time_c = msg.header.stamp.to_sec() - self.time0
 
     def vel_commandCallback(self, msg):
-        if msg.mode == Command.MODE_XVEL_YVEL_YAWRATE_ALTITUDE:
+        if msg.mode == RFCommand.MODE_XVEL_YVEL_YAWRATE_ALTITUDE:
             self.u_c = msg.x
             self.v_c = msg.y
             self.r_c = msg.z
@@ -382,7 +388,7 @@ class Plotter:
         self.time_c = msg.header.stamp.to_sec() - self.time0
 
     def acc_commandCallback(self, msg):
-        if msg.mode == Command.MODE_XACC_YACC_YAWRATE_AZ:
+        if msg.mode == RFCommand.MODE_XACC_YACC_YAWRATE_AZ:
             # self.u_c = msg.x
             # self.v_c = msg.y
             self.w_c = msg.z

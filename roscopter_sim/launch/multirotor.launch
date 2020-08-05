@@ -50,6 +50,7 @@
       <remap from="waypoint" to="high_level_command"/>
       <!-- <remap from="state" to="ground_truth/odometry/NED"/> -->
       <remap from="state" to="odom"/>
+      <!-- <remap from="estimate" to="odom"/> -->
     </node>
 
     <!--Estimator-->
@@ -66,13 +67,24 @@
     </node>
 
     <!-- plot states -->
-    <!--<node pkg="roscopter" type="states_plotter.py" name="states_plotter" output="screen">
+<!--     <node pkg="roscopter" type="states_plotter.py" name="states_plotter" output="screen">
       <param name="time_window" value="10.0"/>
-    </node>-->
+      <remap from="truth" to="ground_truth/odometry/NED"/>
+      <remap from="estimate" to="odom" />
+    </node>
+ -->
+    <!-- plot states with commands -->
+<!--     <node pkg="roscopter" type="commands_plotter.py" name="commands_plotter" output="screen">
+      <param name="time_window" value="10.0"/>
+      <remap from="truth" to="ground_truth/odometry/NED"/>
+      <remap from="estimate" to="odom" />
+    </node> -->
 
   </group>
 
   <!--Throttle ground truth for use in the estimator. Estimator cant handle 1000hz-->
-  <node name="truth_throttler" type="throttle" pkg="topic_tools" args="messages /multirotor/ground_truth/odometry/NED 100 /multirotor/ground_truth/odometry/NED_throttled" />
+  <node name="truth_throttler" type="throttle" pkg="topic_tools" args="messages /multirotor/ground_truth/odometry/NED 100 /multirotor/ground_truth/odometry/NED_throttled">
+
+  </node>
 
 </launch>

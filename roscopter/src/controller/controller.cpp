@@ -110,29 +110,46 @@ void Controller::statusCallback(const rosflight_msgs::StatusConstPtr &msg)
 }
 
 
-void Controller::cmdCallback(const rosflight_msgs::CommandConstPtr &msg)
+void Controller::cmdCallback(const roscopter_msgs::CommandConstPtr &msg)
 {
   switch(msg->mode)
   {
-    case rosflight_msgs::Command::MODE_XPOS_YPOS_YAW_ALTITUDE:
-      xc_.pn = msg->x;
-      xc_.pe = msg->y;
-      xc_.pd = -msg->F;
-      xc_.psi = msg->z;
+    case roscopter_msgs::Command::MODE_NPOS_EPOS_DPOS_YAW:
+      xc_.pn = msg->cmd1;
+      xc_.pe = msg->cmd2;
+      xc_.pd = msg->cmd3;
+      xc_.psi = msg->cmd4;
       control_mode_ = msg->mode;
       break;
-    case rosflight_msgs::Command::MODE_XVEL_YVEL_YAWRATE_ALTITUDE:
-      xc_.x_dot = msg->x;
-      xc_.y_dot = msg->y;
-      xc_.pd = -msg->F;
-      xc_.r = msg->z;
+    case roscopter_msgs::Command::MODE_NPOS_EPOS_DVEL_YAW:
+      xc_.pn = msg->cmd1;
+      xc_.pe = msg->cmd2;
+      xc_.z_dot = msg->cmd3;
+      xc_.psi = msg->cmd4;
       control_mode_ = msg->mode;
       break;
-    case rosflight_msgs::Command::MODE_XACC_YACC_YAWRATE_AZ:
-      xc_.ax = msg->x;
-      xc_.ay = msg->y;
-      xc_.az = msg->F;
-      xc_.r = msg->z;
+    // case rosflight_msgs::Command::MODE_XVEL_YVEL_YAWRATE_ALTITUDE:
+    case roscopter_msgs::Command::MODE_NVEL_EVEL_DPOS_YAWRATE:
+      xc_.x_dot = msg->cmd1;
+      xc_.y_dot = msg->cmd2;
+      xc_.pd = msg->cmd3;
+      xc_.r = msg->cmd4;
+      control_mode_ = msg->mode;
+      break;
+    // case rosflight_msgs::Command::MODE_XVEL_YVEL_YAWRATE_Z_VEL:
+    case roscopter_msgs::Command::MODE_NVEL_EVEL_DVEL_YAWRATE:
+      xc_.x_dot = msg->cmd1;
+      xc_.y_dot = msg->cmd2;
+      xc_.z_dot = msg->cmd3;
+      xc_.r = msg->cmd4;
+      control_mode_ = msg->mode;
+      break;
+    // case rosflight_msgs::Command::MODE_XACC_YACC_YAWRATE_AZ:
+    case roscopter_msgs::Command::MODE_NACC_EACC_DACC_YAWRATE:
+      xc_.ax = msg->cmd1;
+      xc_.ay = msg->cmd2;
+      xc_.az = msg->cmd3;
+      xc_.r = msg->cmd4;
       control_mode_ = msg->mode;
       break;
     default:
@@ -216,12 +233,13 @@ void Controller::computeControl(double dt)
 
   uint8_t mode_flag = control_mode_;
 
-  if(mode_flag == rosflight_msgs::Command::MODE_XPOS_YPOS_YAW_ALTITUDE)
+  if(mode_flag == roscopter_msgs::Command::MODE_NPOS_EPOS_DPOS_YAW)
   {
     // Figure out desired velocities (in inertial frame)
     // By running the position controllers
     double pndot_c = PID_n_.computePID(xc_.pn, xhat_.pn, dt);
     double pedot_c = PID_e_.computePID(xc_.pe, xhat_.pe, dt);
+    double pddot_c = PID_d_.computePID(xc_.pd, xhat_.pd, dt);
 
     // Calculate desired yaw rate
     // First, determine the shortest direction to the commanded psi
@@ -237,11 +255,58 @@ void Controller::computeControl(double dt)
 
     xc_.x_dot = pndot_c*cos(xhat_.psi) + pedot_c*sin(xhat_.psi);
     xc_.y_dot = -pndot_c*sin(xhat_.psi) + pedot_c*cos(xhat_.psi);
+    xc_.z_dot = pddot_c;
 
-    mode_flag = rosflight_msgs::Command::MODE_XVEL_YVEL_YAWRATE_ALTITUDE;
+    mode_flag = roscopter_msgs::Command::MODE_NVEL_EVEL_DVEL_YAWRATE;
   }
 
-  if(mode_flag == rosflight_msgs::Command::MODE_XVEL_YVEL_YAWRATE_ALTITUDE)
+if(mode_flag == roscopter_msgs::Command::MODE_NPOS_EPOS_DVEL_YAW)
+{
+  // Figure out desired velocities (in inertial frame)
+  // By running the position controllers
+  double pndot_c = PID_n_.computePID(xc_.pn, xhat_.pn, dt);
+  double pedot_c = PID_e_.computePID(xc_.pe, xhat_.pe, dt);
+
+  // Calculate desired yaw rate
+  // First, determine the shortest direction to the commanded psi
+  if(fabs(xc_.psi + 2*M_PI - xhat_.psi) < fabs(xc_.psi - xhat_.psi))
+  {
+    xc_.psi += 2*M_PI;
+  }
+  else if (fabs(xc_.psi - 2*M_PI -xhat_.psi) < fabs(xc_.psi - xhat_.psi))
+  {
+    xc_.psi -= 2*M_PI;
+  }
+  xc_.r = PID_psi_.computePID(xc_.psi, xhat_.psi, dt);
+
+  xc_.x_dot = pndot_c*cos(xhat_.psi) + pedot_c*sin(xhat_.psi);
+  xc_.y_dot = -pndot_c*sin(xhat_.psi) + pedot_c*cos(xhat_.psi);
+
+  mode_flag = roscopter_msgs::Command::MODE_NVEL_EVEL_DVEL_YAWRATE;
+}
+
+  if(mode_flag == roscopter_msgs::Command::MODE_NVEL_EVEL_DVEL_YAWRATE)
+  {
+    // Compute desired accelerations (in terms of g's) in the vehicle 1 frame
+    // Rotate body frame velocities to vehicle 1 frame velocities
+    double sinp = sin(xhat_.phi);
+    double cosp = cos(xhat_.phi);
+    double sint = sin(xhat_.theta);
+    double cost = cos(xhat_.theta);
+    double pxdot =
+        cost * xhat_.u + sinp * sint * xhat_.v + cosp * sint * xhat_.w;
+    double pydot = cosp * xhat_.v - sinp * xhat_.w;
+    double pddot =
+        -sint * xhat_.u + sinp * cost * xhat_.v + cosp * cost * xhat_.w;
+
+    xc_.ax = PID_x_dot_.computePID(xc_.x_dot, pxdot, dt);
+    xc_.ay = PID_y_dot_.computePID(xc_.y_dot, pydot, dt);
+    xc_.az = PID_z_dot_.computePID(xc_.z_dot, pddot, dt);
+
+    mode_flag = roscopter_msgs::Command::MODE_NACC_EACC_DACC_YAWRATE;
+  }
+
+  if(mode_flag == roscopter_msgs::Command::MODE_NVEL_EVEL_DPOS_YAWRATE)
   {
     // Compute desired accelerations (in terms of g's) in the vehicle 1 frame
     // Rotate body frame velocities to vehicle 1 frame velocities
@@ -261,10 +326,10 @@ void Controller::computeControl(double dt)
     // Nested Loop for Altitude
     double pddot_c = PID_d_.computePID(xc_.pd, xhat_.pd, dt, pddot);
     xc_.az = PID_z_dot_.computePID(pddot_c, pddot, dt);
-    mode_flag = rosflight_msgs::Command::MODE_XACC_YACC_YAWRATE_AZ;
+    mode_flag = roscopter_msgs::Command::MODE_NACC_EACC_DACC_YAWRATE;
   }
 
-  if(mode_flag == rosflight_msgs::Command::MODE_XACC_YACC_YAWRATE_AZ)
+  if(mode_flag == roscopter_msgs::Command::MODE_NACC_EACC_DACC_YAWRATE)
   {
     // Model inversion (m[ax;ay;az] = m[0;0;g] + R'[0;0;-T]
     double total_acc_c = sqrt((1.0 - xc_.az) * (1.0 - xc_.az) +

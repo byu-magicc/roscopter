@@ -2,6 +2,7 @@
 #define CONTROLLER_H
 
 #include <ros/ros.h>
+#include <roscopter_msgs/Command.h>
 #include <rosflight_msgs/Command.h>
 #include <rosflight_msgs/Status.h>
 #include <controller/simple_pid.h>
@@ -126,7 +127,7 @@ private:
   // Functions
   void stateCallback(const nav_msgs::OdometryConstPtr &msg);
   void isFlyingCallback(const std_msgs::BoolConstPtr &msg);
-  void cmdCallback(const rosflight_msgs::CommandConstPtr &msg);
+  void cmdCallback(const roscopter_msgs::CommandConstPtr &msg);
   void statusCallback(const rosflight_msgs::StatusConstPtr &msg);
 
   void computeControl(double dt);

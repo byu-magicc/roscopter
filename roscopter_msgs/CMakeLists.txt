@@ -32,7 +32,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
-  RelativePose.msg
+  Command.msg
+  PoseEuler.msg
 )
 
 # Generate services in the 'srv' folder
@@ -41,6 +42,10 @@ add_service_files(
   AddWaypoint.srv
   RemoveWaypoint.srv
   SetWaypointsFromFile.srv
+  ListWaypoints.srv
+  ClearWaypoints.srv
+  Hold.srv
+  Release.srv
 )
 
 ## Generate actions in the 'action' folder

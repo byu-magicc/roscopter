@@ -9,7 +9,7 @@ from PyQt5.QtCore import pyqtSlot
 import sys
 import signal
 
-class plotWindow():
+class PlotWindow():
     def __init__(self, parent=None):
         signal.signal(signal.SIGINT, signal.SIG_DFL)
         self.app = QApplication(sys.argv)
@@ -54,7 +54,7 @@ if __name__ == '__main__':
     import numpy as np
 
 
-    pw = plotWindow()
+    pw = PlotWindow()
 
     x = np.arange(0, 10, 0.001)
 
@@ -70,9 +70,3 @@ if __name__ == '__main__':
     pw.show()
 
     # sys.exit(app.exec_())
-
-
-
-
-
-

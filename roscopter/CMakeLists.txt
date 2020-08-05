@@ -5,6 +5,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   dynamic_reconfigure
+  roscopter_msgs
   rosflight_msgs
   rosflight_utils
   roscopter_utils
@@ -41,7 +42,7 @@ generate_dynamic_reconfigure_options(
 catkin_package(
   INCLUDE_DIRS include ${EIGEN3_INCLUDE_DIRS}
   CATKIN_DEPENDS roscpp rospy dynamic_reconfigure eigen_conversions
-    rosflight_msgs rosflight_utils std_msgs nav_msgs sensor_msgs roslib
+    roscopter_msgs rosflight_msgs rosflight_utils std_msgs nav_msgs sensor_msgs roslib
   DEPENDS EIGEN3
 )
 
