@@ -81,6 +81,7 @@ private:
   // Node handles, publishers, subscribers
   ros::NodeHandle nh_;
   ros::NodeHandle nh_private_;
+  ros::NodeHandle nh_param_;
 
   // Publishers and Subscribers
   ros::Subscriber state_sub_;

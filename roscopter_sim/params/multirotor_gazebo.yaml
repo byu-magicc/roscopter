@@ -4,9 +4,9 @@
 
 common: {
   #dynamics
-  mass: &mass 2.856 , 
-  linear_mu: &linear_mu 0.2,
-  angular_mu: &angular_mu 0.3,
+  mass: &mass 3.69, 
+  linear_mu: &linear_mu 0.2, #linear wind coeficient
+  angular_mu: &angular_mu 0.3, #angular wind coeficient
   ground_effect: &ground_effect [-55.3516, 181.8265, -203.9874, 85.3735, -7.6619],
   #IMU
   gyro_stdev: &gyro_stdev 0.005,
@@ -143,7 +143,7 @@ rosflight_plugins: {
 ############### ROSflight SIL Parameters ######################
 rosflight: {
   mass: *mass,
-  linear_mu: 0.2,
+  linear_mu: *linear_mu,
   angular_mu: *angular_mu,
   ground_effect: *ground_effect,
   # Dynamics

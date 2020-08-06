@@ -4,7 +4,7 @@
 
   <!-- Parameter Arguments -->
   <!-- mav_name is used for parameter filenames, and for the gazebo link name, Exclude dot extensions -->
-  <arg name="mav_name" value="F450"/>
+  <arg name="mav_name" value="quadcopter"/>
   <arg name="waypoint_list" value="waypoints"/>
 
   <!-- Load  Parameters -->
@@ -27,6 +27,7 @@
 
   <!-- PID Position Controller -->
   <node name="controller" pkg="roscopter" type="controller">
+    <param name="param_namespace" value="controller"/>
     <remap from="estimate" to="odom"/>
   </node>
 
