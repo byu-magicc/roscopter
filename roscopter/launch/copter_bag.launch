@@ -1,9 +1,10 @@
 <?xml version="1.0"?>
 
 <launch>
-
-  <arg name="drone_name"            value="groot"/>
-  <arg name="bag"                 value="../data/debug/old_odom2.bag"/>
+  
+  <arg name="drone_name"          value="groot"/>
+  
+  <arg name="bag"                 value="FILE_PATH_HERE"/> 
   
   <!-- play rosbag -->
   <node pkg="rosbag" type="play" name="player" output="screen" args="--clock $(arg bag)"/>
@@ -28,8 +29,9 @@
   <!-- Waypoint Manager -->
   <node name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
     <remap from="waypoint" to="high_level_command"/>
-    <remap from="state" to="odom"/>
+    <remap from="state"    to="odom"/>
   </node>
 
   <node pkg="rosbag" type="record" name="record" output="screen" args="-O ../data/debug/debug.bag --all"/>
+  
 </launch>
