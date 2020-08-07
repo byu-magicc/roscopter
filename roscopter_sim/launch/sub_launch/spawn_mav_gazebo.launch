@@ -20,7 +20,7 @@
   <arg name="log_file"              default="$(arg mav_name)"/>
   <arg name="enable_wind"           default="true"/>
   <arg name="sim_params"            default="$(find roscopter_sim)/params/$(arg mav_name)_gazebo.yaml"/>
-  <arg name="rosflight_ns"          default="rosflight"/>
+  <arg name="rosflight_sim_ns"      default="rosflight_sim"/>
   <arg name="roscopter_sim_ns"      default="roscopter_sim"/>
   <arg name="rosflight_plugins_ns"  default="rosflight_plugins"/>
   <arg name="gazebo_properties_ns"  default="gazebo_properties"/>
@@ -41,7 +41,7 @@
     mav_name:=$(arg mav_name)
     color:=$(arg color)
     sim_params:=$(arg sim_params)
-    rosflight_ns:=$(arg rosflight_ns)
+    rosflight_sim_ns:=$(arg rosflight_sim_ns)
     roscopter_sim_ns:=$(arg roscopter_sim_ns)
     rosflight_plugins_ns:=$(arg rosflight_plugins_ns)
     gazebo_properties_ns:=$(arg gazebo_properties_ns)

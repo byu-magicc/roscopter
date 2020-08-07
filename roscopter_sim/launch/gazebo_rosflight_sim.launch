@@ -9,6 +9,7 @@
 
   <!-- Namespace Arguments -->
   <arg name="rosflight_ns" value="rosflight"/>
+  <arg name="rosflight_sim_ns" value="rosflight_sim"/>
   <arg name="roscopter_ns" value="roscopter"/>
   <arg name="rosflight_plugins_ns" value="rosflight_plugins"/>
   <arg name="gazebo_properties_ns" value="gazebo_properties"/>
@@ -26,7 +27,7 @@
     <arg name="yaw" value="0"/>
     <arg name="sim_params" value="$(find roscopter_sim)/params/$(arg mav_sim_params).yaml"/>
     <arg name="model" value="$(find roscopter_sim)/xacro/rosflight_sim.urdf.xacro"/>
-    <arg name="rosflight_ns" value="$(arg rosflight_ns)"/>
+    <arg name="rosflight_sim_ns" value="$(arg rosflight_sim_ns)"/>
     <arg name="rosflight_plugins_ns" value="$(arg rosflight_plugins_ns)"/>
     <arg name="gazebo_properties_ns" value="$(arg gazebo_properties_ns)"/>
   </include>
@@ -34,6 +35,7 @@
   <!-- FCU communication -->
   <node ns="$(arg rosflight_ns)" name="rosflight_io" pkg="rosflight" type="rosflight_io" output="screen">
     <param name="udp" value="true"/>
+    <remap from="imu/data" to="/$(arg rosflight_sim_ns)/imu/data"/>
   </node> 
 
   <!-- RC -->
@@ -41,7 +43,7 @@
     <param name="auto_arm" value="true"/>
     <param name="auto_takeoff" value="true"/>
     <remap from="status" to ="/$(arg rosflight_ns)/status"/>
-    <remap from="RC" to="/$(arg rosflight_ns)/RC"/>
+    <remap from="RC" to="/$(arg rosflight_sim_ns)/RC"/>
   </node>
 
   <!-- Waypoint Management -->
@@ -64,7 +66,7 @@
     <param name="param_filename" value="$(find roscopter)/params/$(arg mav_name).yaml"/>
     <param name="param_namespace" value="estimator"/>
     <!--inputs-->
-    <remap from="imu" to="/$(arg rosflight_ns)/imu/data"/>
+    <remap from="imu" to="/$(arg rosflight_sim_ns)/imu/data"/>
     <remap from="gnss" to="/$(arg rosflight_plugins_ns)/gps/data"/>
     <remap from="baro" to="/$(arg rosflight_plugins_ns)/baro/data"/>
   </node>

@@ -44,6 +44,7 @@
 
   <!-- Control -->
   <node ns="$(arg roscopter_ns)" name="controller" pkg="roscopter" type="controller" output="screen">
+    <param name="param_namespace" value="controller"/>
     <remap from="command" to="/$(arg roscopter_sim_ns)/command"/>
     <!--inputs-->
     <remap from="estimate" to="/$(arg roscopter_ns)/odom"/>

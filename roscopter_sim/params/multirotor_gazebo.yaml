@@ -141,7 +141,7 @@ rosflight_plugins: {
 }
 
 ############### ROSflight SIL Parameters ######################
-rosflight: {
+rosflight_sim: {
   mass: *mass,
   linear_mu: *linear_mu,
   angular_mu: *angular_mu,

@@ -1,0 +1,9 @@
+  mass: 3.69
+  body_width: 0.505
+  body_height: 0.1
+  ixx: 0.07
+  ixy: 0.0
+  ixz: 0.0
+  iyy: 0.08
+  iyz: 0.0
+  izz: 0.12

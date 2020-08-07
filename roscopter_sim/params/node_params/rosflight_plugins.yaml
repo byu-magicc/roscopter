@@ -1,0 +1,61 @@
+    # Odometry (Ground Truth)
+  odometry: {
+    transform_topic: ground_truth/transform,
+    odometry_topic: ground_truth/odometry
+  }
+
+  # IMU
+  imu: {
+    noise_on: true,
+    topic: imu/data,
+    rate: 250,
+    gyro_bias_topic: imu/gyro_bias,
+    gyro_stdev: 0.005,
+    gyro_bias_range: 0.005,
+    gyro_bias_walk_stdev: 0.00001,
+    acc_bias_topic: imu/acc_bias,
+    acc_stdev: 0.05,
+    acc_bias_range: 0.01,
+    acc_bias_walk_stdev: 0.00001
+  }
+
+  # Barometer
+  barometer: {
+    noise_on: true,
+    topic: baro/data,
+    rate: 50.0,
+    stdev: 0.1
+  }
+
+  # Magnetometer
+  magnetometer: {
+    noise_on: true,
+    rate: 100.0,
+    topic: mag/data,
+    stdev: 0.02,
+    bias_range: 0.15,
+    declination: 0.198584539676,
+    inclination: 1.14316156541
+  }
+
+  # Sonar
+  # this is still implemented the old way, we need to write a custom plugin to use 
+  # the ROS parameter server like the others
+
+  # GPS
+  gps: {
+    noise_on: true,
+    rate: 10.0,
+    topic: gps/data,
+    north_stdev: 0.21,
+    east_stdev: 0.21,
+    alt_stdev: 0.40,
+    velocity_stdev: 0.1,
+    k_north: 0.0009090909, # 1/1100
+    k_east: 0.0009090909, # 1/1100
+    k_alt: 0.0009090909, # 1/1100
+    initial_latitude: 40.267320,
+    initial_longitude: -111.635629,
+    initial_altitude: 1387.0,
+    num_sats: 7
+  }

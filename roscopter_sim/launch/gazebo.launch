@@ -1,0 +1,108 @@
+
+<launch>
+
+<!-- ########### Arguments ########### -->
+  <!-- Parameter -->
+    <!-- mav_name is used for parameter filenames, and gazebo link name. Exclude dot extensions -->
+  <arg name="mav_name" value="multirotor"/>
+  <arg name="mav_sim_params" value="multirotor_gazebo"/>
+  <arg name="waypoint_list" value="waypoints"/>
+  <arg name="simulation_mode" default="roscopter_sim"/> <!--Possible Simulation Mode Values [roscopter_sim , rosflight_sim] -->
+
+  <!-- Namespace -->
+  <arg name="roscopter_ns" value="roscopter"/>
+  <arg name="roscopter_sim_ns" value="roscopter_sim"/>
+  <arg name="rosflight_ns" value="rosflight"/>
+  <arg name="rosflight_sim_ns" value="rosflight_sim"/>
+  <arg name="rosflight_plugins_ns" value="rosflight_plugins"/> 
+  <arg name="gazebo_properties_ns" value="gazebo_properties"/>
+
+
+<!-- ########### Simulation ########### -->
+
+  <!-- Gazebo -->
+  <include file="$(find roscopter_sim)/launch/sub_launch/spawn_mav_gazebo.launch">
+    <arg name="mav_name" value="$(arg mav_name)"/>
+    <arg name="x" value="0"/>
+    <arg name="y" value="0"/>
+    <arg name="z" value="0.1"/>
+    <arg name="yaw" value="0"/>
+    <arg name="model" value="$(find roscopter_sim)/xacro/$(arg simulation_mode).urdf.xacro"/>
+    <arg name="sim_params" value="$(find roscopter_sim)/params/$(arg mav_sim_params).yaml"/>
+    <arg name="roscopter_sim_ns" value="$(arg roscopter_sim_ns)"/>
+    <arg name="rosflight_sim_ns" value="$(arg rosflight_sim_ns)"/>
+    <arg name="rosflight_plugins_ns" value="$(arg rosflight_plugins_ns)"/>
+    <arg name="gazebo_properties_ns" value="$(arg gazebo_properties_ns)"/>
+  </include>
+  
+
+<!-- ########### ROScopter ########### -->
+
+  <!-- Load ROScopter Parameters -->
+  <rosparam ns="$(arg roscopter_ns)" command="load" file="$(find roscopter)/params/$(arg mav_name).yaml"/>
+  <rosparam ns="$(arg roscopter_ns)" command="load" file="$(find roscopter)/params/$(arg waypoint_list).yaml"/>
+
+  <!-- Waypoint Management -->
+  <node ns="$(arg roscopter_ns)" name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
+    <remap from="state" to="/$(arg roscopter_ns)/odom"/>
+  </node>
+
+  <!-- Control -->
+  <node ns="$(arg roscopter_ns)" name="controller" pkg="roscopter" type="controller" output="screen">
+    <param name="param_namespace" value="controller"/>
+    <!--ouptuts-->
+    <remap from="command" to="/$(arg roscopter_sim_ns)/command" if="$(eval simulation_mode == 'roscopter_sim')"/>
+    <remap from="command" to="/$(arg rosflight_ns)/command" if="$(eval simulation_mode == 'rosflight_sim')"/>
+    <!--inputs-->
+    <remap from="estimate" to="/$(arg roscopter_ns)/odom"/>
+    <remap from="status" to ="/status" if="$(eval simulation_mode == 'roscopter_sim')"/>
+    <remap from="status" to ="/$(arg rosflight_ns)/status" if="$(eval simulation_mode == 'rosflight_sim')"/>
+  </node>
+
+  <!--Estimator-->
+  <node ns="$(arg roscopter_ns)" name="estimator" pkg="roscopter" type="ekf_node" output="screen">
+    <param name="param_filename" value="$(find roscopter)/params/multirotor.yaml"/>
+    <param name="param_namespace" value="estimator"/>
+    <!--inputs-->
+    <remap from="imu" to="/$(arg rosflight_plugins_ns)/imu/data" if="$(eval simulation_mode == 'roscopter_sim')"/>
+    <remap from="imu" to="/$(arg rosflight_sim_ns)/imu/data" if="$(eval simulation_mode == 'rosflight_sim')"/>
+    <remap from="gnss" to="/$(arg rosflight_plugins_ns)/gps/data"/>
+    <remap from="baro" to="/$(arg rosflight_plugins_ns)/baro/data"/>
+  </node>
+
+
+<!-- ########### ROScopter Simulation Mode ############ -->
+  <group if="$(eval simulation_mode == 'roscopter_sim')">
+    
+    <!--Throttle ground truth for use in the estimator. Estimator cant handle 1000hz-->
+    <node name="truth_throttler" type="throttle" pkg="topic_tools" args="messages /$(arg rosflight_plugins_ns)/ground_truth/odometry/NED 100 /truth_NED_throttled"/>
+    
+    <!-- Is Flying Publisher -->
+    <node pkg="rostopic" type="rostopic" name="is_flying_pub" args="pub $(arg roscopter_ns)/is_flying std_msgs/Bool true"/>
+    
+    <!-- Status Publisher -->
+    <node pkg="rostopic" type="rostopic" name="status_pub" args="pub -r 1 status rosflight_msgs/Status '{armed: true, failsafe: false, rc_override: false, offboard: true, error_code: 0, num_errors: 0, loop_time_us: 1}'"/>
+
+  </group>
+
+
+<!-- ########### ROSflight Simulation Mode ############ -->
+  <group if="$(eval simulation_mode == 'rosflight_sim')">
+
+    <!-- FCU communication -->
+    <node ns="$(arg rosflight_ns)" name="rosflight_io" pkg="rosflight" type="rosflight_io" output="screen">
+      <param name="udp" value="true"/>
+      <remap from="imu/data" to="/$(arg rosflight_sim_ns)/imu/data"/>
+    </node> 
+
+    <!-- RC -->
+    <node ns="$(arg rosflight_ns)" pkg="rosflight_joy" type="rc_keyboard" name="rc_node" output="screen">
+      <param name="auto_arm" value="true"/>
+      <param name="auto_takeoff" value="true"/>
+      <remap from="status" to ="/$(arg rosflight_ns)/status"/>
+      <remap from="RC" to="/$(arg rosflight_sim_ns)/RC"/>
+    </node>
+
+  </group>
+
+</launch>

@@ -12,7 +12,7 @@ Author: James Jackson
 <!-- Arguments -->
   <xacro:arg name="mav_name" default="multirotor" />
   <xacro:arg name="sim_params" default="$(find roscopter_sim)/params/$(arg mav_name)_gazebo.yaml"/>
-  <xacro:arg name="rosflight_ns" default="rosflight"/>
+  <xacro:arg name="rosflight_sim_ns" default="rosflight_sim"/>
   <xacro:arg name="rosflight_plugins_ns" default="rosflight_plugins"/>
   <xacro:arg name="gazebo_properties_ns" default="gazebo_properties"/>
   <xacro:arg name="color" default="White" />
@@ -70,7 +70,7 @@ Author: James Jackson
   <gazebo>
     <plugin filename="librosflight_sil_plugin.so" name="rosflight_sil">
         <linkName>${mav_namespace}/base_link</linkName>
-        <namespace>$(arg rosflight_ns)</namespace>
+        <namespace>$(arg rosflight_sim_ns)</namespace>
         <mavType>multirotor</mavType>
         <parentFrameId>${mav_namespace}</parentFrameId>
     </plugin>
