@@ -1,0 +1,47 @@
+# ROSPARAMS FOR ROSFLIGHT_HOLODECK SIMULATOR
+
+### rosflight_holodeck ###
+world_name: "UrbanCity-RGBCam"
+# world_name: "Ocean-BoatLanding"
+
+# Set the initial state of main UAV agent
+# NOTE: - NED inertial frame, i.e. -20 in z means 20 meters above ground
+#       - Attitude is in  DEGREES and EULER ANGLES in this file for convenience, but
+#         is converted to RADIANS and QUATERNIONS  in code
+x0: [
+  0,   0,   0,   # position NED [0-2]
+  0,   0,   0,   # attitude [3-6] -- set here as euler angs (degs); will be converted to quat:[w,x,y,z]
+  0,   0,   0,   # velocity [7-9]
+  0,   0,   0,   # omega [10-12]
+  0,   0,   0    # acc [13-15]
+]
+show_viewport: true
+framerate: 30   ####### TODO: Currently not working  ####### frame rate of camera/rendering [Hz]
+simrate: 1000   # rate of simulated dynamics
+pub_external_att: false  # publish /truth/NED quaternion to /external_attitude topic
+
+show_camera: false  # opencv window of onboard camera sensor
+camera_angle: [0, 0, 0]  # roll, pitch, yaw of camera in body frame (0,0,0 is pointing forward) [degrees]
+
+render_quality: 3  # 0 = lowest, 3 = best [int]
+day_time: 13  # time of day (24-hour clock, i.e. 18 = 6pm) [int]
+weather: "sunny"  # can be 'sunny', 'cloudy', or 'rain'
+fog_density: 0.0  # value between 0.0 and 1.0 [float]
+day_length: 0     # minutes for 1 simulated day/night cycle (0 for no sun movement) [int]
+
+# Params specific to Ocean world
+ocean: {
+  ocean_state: [1, 1, 90], # [wave intensity (1-13), wave size (1-8), wave direction (0-360)]
+  boat_initial_state: [
+    20, 0, 0,  # position [NED]
+    0          # attitude [yaw angle]
+  ],
+  boat_cmd: [0, -50],  # [direction (0-360), throttle (0-[-100] -- needs to be negative for forward propulsion for some reason)]
+  enable_aruco: true,
+  ground_height: -0.1  # meters
+}
+
+### rosflight_joy ###
+rc_node: {
+  auto_arm: true
+}

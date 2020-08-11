@@ -79,16 +79,6 @@ void EKF_ROS::initROS()
 void EKF_ROS::init(const std::string &param_file, const std::string &param_namespace)
 {
   ekf_.load(param_file, param_namespace);
-
-  // YAML::Node node;
-  // node = YAML::LoadFile(param_file);
-  // YAML::Node node2;
-  // node2 = node["estimator"];
-  // get_yaml_dictionary_node("estimator", param_file, node2);
-  // double foo;
-  // foo = node2["foo"].as<double>();
-  // std::cout << foo << std::endl;
-  // Load Sensor Noise Parameters;
   double acc_stdev, gyro_stdev;
   get_yaml_node("accel_noise_stdev", param_file, acc_stdev, param_namespace);
   get_yaml_node("gyro_noise_stdev", param_file, gyro_stdev, param_namespace);
@@ -117,12 +107,16 @@ void EKF_ROS::init(const std::string &param_file, const std::string &param_names
     get_yaml_node("gps_vertical_stdev", param_file, gps_vertical_stdev_, param_namespace);
     get_yaml_node("gps_speed_stdev", param_file, gps_speed_stdev_, param_namespace);
   }
-
+  ekf_.setUseMocap(nh_private_.param<bool>("use_mocap",NULL));
+  ekf_.setUseBaro(nh_private_.param<bool>("use_baro",NULL));
+  ekf_.setUseGNSS(nh_private_.param<bool>("use_gnss",NULL));
+  ekf_.setUseZeroVel(nh_private_.param<bool>("use_zero_vel",NULL));
   start_time_.fromSec(0.0);
 }
 
 void EKF_ROS::publishEstimates(const sensor_msgs::ImuConstPtr &msg)
 {
+
   // Pub Odom
   odom_msg_.header = msg->header;
 

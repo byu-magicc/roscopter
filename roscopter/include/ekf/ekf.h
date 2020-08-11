@@ -67,6 +67,14 @@ public:
 
   void setArmed() { armed_ = true; }
   void setDisarmed() { armed_ = false; }
+  void setUseMocap(bool use_mocap) {use_mocap_ = use_mocap; }
+  void setUseBaro(bool use_baro) {use_baro_ = use_baro; }
+  void setUseGNSS(bool use_gnss) {use_gnss_ = use_gnss; }
+  void setUseZeroVel(bool use_zero_vel) {use_zero_vel_ = use_zero_vel; }
+  bool getUseMocap() {return use_mocap_;}
+  bool getUseBaro() {return use_baro_;}
+  bool getUseGNSS() {return use_gnss_;}
+  bool getUseZeroVel() {return use_zero_vel_;}
 
   bool refLlaSet() { return ref_lla_set_; }
 

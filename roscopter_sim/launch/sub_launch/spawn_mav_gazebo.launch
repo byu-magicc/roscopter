@@ -11,7 +11,7 @@
   <arg name="gui"                   default="true"/>
   <arg name="verbose"               default="false"/>
   <arg name="debug"                 default="false"/>
-  <arg name="model"                 default="$(find roscopter_sim)/xacro/rosflight_sim.urdf.xacro"/>
+  <arg name="model"                 default="$(find roscopter_sim)/xacro/roscopter_sim.urdf.xacro"/>
   <arg name="model_name"            default="$(arg mav_name)_mav"/>
   <arg name="world_file"            default="worlds/empty.world"/>
   <arg name="tf_prefix"             default="$(optenv ROS_NAMESPACE)"/>

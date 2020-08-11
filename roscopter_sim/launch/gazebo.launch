@@ -5,9 +5,9 @@
   <!-- Parameter -->
     <!-- mav_name is used for parameter filenames, and gazebo link name. Exclude dot extensions -->
   <arg name="mav_name" value="multirotor"/>
-  <arg name="mav_sim_params" value="multirotor_gazebo"/>
   <arg name="waypoint_list" value="waypoints"/>
   <arg name="simulation_mode" default="roscopter_sim"/> <!--Possible Simulation Mode Values [roscopter_sim , rosflight_sim] -->
+  <arg name="mav_sim_params" value="multirotor_gazebo_$(arg simulation_mode)"/>
 
   <!-- Namespace -->
   <arg name="roscopter_ns" value="roscopter"/>
@@ -44,6 +44,7 @@
 
   <!-- Waypoint Management -->
   <node ns="$(arg roscopter_ns)" name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
+    <param name="param_namespace" value="waypoint_manager"/>
     <remap from="state" to="/$(arg roscopter_ns)/odom"/>
   </node>
 
@@ -63,6 +64,10 @@
   <node ns="$(arg roscopter_ns)" name="estimator" pkg="roscopter" type="ekf_node" output="screen">
     <param name="param_filename" value="$(find roscopter)/params/multirotor.yaml"/>
     <param name="param_namespace" value="estimator"/>
+    <param name="use_mocap" value="false"/>
+    <param name="use_baro" value="true"/>
+    <param name="use_gnss" value="true"/>
+    <param name="use_zero_vel" value="true"/>
     <!--inputs-->
     <remap from="imu" to="/$(arg rosflight_plugins_ns)/imu/data" if="$(eval simulation_mode == 'roscopter_sim')"/>
     <remap from="imu" to="/$(arg rosflight_sim_ns)/imu/data" if="$(eval simulation_mode == 'rosflight_sim')"/>

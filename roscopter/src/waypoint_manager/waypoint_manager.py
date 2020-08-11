@@ -16,7 +16,12 @@ class WaypointManager():
 
         # get parameters
         try:
-            self.waypoint_list = rospy.get_param('~waypoints')
+            node_namespace = rospy.get_namespace()
+            param_namespace = rospy.get_param('~param_namespace' , "")
+            print(node_namespace)
+            print(param_namespace)
+            print(node_namespace + param_namespace + "/waypoints")
+            self.waypoint_list = rospy.get_param(node_namespace + param_namespace + "/waypoints")
         except KeyError:
             rospy.logfatal('[waypoint_manager] waypoints not set')
             rospy.signal_shutdown('[waypoint_manager] Parameters not set')
@@ -41,10 +46,10 @@ class WaypointManager():
         self.poseEuler_msg.psi = self.psi
 
         # how close does the MAV need to get before going to the next waypoint?
-        self.pos_threshold = rospy.get_param('~threshold', 5)
-        self.heading_threshold = rospy.get_param('~heading_threshold', 0.035)  # radians
-        self.cyclical_path = rospy.get_param('~cycle', True)
-        self.print_wp_reached = rospy.get_param('~print_wp_reached', True)
+        self.pos_threshold = rospy.get_param(node_namespace + param_namespace + "/threshold", 5)
+        self.heading_threshold = rospy.get_param(node_namespace + param_namespace + "/heading_threshold", 0.035)  # radians
+        self.cyclical_path = rospy.get_param(node_namespace + param_namespace + "/cycle", True)
+        self.print_wp_reached = rospy.get_param(node_namespace + param_namespace + "/print_wp_reached", True)
 
         # Set up Services
         self.add_waypoint_service = rospy.Service('add_waypoint', AddWaypoint, self.addWaypointCallback)
