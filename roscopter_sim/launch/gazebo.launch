@@ -45,12 +45,12 @@
   <!-- Waypoint Management -->
   <node ns="$(arg roscopter_ns)" name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
     <param name="param_namespace" value="$(arg roscopter_ns)/waypoint_manager"/>
-    <remap from="state" to="/$(arg roscopter_ns)/odom"/>
+    <remap from="state" to="$(arg roscopter_ns)/odom"/>
   </node>
 
   <!-- Control -->
   <node ns="$(arg roscopter_ns)" name="controller" pkg="roscopter" type="controller" output="screen">
-    <param name="param_namespace" value="controller"/>
+    <param name="param_namespace" value="$(arg roscopter_ns)/controller"/>
     <!--ouptuts-->
     <remap from="command" to="/$(arg roscopter_sim_ns)/command" if="$(eval simulation_mode == 'roscopter_sim')"/>
     <remap from="command" to="/$(arg rosflight_ns)/command" if="$(eval simulation_mode == 'rosflight_sim')"/>

@@ -8,10 +8,9 @@ namespace controller
 Controller::Controller() :
   nh_(ros::NodeHandle()),
   nh_private_("~"),
-  nh_param_(nh_, nh_private_.param<std::string>("param_namespace", "")),
+  nh_param_("/" + nh_private_.param<std::string>("param_namespace", nh_private_.getNamespace()) ),
   _server(nh_param_)
 {
-  
   if (!nh_param_.getParam("equilibrium_throttle", throttle_eq_))
     ROS_ERROR("[Controller] MAV equilibrium_throttle not found!");
     
