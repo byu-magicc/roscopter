@@ -9,15 +9,16 @@
     <node name="roscopter_controller" pkg="roscopter" type="controller" output="screen"
           required="true">
       <remap from="estimate" to="truth/NED"/>
-      <rosparam command="load" file="$(find roscopter)/params/sub_params/controller.yaml"/>
+      <rosparam ns="" command="load" file="$(find roscopter)/params/sub_params/controller.yaml"/>
     </node>
 
 
     <rosparam command="load" file="$(find roscopter)/params/waypoints.yaml"/>
+
     <!-- Waypoint Manager -->
     <node name="roscopter_waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen" required="true">
       <remap from="state" to="truth/NED"/>
-      <param name="param_namespace" value="waypoint_manager"/>
+      <param name="param_namespace" value="waypoint_manager"/> 
     </node>
 
 </launch>

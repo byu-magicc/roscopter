@@ -44,7 +44,7 @@
 
   <!-- Waypoint Management -->
   <node ns="$(arg roscopter_ns)" name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
-    <param name="param_namespace" value="waypoint_manager"/>
+    <param name="param_namespace" value="$(arg roscopter_ns)/waypoint_manager"/>
     <remap from="state" to="/$(arg roscopter_ns)/odom"/>
   </node>
 
