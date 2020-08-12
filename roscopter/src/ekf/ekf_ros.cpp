@@ -64,6 +64,7 @@ void EKF_ROS::initROS()
   pose_sub_ = nh_.subscribe("pose", 10, &EKF_ROS::poseCallback, this);
   odom_sub_ = nh_.subscribe("reference", 10, &EKF_ROS::odomCallback, this);
   gnss_sub_ = nh_.subscribe("gnss", 10, &EKF_ROS::gnssCallback, this);
+  range_sub_ = nh_.subscribe("range", 10, &EKF_ROS::rangeCallback, this);
 
 #ifdef UBLOX
   ublox_gnss_sub_ = nh_.subscribe("ublox_gnss", 10, &EKF_ROS::gnssCallbackUblox, this);
