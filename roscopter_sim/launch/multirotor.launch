@@ -10,7 +10,7 @@
 
   <!-- Start Simulator -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <arg name="paused" value="true"/>
+    <arg name="paused" value="false"/>
     <arg name="gui" value="true"/>
     <arg name="verbose" value="false"/>
     <arg name="debug" value="$(arg debug)"/>
@@ -43,6 +43,7 @@
     <node name="controller" pkg="roscopter" type="controller" output="screen">
       <!-- <remap from="estimate" to="ground_truth/odometry/NED"/> -->
       <remap from="estimate" to="odom"/>
+      <remap from="high_level_command" to="roscopter_command"/>
     </node>
 
     <!-- Waypoint Manager -->
@@ -52,6 +53,17 @@
       <remap from="state" to="odom"/>
       <!-- <remap from="estimate" to="odom"/> -->
     </node>
+
+    <!-- external controller-->
+    <node name="external_controller" pkg="roscopter" type="controller" output="screen">
+      <!-- <remap from="estimate" to="ground_truth/odometry/NED"/> -->
+      <remap from="estimate" to="odom"/>
+      <remap from="command" to="rosflight_command"/>
+    </node>
+
+    <!-- converter node-->
+    <node name="command_converter" pkg="roscopter" type="command_converter.py" output="screen"/>
+
 
     <!--Failsafe-->
     <!-- <node name="failsafe_manager" pkg="roscopter" type="failsafe_manager.py" output="screen">
