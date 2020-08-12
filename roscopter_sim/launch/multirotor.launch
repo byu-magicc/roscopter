@@ -54,17 +54,17 @@
     </node>
 
     <!--Failsafe-->
-    <node name="failsafe_manager" pkg="roscopter" type="failsafe_manager.py" output="screen">
+    <!-- <node name="failsafe_manager" pkg="roscopter" type="failsafe_manager.py" output="screen">
       <remap from="state" to="odom"/>
     </node>
     <node name="failsafe_controller" pkg="roscopter" type="controller" output="screen">
       <remap from='high_level_command' to="fs_high_level_command"/>
       <remap from='command' to="failsafe_command"/>
       <remap from="estimate" to="odom"/>
-    </node>
+    </node> -->
 
     <!--Geofence-->
-    <node name="geofencing" pkg="geofencing" type="geofencing.py" output="screen"/>
+    <!-- <node name="geofencing" pkg="geofencing" type="geofencing.py" output="screen"/> -->
 
     <!--Estimator-->
     <node name="estimator" pkg="roscopter" type="ekf_node" output="screen">

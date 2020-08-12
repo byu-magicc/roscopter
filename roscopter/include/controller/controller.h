@@ -49,6 +49,8 @@ typedef struct
   double y_dot;
   double z_dot;
 
+  double p;
+  double q;
   double r;
 
   double ax;
