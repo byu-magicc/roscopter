@@ -28,7 +28,7 @@
     <arg name="z" value="0.1"/>
     <arg name="yaw" value="0"/>
     <arg name="model" value="$(find roscopter_sim)/xacro/$(arg simulation_mode).urdf.xacro"/>
-    <arg name="sim_params" value="$(find roscopter_sim)/params/$(arg mav_sim_params).yaml"/>
+    <arg name="sim_params" value="$(find roscopter_sim)/params/gazebo/$(arg mav_sim_params).yaml"/>
     <arg name="roscopter_sim_ns" value="$(arg roscopter_sim_ns)"/>
     <arg name="rosflight_sim_ns" value="$(arg rosflight_sim_ns)"/>
     <arg name="rosflight_plugins_ns" value="$(arg rosflight_plugins_ns)"/>
@@ -45,7 +45,7 @@
   <!-- Waypoint Management -->
   <node ns="$(arg roscopter_ns)" name="waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen">
     <param name="param_namespace" value="$(arg roscopter_ns)/waypoint_manager"/>
-    <remap from="state" to="$(arg roscopter_ns)/odom"/>
+    <remap from="state" to="/$(arg roscopter_ns)/odom"/>
   </node>
 
   <!-- Control -->
@@ -63,11 +63,11 @@
   <!--Estimator-->
   <node ns="$(arg roscopter_ns)" name="estimator" pkg="roscopter" type="ekf_node" output="screen">
     <param name="param_filename" value="$(find roscopter)/params/multirotor.yaml"/>
-    <param name="param_namespace" value="estimator"/>
+    <param name="param_namespace" value="$(arg roscopter_ns)/estimator"/>
     <param name="use_mocap" value="false"/>
     <param name="use_baro" value="true"/>
     <param name="use_gnss" value="true"/>
-    <param name="use_zero_vel" value="true"/>
+    <param name="use_zero_vel" value="false"/>
     <!--inputs-->
     <remap from="imu" to="/$(arg rosflight_plugins_ns)/imu/data" if="$(eval simulation_mode == 'roscopter_sim')"/>
     <remap from="imu" to="/$(arg rosflight_sim_ns)/imu/data" if="$(eval simulation_mode == 'rosflight_sim')"/>
