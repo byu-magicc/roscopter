@@ -110,4 +110,4 @@ Removes all waypoints. Because the multirotor needs at least 1 waypoint to be co
 
 8. Improve flight performance in windy conditions. Most accurate solution is to incorporate wind estimation. This is possible without air sensors if you can estimate parameters of the flight vehicle such as drag and thrust coefficients.
 
-9. Enable Roscopter to fly in reference to the vehicle 1 frame
+9. Enable Roscopter to fly in reference to the vehicle 1 frame and body fixed frames as well as the inertial frame.
