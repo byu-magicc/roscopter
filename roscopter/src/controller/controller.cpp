@@ -128,6 +128,7 @@ void Controller::cmdCallback(const roscopter_msgs::CommandConstPtr &msg)
       xc_.psi = msg->cmd4;
       control_mode_ = msg->mode;
       break;
+    // case rosflight_msgs::Command::MODE_XVEL_YVEL_YAWRATE_ALTITUDE:
     case roscopter_msgs::Command::MODE_NVEL_EVEL_DPOS_YAWRATE:
       xc_.x_dot = msg->cmd1;
       xc_.y_dot = msg->cmd2;
@@ -135,6 +136,7 @@ void Controller::cmdCallback(const roscopter_msgs::CommandConstPtr &msg)
       xc_.r = msg->cmd4;
       control_mode_ = msg->mode;
       break;
+    // case rosflight_msgs::Command::MODE_XVEL_YVEL_YAWRATE_Z_VEL:
     case roscopter_msgs::Command::MODE_NVEL_EVEL_DVEL_YAWRATE:
       xc_.x_dot = msg->cmd1;
       xc_.y_dot = msg->cmd2;
@@ -142,6 +144,7 @@ void Controller::cmdCallback(const roscopter_msgs::CommandConstPtr &msg)
       xc_.r = msg->cmd4;
       control_mode_ = msg->mode;
       break;
+    // case rosflight_msgs::Command::MODE_XACC_YACC_YAWRATE_AZ:
     case roscopter_msgs::Command::MODE_NACC_EACC_DACC_YAWRATE:
       xc_.ax = msg->cmd1;
       xc_.ay = msg->cmd2;
@@ -149,21 +152,6 @@ void Controller::cmdCallback(const roscopter_msgs::CommandConstPtr &msg)
       xc_.r = msg->cmd4;
       control_mode_ = msg->mode;
       break;
-    case roscopter_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE:
-      xc_.phi = msg->cmd1;
-      xc_.theta = msg->cmd2;
-      xc_.r = msg->cmd3;
-      xc_.throttle = msg->cmd4;
-      control_mode_ = msg->mode;
-      break;
-    case roscopter_msgs::Command::MODE_ROLLRATE_PITCHRATE_YAWRATE_THROTTLE:
-      xc_.p = msg->cmd1;
-      xc_.q = msg->cmd2;
-      xc_.r = msg->cmd3;
-      xc_.throttle = msg->cmd4;
-      control_mode_ = msg->mode;
-      break;
-
     default:
       ROS_ERROR("roscopter/controller: Unhandled command message of type %d",
                 msg->mode);
@@ -272,29 +260,50 @@ void Controller::computeControl(double dt)
     mode_flag = roscopter_msgs::Command::MODE_NVEL_EVEL_DVEL_YAWRATE;
   }
 
-  if(mode_flag == roscopter_msgs::Command::MODE_NPOS_EPOS_DVEL_YAW)
+if(mode_flag == roscopter_msgs::Command::MODE_NPOS_EPOS_DVEL_YAW)
+{
+  // Figure out desired velocities (in inertial frame)
+  // By running the position controllers
+  double pndot_c = PID_n_.computePID(xc_.pn, xhat_.pn, dt);
+  double pedot_c = PID_e_.computePID(xc_.pe, xhat_.pe, dt);
+
+  // Calculate desired yaw rate
+  // First, determine the shortest direction to the commanded psi
+  if(fabs(xc_.psi + 2*M_PI - xhat_.psi) < fabs(xc_.psi - xhat_.psi))
   {
-    // Figure out desired velocities (in inertial frame)
-    // By running the position controllers
-    double pndot_c = PID_n_.computePID(xc_.pn, xhat_.pn, dt);
-    double pedot_c = PID_e_.computePID(xc_.pe, xhat_.pe, dt);
+    xc_.psi += 2*M_PI;
+  }
+  else if (fabs(xc_.psi - 2*M_PI -xhat_.psi) < fabs(xc_.psi - xhat_.psi))
+  {
+    xc_.psi -= 2*M_PI;
+  }
+  xc_.r = PID_psi_.computePID(xc_.psi, xhat_.psi, dt);
 
-    // Calculate desired yaw rate
-    // First, determine the shortest direction to the commanded psi
-    if(fabs(xc_.psi + 2*M_PI - xhat_.psi) < fabs(xc_.psi - xhat_.psi))
-    {
-      xc_.psi += 2*M_PI;
-    }
-    else if (fabs(xc_.psi - 2*M_PI -xhat_.psi) < fabs(xc_.psi - xhat_.psi))
-    {
-      xc_.psi -= 2*M_PI;
-    }
-    xc_.r = PID_psi_.computePID(xc_.psi, xhat_.psi, dt);
+  xc_.x_dot = pndot_c*cos(xhat_.psi) + pedot_c*sin(xhat_.psi);
+  xc_.y_dot = -pndot_c*sin(xhat_.psi) + pedot_c*cos(xhat_.psi);
 
-    xc_.x_dot = pndot_c*cos(xhat_.psi) + pedot_c*sin(xhat_.psi);
-    xc_.y_dot = -pndot_c*sin(xhat_.psi) + pedot_c*cos(xhat_.psi);
+  mode_flag = roscopter_msgs::Command::MODE_NVEL_EVEL_DVEL_YAWRATE;
+}
 
-    mode_flag = roscopter_msgs::Command::MODE_NVEL_EVEL_DVEL_YAWRATE;
+  if(mode_flag == roscopter_msgs::Command::MODE_NVEL_EVEL_DVEL_YAWRATE)
+  {
+    // Compute desired accelerations (in terms of g's) in the vehicle 1 frame
+    // Rotate body frame velocities to vehicle 1 frame velocities
+    double sinp = sin(xhat_.phi);
+    double cosp = cos(xhat_.phi);
+    double sint = sin(xhat_.theta);
+    double cost = cos(xhat_.theta);
+    double pxdot =
+        cost * xhat_.u + sinp * sint * xhat_.v + cosp * sint * xhat_.w;
+    double pydot = cosp * xhat_.v - sinp * xhat_.w;
+    double pddot =
+        -sint * xhat_.u + sinp * cost * xhat_.v + cosp * cost * xhat_.w;
+
+    xc_.ax = PID_x_dot_.computePID(xc_.x_dot, pxdot, dt);
+    xc_.ay = PID_y_dot_.computePID(xc_.y_dot, pydot, dt);
+    xc_.az = PID_z_dot_.computePID(xc_.z_dot, pddot, dt);
+
+    mode_flag = roscopter_msgs::Command::MODE_NACC_EACC_DACC_YAWRATE;
   }
 
   if(mode_flag == roscopter_msgs::Command::MODE_NVEL_EVEL_DPOS_YAWRATE)
@@ -320,83 +329,45 @@ void Controller::computeControl(double dt)
     mode_flag = roscopter_msgs::Command::MODE_NACC_EACC_DACC_YAWRATE;
   }
 
-  if(mode_flag == roscopter_msgs::Command::MODE_NVEL_EVEL_DVEL_YAWRATE)
-  {
-    // Compute desired accelerations (in terms of g's) in the vehicle 1 frame
-    // Rotate body frame velocities to vehicle 1 frame velocities
-    double sinp = sin(xhat_.phi);
-    double cosp = cos(xhat_.phi);
-    double sint = sin(xhat_.theta);
-    double cost = cos(xhat_.theta);
-    double pxdot =
-        cost * xhat_.u + sinp * sint * xhat_.v + cosp * sint * xhat_.w;
-    double pydot = cosp * xhat_.v - sinp * xhat_.w;
-    double pddot =
-        -sint * xhat_.u + sinp * cost * xhat_.v + cosp * cost * xhat_.w;
-
-    xc_.ax = PID_x_dot_.computePID(xc_.x_dot, pxdot, dt);
-    xc_.ay = PID_y_dot_.computePID(xc_.y_dot, pydot, dt);
-    xc_.az = PID_z_dot_.computePID(xc_.z_dot, pddot, dt);
-
-    mode_flag = roscopter_msgs::Command::MODE_NACC_EACC_DACC_YAWRATE;
-  }
-
   if(mode_flag == roscopter_msgs::Command::MODE_NACC_EACC_DACC_YAWRATE)
   {
     // Model inversion (m[ax;ay;az] = m[0;0;g] + R'[0;0;-T]
-    double phi;
-    double theta;
     double total_acc_c = sqrt((1.0 - xc_.az) * (1.0 - xc_.az) +
                               xc_.ax * xc_.ax + xc_.ay * xc_.ay);  // (in g's)
     if (total_acc_c > 0.001)
     {
-      phi = asin(xc_.ay / total_acc_c);
-      theta = -1.0*asin(xc_.ax / total_acc_c);
+      xc_.phi = asin(xc_.ay / total_acc_c);
+      xc_.theta = -1.0*asin(xc_.ax / total_acc_c);
     }
     else
     {
-      phi = 0;
-      theta = 0;
+      xc_.phi = 0;
+      xc_.theta = 0;
     }
-    
+
     // Compute desired thrust based on current pose
     double cosp = cos(xhat_.phi);
     double cost = cos(xhat_.theta);
-    double throttle = (1.0 - xc_.az) * throttle_eq_ / cosp / cost;
+    xc_.throttle = (1.0 - xc_.az) * throttle_eq_ / cosp / cost;
 
-    xc_.phi = saturate(phi, max_.roll, -max_.roll);
-    xc_.theta = saturate(theta, max_.pitch, -max_.pitch);
-    xc_.r = saturate(xc_.r, max_.yaw_rate, -max_.yaw_rate);
-    xc_.throttle = saturate(throttle, max_.throttle, 0.0);
-
-    if (-xhat_.pd < min_altitude_)
-    {
-      xc_.phi = 0.;
-      xc_.theta = 0.;
-      xc_.r = 0.;
-    }
-
-    mode_flag = roscopter_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE;
+    mode_flag = rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE;
   }
 
-  if(mode_flag == roscopter_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE)
+  if(mode_flag == rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE)
   {
     // Pack up and send the command
     command_.mode = rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_THROTTLE;
-    command_.F = xc_.throttle;
-    command_.x = xc_.phi;
-    command_.y = xc_.theta;
-    command_.z = xc_.r;
-  }
+    command_.F = saturate(xc_.throttle, max_.throttle, 0.0);
+    command_.x = saturate(xc_.phi, max_.roll, -max_.roll);
+    command_.y = saturate(xc_.theta, max_.pitch, -max_.pitch);
+    command_.z = saturate(xc_.r, max_.yaw_rate, -max_.yaw_rate);
 
-  if(mode_flag == roscopter_msgs::Command::MODE_ROLLRATE_PITCHRATE_YAWRATE_THROTTLE)
-  {
-        // Pack up and send the command
-    command_.mode = rosflight_msgs::Command::MODE_ROLLRATE_PITCHRATE_YAWRATE_THROTTLE;
-    command_.F = xc_.throttle;
-    command_.x = xc_.p;
-    command_.y = xc_.q;
-    command_.z = xc_.r;
+    if (-xhat_.pd < min_altitude_)
+    {
+      command_.x = 0.;
+      command_.y = 0.;
+      command_.z = 0.;
+    }
   }
 }
 
