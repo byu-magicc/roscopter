@@ -62,6 +62,7 @@
       <remap from="reference" to="ground_truth/odometry/NED_throttled"/>
       <remap from="gnss" to="gps/data"/>
       <remap from="baro" to="baro/data"/>
+      <remap from="range" to="sonar/data"/>
       <!--Outputs-->
       <remap from="is_flying" to="not_for_sim"/>
     </node>

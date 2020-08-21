@@ -1,0 +1,28 @@
+#This param file is used in mocap2ublox node.
+#It converts motion capture date to a virtual set of ublox data
+
+mocap2ublox: {
+
+ublox_frequency: 5.0, #hz
+
+#Should they be less by a factor of 10?
+global_horizontal_accuracy: 0.4, #standard deviations
+global_vertical_accuracy: 0.6,
+global_speed_accuracy: 0.4,
+relative_horizontal_accuracy: 0.02,
+relative_vertical_accuracy: 0.06,
+relative_speed_accuracy: 0.02,
+
+noise_on: True,
+
+ref_lla: [40.267320, -111.635629, 1387.0],
+
+sigma_rover_pos: 5.0, #TODO: tune this
+sigma_rover_vel: 5.0, #TODO: tune this
+
+lpf_on: True, #low pass filter of measurements
+
+A: 6378137.0,       # WGS-84 Earth semimajor axis (m), from ekf_ros.cpp
+B: 6356752.314245,  # Derived Earth semiminor axis (m), from ekf_ros.cpp
+
+}
