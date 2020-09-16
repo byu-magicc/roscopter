@@ -1,0 +1,8 @@
+#This param file is used in performance tracker node.
+
+performance_tracker: {
+
+riseTimeCutoffPercentage: 90.0,
+settleTimeEnvelopePercentage: 10.0,
+
+}

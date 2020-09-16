@@ -1,0 +1,15 @@
+float32 north_body_frame_rise_time
+float32 north_body_frame_settling_time
+float32 north_body_frame_percent_overshoot
+
+float32 east_body_frame_rise_time
+float32 east_body_frame_settling_time
+float32 east_body_frame_percent_overshoot
+
+float32 down_body_frame_rise_time
+float32 down_body_frame_settling_time
+float32 down_body_frame_percent_overshoot
+
+float32 yaw_body_frame_rise_time
+float32 yaw_body_frame_settling_time
+float32 yaw_body_frame_percent_overshoot
