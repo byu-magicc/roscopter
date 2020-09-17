@@ -369,6 +369,7 @@ class WaypointManager():
 
         self.cmd_msg.mode = Command.MODE_NPOS_EPOS_DPOS_YAW
         self.waypoint_cmd_pub_.publish(self.cmd_msg)
+        rospy.sleep(20)
         return
 
     def wrap(self, angle):

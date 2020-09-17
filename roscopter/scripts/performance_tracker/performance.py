@@ -4,21 +4,21 @@ class Performance():
 
     def __init__(self, riseTimeCutoffPercentage, settleTimeEnvelopePercentage):
 
-        #creat object to track time
-        self.time = Time()
+        # #creat object to track time
+        # self.time = Time()
 
         #create objects for each dimension
-        self.north = Dimension(riseTimeCutoffPercentage, settleTimeEnvelopePercentage, self.time)
-        self.east = Dimension(riseTimeCutoffPercentage, settleTimeEnvelopePercentage, self.time)
-        self.down = Dimension(riseTimeCutoffPercentage, settleTimeEnvelopePercentage, self.time)
-        self.yaw = Dimension(riseTimeCutoffPercentage, settleTimeEnvelopePercentage, self.time)
+        self.north = Dimension(riseTimeCutoffPercentage, settleTimeEnvelopePercentage)#, self.time)
+        self.east = Dimension(riseTimeCutoffPercentage, settleTimeEnvelopePercentage)#, self.time)
+        self.down = Dimension(riseTimeCutoffPercentage, settleTimeEnvelopePercentage)#, self.time)
+        self.yaw = Dimension(riseTimeCutoffPercentage, settleTimeEnvelopePercentage)#, self.time)
 
-    def update_performance_measures_for_all_states(self):
+    def update_performance_measures_for_all_states(self, time):
 
-        self.north.update_performance_measures()
-        self.east.update_performance_measures()
-        self.down.update_performance_measures()
-        self.yaw.update_performance_measures()
+        self.north.update_performance_measures(time)
+        self.east.update_performance_measures(time)
+        self.down.update_performance_measures(time)
+        self.yaw.update_performance_measures(time)
 
     def update_command_for_all_states(self):
 
@@ -36,17 +36,17 @@ class Time():
 
 class Dimension():
 
-    def __init__(self, riseTimeCutoffPercentage, settleTimeEnvelopePercentage, time):
+    def __init__(self, riseTimeCutoffPercentage, settleTimeEnvelopePercentage):#, time):
 
         #TODO Make sure self.time is not a copy
-        self.time = time
+        # self.time = time
         self.riseTimeCutoffPercentage = riseTimeCutoffPercentage
         self.settleTimeEnvelopePercentage = settleTimeEnvelopePercentage
 
         #Calculated parameters
-        self.riseTimeCutoff = 0.0
-        self.settleTimeCutoff = 0.0
-        self.command_distance = 0.0
+        self.riseTimeCutoff = -1
+        self.settleTimeCutoff = -1
+        self.command_distance = -1
 
         #incoming values
         self.state = 0.0
@@ -64,47 +64,55 @@ class Dimension():
         self.settle_time = 0.0
         self.percent_overshoot = 0.0
 
-    def update_performance_measures(self):
+    def update_performance_measures(self, time):
 
-        self.error = self.high_level_command - self.state
-        self.update_rise_time()
-        self.update_settle_time()
+        self.error = self.state - self.high_level_command
+        self.update_rise_time(time)
+        self.update_settle_time(time)
         self.update_percent_overshoot()
 
     def update_command(self):
 
         self.command_distance = self.high_level_command - self.prev_hlc
-        self.riseTimeCutoff = self.command_distance*self.riseTimeCutoffPercentage
-        self.settleTimeCutoff = self.settleTimeEnvelopePercentage*self.command_distance
+        self.riseTimeCutoff = self.command_distance*(1.0-self.riseTimeCutoffPercentage/100.0)
+        self.settleTimeCutoff = self.command_distance*self.settleTimeEnvelopePercentage/100
 
+        #reset values
         self.rise_time_set = False
         self.settle_time_set = False
+        self.percent_overshoot = 0.0
 
-        self.prev_hlc = self.high_level_command
+        # self.prev_hlc = self.high_level_command
 
-    def update_rise_time(self):
+    def update_rise_time(self, time):
 
-        if self.rise_time_set == False and abs(self.error) < self.riseTimeCutoff:
-            self.rise_time = self.time.odomTime - self.time.receivedCommandTime
+        if self.rise_time_set == False and abs(self.error) <= abs(self.riseTimeCutoff):
+            self.rise_time = time.odomTime - time.receivedCommandTime
             self.rise_time_set = True
+        elif self.rise_time_set == False:
+            self.rise_time = -1
 
-    def update_settle_time(self):
-
-        if self.settle_time_set == False and abs(self.error) < self.settleTimeCutoff:
-            self.settle_time = self.time.odomTime - self.time.receivedCommandTime
+    def update_settle_time(self, time):
+        if self.settle_time_set == False and abs(self.error) <= abs(self.settleTimeCutoff):
+            self.settle_time = time.odomTime - time.receivedCommandTime
             self.settle_time_set = True
-        if self.settle_time_set == True and abs(self.error) > self.settleTimeCutoff:
-            self.settle_time = 0.0
+        elif self.settle_time_set == False:
+            self.settle_time = -1
+        elif self.settle_time_set == True and abs(self.error) > abs(self.settleTimeCutoff):
+            self.settle_time = -1
             self.settle_time_set = False
+
 
     def update_percent_overshoot(self):
 
+        percent_error = 0.0
+        if self.command_distance != 0.0:
+            percent_error = self.error/abs(self.command_distance)*100.0
         if self.command_distance >= 0.0:
-            if self.error > self.percent_overshoot:
-                self.percent_overshoot = self.error
+            if percent_error > self.percent_overshoot:
+                self.percent_overshoot = percent_error
         elif self.command_distance < 0.0:
-            if self.error < self.percent_overshoot:
-                self.percent_overshoot = self.error
+            if percent_error < self.percent_overshoot:
+                self.percent_overshoot = percent_error
         else:
-            print('Invalid error in update percent overshot')
-    
+            print('Invalid error in update percent overshot')    

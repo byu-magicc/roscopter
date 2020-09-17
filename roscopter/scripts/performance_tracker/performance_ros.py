@@ -9,6 +9,7 @@ from nav_msgs.msg import Odometry
 from roscopter_msgs.msg import Command
 from roscopter_msgs.msg import Control_Performance
 from performance import Performance
+from performance import Time
 
 class PerformanceROS():
 
@@ -19,11 +20,13 @@ class PerformanceROS():
 
         self.performance = Performance(riseTimeCutoffPercentage, settleTimeEnvelopePercentage)
 
+        self.time = Time()
+
         self.performance_message = Control_Performance()
 
         # Publishers
-        self.body_frame_preformance_pub_ = rospy.Publisher('controller_performance', Control_Performance, queue_size=5, latch=True)
-        
+        self.inertial_frame_preformance_pub_ = rospy.Publisher('controller_performance', Control_Performance, queue_size=5, latch=True)
+
         # Subscribers
         self.odom_sub_ = rospy.Subscriber('odom', Odometry, self.odomCallback, queue_size=5)
         self.high_level_command_sub = rospy.Subscriber('high_level_command', Command, self.highLevelCommandCallback, queue_size=5)
@@ -45,39 +48,45 @@ class PerformanceROS():
         euler = self.get_euler(quat)
         self.performance.yaw.state = euler[2]
 
-        self.performance.odomTime = msg.header.stamp.secs + msg.header.stamp.nsecs*1E-9
+        self.time.odomTime = msg.header.stamp.secs + msg.header.stamp.nsecs*1E-9
+
+        self.performance.update_performance_measures_for_all_states(self.time)
     
     def highLevelCommandCallback(self, msg):
 
         self.publish_performance()
-        
-        self.performance.north.highLevelCommand = msg.cmd1
-        self.performance.east.highLevelCommand = msg.cmd2
-        self.performance.down.highLevelCommand = msg.cmd3
-        self.performance.yaw.highLevelCommand = msg.cmd4
 
-        self.performance.receivedCommandTime = msg.stamp.secs + msg.stamp.nsecs*1E-9
+        self.performance.north.prev_hlc = self.performance.north.high_level_command
+        self.performance.east.prev_hlc = self.performance.east.high_level_command
+        self.performance.down.prev_hlc = self.performance.down.high_level_command
+        self.performance.yaw.prev_hlc = self.performance.yaw.high_level_command
 
-        self.performance.update_performance_measures_for_all_states()
+        self.performance.north.high_level_command = msg.cmd1
+        self.performance.east.high_level_command = msg.cmd2
+        self.performance.down.high_level_command = msg.cmd3
+        self.performance.yaw.high_level_command = msg.cmd4
+
+        self.time.receivedCommandTime = msg.stamp.secs + msg.stamp.nsecs*1E-9
+
         self.performance.update_command_for_all_states()
 
     def publish_performance(self):
 
         #TODO these need to be rotated to the body frame
-        self.performance_message.north_body_frame_rise_time = self.performance.north.rise_time
-        self.performance_message.north_body_frame_settling_time = self.performance.north.settle_time
-        self.performance_message.north_body_frame_percent_overshoot = self.performance.north.percent_overshoot
-        self.performance_message.east_body_frame_rise_time = self.performance.east.rise_time
-        self.performance_message.east_body_frame_settling_time = self.performance.east.settle_time
-        self.performance_message.east_body_frame_percent_overshoot = self.performance.east.percent_overshoot
-        self.performance_message.down_body_frame_rise_time = self.performance.down.rise_time
-        self.performance_message.down_body_frame_settling_time = self.performance.down.settle_time
-        self.performance_message.down_body_frame_percent_overshoot = self.performance.down.percent_overshoot   
-        self.performance_message.yaw_body_frame_rise_time = self.performance.yaw.rise_time
-        self.performance_message.yaw_body_frame_settling_time = self.performance.yaw.settle_time
-        self.performance_message.yaw_body_frame_settling_time = self.performance.yaw.percent_overshoot 
+        self.performance_message.north_inertial_frame_rise_time = self.performance.north.rise_time
+        self.performance_message.north_inertial_frame_settling_time = self.performance.north.settle_time
+        self.performance_message.north_inertial_frame_percent_overshoot = self.performance.north.percent_overshoot
+        self.performance_message.east_inertial_frame_rise_time = self.performance.east.rise_time
+        self.performance_message.east_inertial_frame_settling_time = self.performance.east.settle_time
+        self.performance_message.east_inertial_frame_percent_overshoot = self.performance.east.percent_overshoot
+        self.performance_message.down_inertial_frame_rise_time = self.performance.down.rise_time
+        self.performance_message.down_inertial_frame_settling_time = self.performance.down.settle_time
+        self.performance_message.down_inertial_frame_percent_overshoot = self.performance.down.percent_overshoot   
+        self.performance_message.yaw_inertial_frame_rise_time = self.performance.yaw.rise_time
+        self.performance_message.yaw_inertial_frame_settling_time = self.performance.yaw.settle_time
+        self.performance_message.yaw_inertial_frame_percent_overshoot = self.performance.yaw.percent_overshoot 
 
-        self.body_frame_preformance_pub_.publish(self.performance_message)
+        self.inertial_frame_preformance_pub_.publish(self.performance_message)
 
     #this function works in ipython
     def get_euler(self, quat):  

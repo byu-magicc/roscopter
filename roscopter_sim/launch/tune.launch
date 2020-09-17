@@ -62,7 +62,7 @@
       <remap from="imu" to="imu/data"/>
       <!--<remap from="pose" to="pose"/>-->
       <remap from="reference" to="ground_truth/odometry/NED_throttled"/>
-      <remap from="gnss" to="gps/data"/>
+      <!-- <remap from="gnss" to="gps/data"/> -->
       <remap from="baro" to="baro/data"/>
       <remap from="range" to="sonar/data"/>
       <!--Outputs-->
@@ -89,5 +89,7 @@
   <node name="truth_throttler" type="throttle" pkg="topic_tools" args="messages /multirotor/ground_truth/odometry/NED 100 /multirotor/ground_truth/odometry/NED_throttled">
 
   </node>
+
+  <node pkg="rosbag" type="record" name="record" output="screen" args="-O ../data/debug.bag --all"/>
 
 </launch>
