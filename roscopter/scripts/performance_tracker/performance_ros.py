@@ -15,13 +15,15 @@ class PerformanceROS():
 
     def __init__(self):
 
+        #gather parameters
         riseTimeCutoffPercentage = rospy.get_param('~riseTimeCutoffPercentage', 90.0)
         settleTimeEnvelopePercentage = rospy.get_param('~settleTimeEnvelopePercentage', 10.0)
 
+        #Instatiate objects
         self.performance = Performance(riseTimeCutoffPercentage, settleTimeEnvelopePercentage)
-
         self.time = Time()
 
+        #Create Messages
         self.performance_message = Control_Performance()
 
         # Publishers
@@ -30,6 +32,7 @@ class PerformanceROS():
         # Subscribers
         self.odom_sub_ = rospy.Subscriber('odom', Odometry, self.odomCallback, queue_size=5)
         self.high_level_command_sub = rospy.Subscriber('high_level_command', Command, self.highLevelCommandCallback, queue_size=5)
+
         while not rospy.is_shutdown():
             # wait for new messages and call the callback when they arrive
             rospy.spin()
@@ -72,7 +75,7 @@ class PerformanceROS():
 
     def publish_performance(self):
 
-        #TODO these need to be rotated to the body frame
+        #TODO it would be good if these were rotated to the body frame
         self.performance_message.north_inertial_frame_rise_time = self.performance.north.rise_time
         self.performance_message.north_inertial_frame_settling_time = self.performance.north.settle_time
         self.performance_message.north_inertial_frame_percent_overshoot = self.performance.north.percent_overshoot
@@ -88,7 +91,6 @@ class PerformanceROS():
 
         self.inertial_frame_preformance_pub_.publish(self.performance_message)
 
-    #this function works in ipython
     def get_euler(self, quat):  
 
         qw = quat[0]

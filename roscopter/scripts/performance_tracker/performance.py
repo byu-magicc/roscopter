@@ -1,17 +1,18 @@
+#Use this to gather controller performance information.
+#Performance measures of rise time, settling time, and percent overshoot are provided.
+#Performance measures are provided for each dimension and yaw i.e. x, y, z, and yaw
+#TODO modify the performance measures to be in the body frame rather than the inertial frame.
+
 import numpy as np
 
 class Performance():
 
     def __init__(self, riseTimeCutoffPercentage, settleTimeEnvelopePercentage):
 
-        # #creat object to track time
-        # self.time = Time()
-
-        #create objects for each dimension
-        self.north = Dimension(riseTimeCutoffPercentage, settleTimeEnvelopePercentage)#, self.time)
-        self.east = Dimension(riseTimeCutoffPercentage, settleTimeEnvelopePercentage)#, self.time)
-        self.down = Dimension(riseTimeCutoffPercentage, settleTimeEnvelopePercentage)#, self.time)
-        self.yaw = Dimension(riseTimeCutoffPercentage, settleTimeEnvelopePercentage)#, self.time)
+        self.north = Dimension(riseTimeCutoffPercentage, settleTimeEnvelopePercentage)
+        self.east = Dimension(riseTimeCutoffPercentage, settleTimeEnvelopePercentage)
+        self.down = Dimension(riseTimeCutoffPercentage, settleTimeEnvelopePercentage)
+        self.yaw = Dimension(riseTimeCutoffPercentage, settleTimeEnvelopePercentage)
 
     def update_performance_measures_for_all_states(self, time):
 
@@ -36,10 +37,9 @@ class Time():
 
 class Dimension():
 
-    def __init__(self, riseTimeCutoffPercentage, settleTimeEnvelopePercentage):#, time):
+    def __init__(self, riseTimeCutoffPercentage, settleTimeEnvelopePercentage):
 
-        #TODO Make sure self.time is not a copy
-        # self.time = time
+        #provided constant parameters
         self.riseTimeCutoffPercentage = riseTimeCutoffPercentage
         self.settleTimeEnvelopePercentage = settleTimeEnvelopePercentage
 
@@ -82,7 +82,7 @@ class Dimension():
         self.settle_time_set = False
         self.percent_overshoot = 0.0
 
-        # self.prev_hlc = self.high_level_command
+        # be sure to age the high level command.  This is done in performance_ros.py
 
     def update_rise_time(self, time):
 
@@ -93,6 +93,7 @@ class Dimension():
             self.rise_time = -1
 
     def update_settle_time(self, time):
+        
         if self.settle_time_set == False and abs(self.error) <= abs(self.settleTimeCutoff):
             self.settle_time = time.odomTime - time.receivedCommandTime
             self.settle_time_set = True

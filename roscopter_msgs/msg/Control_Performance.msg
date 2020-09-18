@@ -1,6 +1,6 @@
+float32 north_inertial_frame_rise_time
 float32 north_inertial_frame_settling_time
 float32 north_inertial_frame_percent_overshoot
-float32 north_inertial_frame_rise_time
 
 float32 east_inertial_frame_rise_time
 float32 east_inertial_frame_settling_time
@@ -10,6 +10,6 @@ float32 down_inertial_frame_rise_time
 float32 down_inertial_frame_settling_time
 float32 down_inertial_frame_percent_overshoot
 
-float32 yaw_intertial_frame_rise_time
-float32 yaw_intertial_frame_settling_time
-float32 yaw_intertial_frame_percent_overshoot
+float32 yaw_inertial_frame_rise_time
+float32 yaw_inertial_frame_settling_time
+float32 yaw_inertial_frame_percent_overshoot
