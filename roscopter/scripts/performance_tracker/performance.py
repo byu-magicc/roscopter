@@ -1,3 +1,4 @@
+#Maintainer: Matthew Rydalch
 #Use this to gather controller performance information.
 #Performance measures of rise time, settling time, and percent overshoot are provided.
 #Performance measures are provided for each dimension and yaw i.e. x, y, z, and yaw
@@ -93,7 +94,7 @@ class Dimension():
             self.rise_time = -1
 
     def update_settle_time(self, time):
-        
+
         if self.settle_time_set == False and abs(self.error) <= abs(self.settleTimeCutoff):
             self.settle_time = time.odomTime - time.receivedCommandTime
             self.settle_time_set = True

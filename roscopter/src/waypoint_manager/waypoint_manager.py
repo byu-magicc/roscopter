@@ -369,7 +369,7 @@ class WaypointManager():
 
         self.cmd_msg.mode = Command.MODE_NPOS_EPOS_DPOS_YAW
         self.waypoint_cmd_pub_.publish(self.cmd_msg)
-        rospy.sleep(20)
+        # rospy.sleep(20) Turn this on to test controller performance.  It gives the quad enough time to settle at a waypoint.
         return
 
     def wrap(self, angle):
