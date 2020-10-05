@@ -172,7 +172,7 @@ State& State::operator+=(const VectorXd& dx)
     bb += dx(ErrorState::DBB);
     ref += dx(ErrorState::DREF);
 
-    *this;
+    return *this;
 }
 
 State& State::operator+=(const ErrorState& dx)

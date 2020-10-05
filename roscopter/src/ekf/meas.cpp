@@ -34,6 +34,8 @@ std::string Base::Type() const
     case ZERO_VEL:
         return "ZeroVel";
         break;
+    default:
+        return "unknown";
     }
 }
 
