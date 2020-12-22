@@ -1,14 +1,18 @@
 <?xml version="1.0"?>
 
 <launch>
+  
 
   <!-- Parameter Arguments -->
   <!-- mav_name is used for parameter filenames, and for the gazebo link name, Exclude dot extensions -->
-  <arg name="mav_name" value="quadcopter"/>
+  <arg name="mav_name"  value="quadcopter"/>
   <arg name="waypoint_list" value="waypoints"/>
-  <arg name="mocap2ublox_param_file" value="mocap2ublox"/>
+  <arg name="bag_name"  value="FILE_PATH_HERE"/> 
+  
+  <!-- play rosbag -->
+  <node pkg="rosbag" type="play" name="player" output="screen" args="--clock $(arg bag_name)"/>
 
-    <!-- Load  Parameters -->
+  <!-- Load  Parameters -->
   <rosparam command="load" file="$(find roscopter)/params/$(arg mav_name).yaml"/>
   <rosparam command="load" file="$(find roscopter)/params/$(arg waypoint_list).yaml"/>
 
@@ -18,18 +22,13 @@
     <param name="port" value="/dev/ttyACM0"/>
   </node>
 
-  <!-- Motion Capture Node-->
-  <node name="node" pkg="optitrack_vrpn" type="node" output="screen"/>
-
-  <!-- Mocap2Ublox Node-->
-  <group ns="m2u">
-    <!-- Load common parameters -->
-    <rosparam command="load" file="$(find roscopter)/params/$(arg mocap2ublox_param_file).yaml"/>
-    <node name="mocap2ublox" pkg="roscopter" type="mocap2ublox_ros.py" output="screen">
-      <remap from="rover_mocap" to="/$(arg mav_name)_ned"/>
-    </node>
-  </group>
-
+  <!-- GPS Node-->
+	<node name="f9p" pkg="ublox" type="ublox_ros">
+		<param name="serial_port" value="/dev/ttyACM1"/>
+		<param name="chain_level" value="0"/>
+		<param name="base_type" value = "moving"/>  <!--moving or stationary-->
+		<param name="rover_quantity" value = "0"/>     <!--number of rovers-->
+	</node>
 
   <!-- PID Position Controller -->
   <node name="controller" pkg="roscopter" type="controller">
@@ -43,7 +42,7 @@
     <param name="param_namespace" value="estimator"/>
     <remap from="imu" to="/imu/data"/>
     <remap from="baro" to="/baro"/>
-    <remap from="ublox_gnss" to="/m2u/rover_PosVelEcef"/>
+    <remap from="ublox_gnss" to="/PosVelEcef"/>
   </node>
 
   <!-- Waypoint Manager -->
@@ -51,5 +50,8 @@
     <remap from="waypoint" to="high_level_command"/>
     <remap from="state" to="odom"/>
   </node>
+
+  <!-- record rosbag -->
+  <node pkg="rosbag" type="record" name="record" output="screen" args="-O ../data/debug/debug.bag --all"/>
   
 </launch>
