@@ -1,19 +1,19 @@
 #include <controller/controller.h>
 #include <stdio.h>
+#include <string.h>
 
 namespace controller
 {
 
 Controller::Controller() :
   nh_(ros::NodeHandle()),
-  nh_private_("~")
+  nh_private_("~"),
+  nh_param_("/" + nh_private_.param<std::string>("param_namespace", nh_private_.getNamespace()) ),
+  _server(nh_param_)
 {
-  // Retrieve global MAV equilibrium throttle. This is the only MAV specific
-  // parameter that is required
-  ros::NodeHandle nh_mav(ros::this_node::getNamespace());
-  if (!nh_private_.getParam("equilibrium_throttle", throttle_eq_))
+  if (!nh_param_.getParam("equilibrium_throttle", throttle_eq_))
     ROS_ERROR("[Controller] MAV equilibrium_throttle not found!");
-
+    
   // Calculate max accelerations. Assuming that equilibrium throttle produces
   // 1 g of acceleration and a linear thrust model, these max acceleration
   // values are computed in g's as well.
@@ -23,15 +23,15 @@ Controller::Controller() :
   is_flying_ = false;
   received_cmd_ = false;
 
-  nh_private_.getParam("max_roll", max_.roll);
-  nh_private_.getParam("max_pitch", max_.pitch);
-  nh_private_.getParam("max_yaw_rate", max_.yaw_rate);
-  nh_private_.getParam("max_throttle", max_.throttle);
-  nh_private_.getParam("max_n_dot", max_.n_dot);
-  nh_private_.getParam("max_e_dot", max_.e_dot);
-  nh_private_.getParam("max_d_dot", max_.d_dot);
+  nh_param_.getParam("max_roll", max_.roll);
+  nh_param_.getParam("max_pitch", max_.pitch);
+  nh_param_.getParam("max_yaw_rate", max_.yaw_rate);
+  nh_param_.getParam("max_throttle", max_.throttle);
+  nh_param_.getParam("max_n_dot", max_.n_dot);
+  nh_param_.getParam("max_e_dot", max_.e_dot);
+  nh_param_.getParam("max_d_dot", max_.d_dot);
 
-  nh_private_.getParam("min_altitude", min_altitude_);
+  nh_param_.getParam("min_altitude", min_altitude_);
 
   _func = boost::bind(&Controller::reconfigure_callback, this, _1, _2);
   _server.setCallback(_func);

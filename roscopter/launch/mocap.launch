@@ -1,6 +1,14 @@
 <?xml version="1.0"?>
 
 <launch>
+  <!-- Parameter Arguments -->
+  <!-- mav_name is used for parameter filenames, and for the gazebo link name, Exclude dot extensions -->
+  <arg name="mav_name" value="quadcopter"/>
+  <arg name="waypoint_list" value="waypoints"/>
+
+  <!-- Load  Parameters -->
+  <rosparam command="load" file="$(find roscopter)/params/$(arg mav_name).yaml"/>
+  <rosparam command="load" file="$(find roscopter)/params/$(arg waypoint_list).yaml"/>
 
 
   <!-- FCU communication -->
@@ -12,17 +20,15 @@
   <!-- Motion Capture Node-->
   <node name="mocap" pkg="optitrack_vrpn" type="node" output="screen"/>
 
-  <!-- Load common parameters -->
-  <rosparam command="load" file="$(find roscopter)/params/F450.yaml"/>
-
-  <!-- PID Position Controller -->
+  <!-- PID Controller -->
   <node name="controller" pkg="roscopter" type="controller">
     <remap from="estimate" to="odom"/>
   </node>
 
   <!-- Estimator -->
-  <rosparam command="load" file="$(find roscopter)/params/ekf.yaml" ns="estimator"/>
   <node name="estimator" type="ekf_node" pkg="roscopter" output="screen">
+    <param name="param_filename" value="$(find roscopter)/params/$(arg mav_name).yaml"/>
+    <param name="param_namespace" value="estimator"/>
     <remap from="imu" to="/imu/data"/>
     <remap from="pose" to="/MOTIONCAPTUREASSET_ned"/>
     <!-- <remap from="range" to=<RANGE_TOPIC> /> -->

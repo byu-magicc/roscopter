@@ -11,12 +11,13 @@ ROSbagParser::ROSbagParser(int argc, char** argv)
   duration_ = 1e3;
 
   param_filename_ = ROSCOPTER_DIR"/params/ekf.yaml";
+  param_namespace_ = "";
   getArgs(argc, argv);
 
   loadParams();
   openBag();
 
-  ekf_.init(param_filename_);
+  ekf_.init(param_filename_,param_namespace_);
 }
 
 void ROSbagParser::loadParams()
@@ -50,6 +51,7 @@ void ROSbagParser::getArgs(int argc, char** argv)
     if (argparse.cmdOptionExists("-h"))
         displayHelp();
     argparse.getCmdOption("-f", param_filename_);
+    argparse.getCmdOption("-f", param_namespace_);
 }
 
 void ROSbagParser::openBag()

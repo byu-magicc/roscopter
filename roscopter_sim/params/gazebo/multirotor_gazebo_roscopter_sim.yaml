@@ -1,0 +1,123 @@
+
+################## Commonly Used Parameters ###################
+#common parameters used in varying simulations, create as anchor nodes to reference below
+common: {
+  #dynamics
+  mass: &mass 3.69
+}
+
+############# Gazebo Properties ###################
+
+gazebo_properties: {
+  mass: *mass,
+  body_width: 0.505,
+  body_height: 0.1,
+  ixx: 0.07,
+  ixy: 0.0,
+  ixz: 0.0,
+  iyy: 0.08,
+  iyz: 0.0,
+  izz: 0.12,
+}
+
+############ ROScopter SIL Parameters ####################
+
+roscopter_sim: {
+# Simplified Dynamics #
+  dynamics: {
+    mass: *mass,
+    linear_mu: 0.2,
+    angular_mu: 0.3,
+    ground_effect: [-55.3516, 181.8265, -203.9874, 85.3735, -7.6619],
+    max_l: 6.5080,
+    max_m: 5.087,
+    max_n: 0.25,
+    max_F: 59.844,
+    tau_up_l: 0.1904,
+    tau_up_m: 0.1904,
+    tau_up_n: 0.1644,
+    tau_up_F: 0.1644,
+    tau_down_l: 0.1904,
+    tau_down_m: 0.1904,
+    tau_down_n: 0.2164,
+    tau_down_F: 0.2164,
+    roll_P: 25.0,
+    roll_I: 0.0,
+    roll_D: 8.0,
+    pitch_P: 25.0,
+    pitch_I: 0.0,
+    pitch_D: 8.0,
+    yaw_P: 25.0,
+    yaw_I: 0.0,
+    yaw_D: 0.0,
+    alt_P: 16.0,
+    alt_I: 5.0,
+    alt_D: 32.0
+  }
+}
+
+################## rosflight_plugins - Sensor Model Parameters ####################
+
+rosflight_plugins: {
+    # Odometry (Ground Truth)
+  odometry: {
+    transform_topic: ground_truth/transform,
+    odometry_topic: ground_truth/odometry
+  },
+
+  # IMU
+  imu: {
+    noise_on: true,
+    topic: imu/data,
+    rate: 250,
+    gyro_bias_topic: imu/gyro_bias,
+    gyro_stdev: 0.005 ,
+    gyro_bias_range: 0.005,
+    gyro_bias_walk_stdev: 0.00001,
+    acc_bias_topic: imu/acc_bias,
+    acc_stdev: 0.05,
+    acc_bias_range: 0.01,
+    acc_bias_walk_stdev: 0.00001
+  },
+
+  # Barometer
+  barometer: {
+    noise_on: true,
+    topic: baro/data,
+    rate: 50.0,
+    stdev: 0.1
+  },
+
+  # Magnetometer
+  magnetometer: {
+    noise_on: true,
+    rate: 100.0,
+    topic: mag/data,
+    stdev: 0.02,
+    bias_range: 0.15,
+    declination: 0.198584539676,
+    inclination: 1.14316156541
+  },
+
+  # Sonar
+  # this is still implemented the old way, we need to write a custom plugin to use 
+  # the ROS parameter server like the others
+
+  # GPS
+  gps: {
+    noise_on: true,
+    rate: 10.0,
+    topic: gps/data,
+    north_stdev: 0.21,
+    east_stdev: 0.21,
+    alt_stdev: 0.40,
+    velocity_stdev: 0.1,
+    k_north: 0.0009090909, # 1/1100
+    k_east: 0.0009090909, # 1/1100
+    k_alt: 0.0009090909, # 1/1100
+    initial_latitude: 40.267320,
+    initial_longitude: -111.635629,
+    initial_altitude: 1387.0,
+    num_sats: 7
+  }
+}

@@ -16,8 +16,12 @@ class WaypointManager():
     def __init__(self):
 
         # get parameters
-        try: #TODO: Do we need this try except? Or can we start without waypoints?
-            self.waypoint_list = rospy.get_param('~waypoints')
+        try:
+            default_param_namespace = rospy.get_name()
+            param_namespace = rospy.get_param('~param_namespace' , default_param_namespace)
+            if len(param_namespace) > 0 and param_namespace[0] is not "/":
+                param_namespace = "/" + param_namespace
+            self.waypoint_list = rospy.get_param( param_namespace + "/waypoints")
         except KeyError:
             rospy.logfatal('[waypoint_manager] waypoints not set')
             rospy.signal_shutdown('[waypoint_manager] Parameters not set')
@@ -45,10 +49,10 @@ class WaypointManager():
         self.poseEuler_msg.psi = self.psi
 
         # how close does the MAV need to get before going to the next waypoint?
-        self.pos_threshold = rospy.get_param('~threshold', 5)
-        self.heading_threshold = rospy.get_param('~heading_threshold', 0.035)  # radians
-        self.cyclical_path = rospy.get_param('~cycle', True)
-        self.print_wp_reached = rospy.get_param('~print_wp_reached', True)
+        self.pos_threshold = rospy.get_param("/" + param_namespace + "/threshold", 5)
+        self.heading_threshold = rospy.get_param("/" + param_namespace + "/heading_threshold", 0.035)  # radians
+        self.cyclical_path = rospy.get_param("/" + param_namespace + "/cycle", True)
+        self.print_wp_reached = rospy.get_param("/" + param_namespace + "/print_wp_reached", True)
 
         # Landing Params
         self.min_landing_alt = rospy.get_param('~min_landing_alt', -1)

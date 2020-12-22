@@ -67,7 +67,7 @@ public:
 
   EKF_ROS();
   ~EKF_ROS();
-  void init(const std::string& param_file);
+  void init(const std::string& param_file, const std::string& param_dictionary);
   void initROS();
 
   void imuCallback(const sensor_msgs::ImuConstPtr& msg);
@@ -95,6 +95,7 @@ private:
 
   ros::NodeHandle nh_;
   ros::NodeHandle nh_private_;
+  ros::NodeHandle nh_param_;
 
   ros::Subscriber imu_sub_;
   ros::Subscriber baro_sub_;
