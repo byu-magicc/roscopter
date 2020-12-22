@@ -1,7 +1,7 @@
 # ROSPARAMS FOR ROSFLIGHT_HOLODECK SIMULATOR
 
 ### rosflight_holodeck ###
-world_name: "UrbanCity-RGBCam"
+world_name: "UrbanCity-Default"
 # world_name: "Ocean-BoatLanding"
 
 # Set the initial state of main UAV agent
@@ -43,5 +43,6 @@ ocean: {
 
 ### rosflight_joy ###
 rc_node: {
-  auto_arm: true
+  auto_arm: true,
+  auto_takeoff: true  # ignored if 'auto_arm' is set to false
 }
