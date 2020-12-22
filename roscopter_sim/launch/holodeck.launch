@@ -1,0 +1,24 @@
+<launch>
+
+  <include file="$(find roscopter_sim)/launch/sub_launch/spawn_mav_holodeck.launch" />
+
+    <!-- Is Flying Publisher: used by roscopter_controller -->
+    <node pkg="rostopic" type="rostopic" name="is_flying_pub" args="pub is_flying std_msgs/Bool true"/>
+
+    <!-- Controller -->
+    <node name="roscopter_controller" pkg="roscopter" type="controller" output="screen"
+          required="true">
+      <remap from="estimate" to="truth/NED"/>
+      <rosparam ns="" command="load" file="$(find roscopter)/params/sub_params/controller.yaml"/>
+    </node>
+
+
+    <rosparam command="load" file="$(find roscopter)/params/waypoints.yaml"/>
+
+    <!-- Waypoint Manager -->
+    <node name="roscopter_waypoint_manager" pkg="roscopter" type="waypoint_manager.py" output="screen" required="true">
+      <remap from="state" to="truth/NED"/>
+      <param name="param_namespace" value="waypoint_manager"/> 
+    </node>
+
+</launch>

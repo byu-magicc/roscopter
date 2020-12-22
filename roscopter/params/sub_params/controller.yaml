@@ -1,0 +1,41 @@
+### Controller Parameters
+
+x_dot_P: 0.5
+x_dot_I: 0.0
+x_dot_D: 0.0
+
+y_dot_P: 0.5
+y_dot_I: 0.0
+y_dot_D: 0.0
+
+z_dot_P: 1.0
+z_dot_I: 0.0
+z_dot_D: 0.0
+
+north_P: 0.45
+north_I: 0.0
+north_d: 0.1
+
+east_P: 0.45
+east_I: 0.0
+east_d: 0.1
+
+down_P: 2.0
+down_I: 0.7
+down_D: 0.1
+
+psi_P: 1.0
+psi_I: 0.0
+psi_D: 0.0
+
+tau: 0.05
+
+equilibrium_throttle: 0.5
+
+max_roll: 0.196
+max_pitch: 0.196
+max_yaw_rate: 0.785
+max_throttle: 0.85
+max_n_dot: 1.5
+max_e_dot: 1.5
+max_d_dot: 1.25

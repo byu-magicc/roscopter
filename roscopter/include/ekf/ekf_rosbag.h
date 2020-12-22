@@ -35,6 +35,7 @@ private:
     rosbag::View* view_;
     std::string bag_filename_;
     std::string param_filename_;
+    std::string param_namespace_;
     std::string log_prefix_;
     double start_;
     double duration_;

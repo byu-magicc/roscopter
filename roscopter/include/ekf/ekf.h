@@ -59,14 +59,18 @@ public:
   const dxMat& P() const { return xbuf_.P(); }
 
   void initialize(double t);
-  void load(const std::string& filename);
-  void initLog(const std::string& filename);
+  void load(const std::string& filename, const std::string& param_dictionary);
+  void initLog(const std::string& filename, const std::string& param_dictionary);
 
   void run();
   void update(const meas::Base *m);
 
   void setArmed() { armed_ = true; }
   void setDisarmed() { armed_ = false; }
+  void setUseMocap(bool use_mocap) {use_mocap_ = use_mocap; }
+  void setUseBaro(bool use_baro) {use_baro_ = use_baro; }
+  void setUseGNSS(bool use_gnss) {use_gnss_ = use_gnss; }
+  void setUseZeroVel(bool use_zero_vel) {use_zero_vel_ = use_zero_vel; }
 
   bool refLlaSet() { return ref_lla_set_; }
 

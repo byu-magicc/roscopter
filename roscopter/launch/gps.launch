@@ -2,6 +2,14 @@
 
 <launch>
 
+  <!-- Parameter Arguments -->
+  <!-- mav_name is used for parameter filenames, and for the gazebo link name, Exclude dot extensions -->
+  <arg name="mav_name" value="quadcopter"/>
+  <arg name="waypoint_list" value="waypoints"/>
+
+  <!-- Load  Parameters -->
+  <rosparam command="load" file="$(find roscopter)/params/$(arg mav_name).yaml"/>
+  <rosparam command="load" file="$(find roscopter)/params/$(arg waypoint_list).yaml"/>
 
   <!-- FCU communication -->
   <node name="rosflight_io" pkg="rosflight" type="rosflight_io" output="screen">
@@ -17,22 +25,19 @@
 		<param name="rover_quantity" value = "0"/>     <!--number of rovers-->
 	</node>
 
-  <!-- Load common parameters -->
-  <rosparam command="load" file="$(find roscopter)/params/F450.yaml"/>
-
   <!-- PID Position Controller -->
   <node name="controller" pkg="roscopter" type="controller">
+    <param name="param_namespace" value="controller"/>
     <remap from="estimate" to="odom"/>
   </node>
 
   <!-- Estimator -->
-  <rosparam command="load" file="$(find roscopter)/params/ekf.yaml" ns="estimator"/>
   <node name="estimator" type="ekf_node" pkg="roscopter" output="screen">
+    <param name="param_filename" value="$(find roscopter)/params/$(arg mav_name).yaml"/>
+    <param name="param_namespace" value="estimator"/>
     <remap from="imu" to="/imu/data"/>
     <remap from="baro" to="/baro"/>
     <remap from="ublox_gnss" to="/PosVelEcef"/>
-    <!-- <remap from="range" to=<RANGE_TOPIC> /> -->
-
   </node>
 
   <!-- Waypoint Manager -->

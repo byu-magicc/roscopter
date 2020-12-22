@@ -81,6 +81,7 @@ private:
   // Node handles, publishers, subscribers
   ros::NodeHandle nh_;
   ros::NodeHandle nh_private_;
+  ros::NodeHandle nh_param_;
 
   // Publishers and Subscribers
   ros::Subscriber state_sub_;
@@ -134,6 +135,7 @@ private:
   void resetIntegrators();
   void publishCommand();
   double saturate(double x, double max, double min);
+
 };
 }
 

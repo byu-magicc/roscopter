@@ -1,5 +1,5 @@
 ## Post-Process Information
-bag_name: "/home/mmmfarrell/magicc/roscopter_ws/src/bags/rock_canyon_updown.bag"
+bag_name: "~/roscopter_ws/src/bags/test.bag"
 status_topic: "/status"
 imu_topic: "/imu/data"
 baro_topic: "/serial/baro"
@@ -32,7 +32,7 @@ use_range: false
 use_zero_vel: true #publishes zeros for the estimator until the quad starts flying, prevents drift before flight
 
 R_zero_vel: [0.001, 0.001, 0.001, # vel
-              0.001] # Altitude
+          0.001] # Altitude
 
 ## Initial Uncertainty
 P0: [10.0, 10.0, 10.0, # pos
@@ -56,12 +56,12 @@ Qx: [0.000, 0.000, 0.000,       # pos
 # 1.0 = use full update
 # 0.0 = do not update at all
 lambda: [1.0, 1.0, 1.0,       # pos
-         1.0, 1.0, 1.0,       # att
-         1.0, 1.0, 1.0,       # vel
-         0.1, 0.1, 0.1,       # accel bias
-         0.1, 0.1, 0.1,       # gyro bias
-         0.5,                 # baro bias
-         0.3]                 # reference altitude
+     1.0, 1.0, 1.0,       # att
+     1.0, 1.0, 1.0,       # vel
+     0.1, 0.1, 0.1,       # accel bias
+     0.1, 0.1, 0.1,       # gyro bias
+     0.5,                 # baro bias
+     0.3]                 # reference altitude
 
 # Constant Parameeters
 p_b2g: [0, 0, 0] # position from body frame to gps frame
@@ -72,7 +72,7 @@ ref_lla: [40.267320, -111.635629, 1387.0]
 ref_heading: 0.0 # reference heading for inertial frame (from north)
 
 x0: [0, 0, 0,       # pos
-     1, 0, 0, 0]    # att
+     1, 0, 0, 0]   # att
 
 ## Sensor Noise
 accel_noise_stdev: 0.5

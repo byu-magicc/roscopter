@@ -1,0 +1,24 @@
+<launch>
+  <arg name="rfh_sim_params_file" default="$(find roscopter_sim)/params/holodeck/holodeck_world.yaml" />
+  <!-- <arg name="camera_info_url" default="file://$(find rosflight_holodeck)/params/camera_info.yaml" /> -->
+
+  <!-- Sync time between rosflight_holodeck and rosflight_firmware -->
+  <param name="use_sim_time" value="true" />
+
+  <!-- **** ROSFLIGHT **** -->
+    <!-- FCU communication -->
+    <node pkg="rosflight" type="rosflight_io" name="rosflight_io" output="screen">
+      <param name="udp" value="true"/>
+    </node>
+
+  <!-- **** ROSFLIGHT_HOLODECK **** -->
+    <!-- Params -->
+    <rosparam command="load" file="$(arg rfh_sim_params_file)" />
+    <rosparam command="load" file="$(find roscopter_sim)/params/holodeck/multirotor_holodeck.yaml" />
+
+    <!-- Nodes -->
+    <node pkg="rosflight_holodeck" type="rosflight_holodeck.py" name="rosflight_holodeck" output="screen" />
+    <node pkg="rosflight_joy" type="rc_keyboard" name="rc_node" output="screen"/>
+    <!-- <node pkg="rosflight_joy" type="rc_joy" name="rc_node" output="screen" respawn="true" respawn_delay="5"/> -->
+
+</launch>
