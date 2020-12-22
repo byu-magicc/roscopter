@@ -31,6 +31,7 @@
     <param name="param_namespace" value="estimator"/>
     <remap from="imu" to="/imu/data"/>
     <remap from="pose" to="/MOTIONCAPTUREASSET_ned"/>
+    <!-- <remap from="range" to=<RANGE_TOPIC> /> -->
   </node>
 
   <!-- Waypoint Manager -->
