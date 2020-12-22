@@ -38,11 +38,6 @@
     <remap from="imu" to="/imu/data"/>
     <remap from="baro" to="/baro"/>
     <remap from="ublox_gnss" to="/PosVelEcef"/>
-<<<<<<< HEAD:roscopter/launch/gps.launch
-=======
-    <!-- <remap from="range" to=<RANGE_TOPIC> /> -->
-
->>>>>>> origin/roscopter_development:roscopter/launch/copter_gps.launch
   </node>
 
   <!-- Waypoint Manager -->

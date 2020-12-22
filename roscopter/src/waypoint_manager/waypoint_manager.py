@@ -16,17 +16,12 @@ class WaypointManager():
     def __init__(self):
 
         # get parameters
-<<<<<<< HEAD
         try:
             default_param_namespace = rospy.get_name()
             param_namespace = rospy.get_param('~param_namespace' , default_param_namespace)
             if len(param_namespace) > 0 and param_namespace[0] is not "/":
                 param_namespace = "/" + param_namespace
             self.waypoint_list = rospy.get_param( param_namespace + "/waypoints")
-=======
-        try: #TODO: Do we need this try except? Or can we start without waypoints?
-            self.waypoint_list = rospy.get_param('~waypoints')
->>>>>>> origin/roscopter_development
         except KeyError:
             rospy.logfatal('[waypoint_manager] waypoints not set')
             rospy.signal_shutdown('[waypoint_manager] Parameters not set')
