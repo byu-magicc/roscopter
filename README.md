@@ -34,7 +34,7 @@ $ catkin_make
 $ source devel/setup.bash
 
 
------ ROScopter Sim - Simplified Dynamics Model -------
+----- ROScopter Sim -----
 
 This simulation does not simulate the firmware (rosflight) and does not require RC input. It has the same API as the SIL stack, and can be useful for developing high-level algorithms, however it makes some simplifying assumptions in the dynamics which reduces the fidelity of the simulation.
 
