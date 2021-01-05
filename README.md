@@ -3,7 +3,7 @@ ROScopter
 
 ------ Getting Started ------
 
-Install the latest version of ROS on your computer. Next install catkin and create a catkin workspace.
+Install the latest version of ROS on your computer.
 
 Make sure to install the following packages to your python environment.
 
@@ -21,13 +21,13 @@ If you would like to use the keyboard or a joypad to control the multirotor make
 
 $ pip install pygame
 
-Clone this repo (ROScopter) and the ROSflight repo into your catkin_ws/src.
+Clone this repo (ROScopter) and the ROSflight (https://github.com/rosflight/rosflight) repo into your catkin_ws/src.
 
-To use the gazebo simulation package, clone the ROSflight_plugins repo. If you would like to use the keyboard as a RC controller, clone the rosflight_joy repo as well.
+To use the gazebo simulation package, clone the ROSflight_plugins repo (https://github.com/byu-magicc/rosflight_plugins). If you would like to use the keyboard as a RC controller, clone the rosflight_joy repo as well (https://github.com/rosflight/rosflight_joy).
 
-If you would like to use the rosflight_holodeck simulation package, clone the rosflight_holodeck repo and follow installation instructions on the linked page.
+If you would like to use the rosflight_holodeck simulation package, clone the rosflight_holodeck repo (https://magiccvs.byu.edu/gitlab/lab/rosflight_holodeck) and follow installation instructions on the linked page.
 
-Build and source the catkin workspace by navigating to the workspace and running these commands.
+Next install catkin and create a catkin workspace. Build and source the catkin workspace by navigating to the workspace and running these commands.
 
 $ catkin_make
 
