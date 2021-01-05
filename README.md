@@ -44,6 +44,9 @@ $ roslaunch roscopter_sim gazebo.launch
 
 Make sure to push the play button in the Gazebo simulator.
 
+----- Wiki -----
+
+To get more help on how to setup roscopter visit the wiki (https://github.com/byu-magicc/roscopter/wiki).
 
 # TODO: #
 
