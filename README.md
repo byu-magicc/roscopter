@@ -8,9 +8,13 @@ Install the latest version of ROS on your computer. Next install catkin and crea
 Make sure to install the following packages to your python environment.
 
 $ pip install pyyaml
+
 $ pip install numpy
+
 $ pip install rospkg
+
 $ pip install pycryptodomex
+
 $ pip install gnupg
 
 If you would like to use the keyboard or a joypad to control the multirotor make sure to install pygame.
