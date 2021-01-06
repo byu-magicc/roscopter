@@ -17,6 +17,8 @@ $ pip install pycryptodomex
 
 $ pip install gnupg
 
+$ pip install empy
+
 If you would like to use the keyboard or a joypad to control the multirotor make sure to install pygame.
 
 $ pip install pygame
