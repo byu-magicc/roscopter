@@ -134,7 +134,7 @@ void EKF::propagate(const double &t, const Vector6d &imu, const Matrix6d &R)
   }
   catch (double e)
   {
-    std::cout << "[Error]: Negative time step calculated in estimator" << '\n';
+    std::cout << "[WARNING]: Negative time step calculated in estimator" << '\n';
     xbuf_.next().x.t = t;
     return;
   }
