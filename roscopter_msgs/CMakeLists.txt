@@ -34,6 +34,8 @@ add_message_files(
   FILES
   Command.msg
   PoseEuler.msg
+  TrajectoryCommand.msg
+  
 )
 
 # Generate services in the 'srv' folder
