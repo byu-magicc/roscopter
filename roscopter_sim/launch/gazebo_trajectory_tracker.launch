@@ -1,0 +1,11 @@
+  
+<launch>
+    <!-- Trajectory Tracker -->
+    <node ns="roscopter" name="trajectory_tracker" pkg="roscopter" type="trajectory_tracker.py" output="screen">
+        
+        <!--ouptuts-->
+
+        <!--inputs-->
+
+    </node>
+</launch>

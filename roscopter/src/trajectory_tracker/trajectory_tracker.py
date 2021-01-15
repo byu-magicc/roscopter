@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import numpy as np
 import rospy
 
@@ -34,6 +35,18 @@ class TrajectoryTracker():
         accelerations_command = np.array([msg.x_acceleration, msg.y_acceleration, msg.z_acceleration])
         heading_command = msg.heading
         heading_rate_command = msg.heading_rate
+
+    def publishRosflightCommand(self):
+        cmd_msg = Command()
+        cmd_msg.header.stamp = rospy.Time.now()
+        cmd_msg.mode = 1
+        cmd_msg.ignore = 0
+        cmd_msg.x = 0
+        cmd_msg.y = 0
+        cmd_msg.z = 2
+        cmd_msg.F = .5
+        self.rosflight_command_publisher.publish(self.cmd_msg)
+
 
 if __name__ == '__main__':
     rospy.init_node('trajectory_tracker', anonymous=True)
