@@ -12,9 +12,107 @@ class TrajectoryTracker():
         self.odometry_subscriber = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
         self.trajectory_command_subscriber = rospy.Subscriber('trajectory_command', TrajectoryCommand, self.commandCallback, queue_size=5)
         self.rosflight_command_publisher = rospy.Publisher('rosflight_command', Command, queue_size=5, latch = True)
-
+        self.position_gain = np.eye(3)*2
+        self.velocity_ain = np.eye(3)*.5
+        self.rotation_gain = np.eye(3)*1
+        self.gravity = 9.8
+        self.mass = 
+        self.position = 
+        self.velocity = 
+        self.acceleration = 
+        self.attitude_in_SO3 = 
         while not rospy.is_shutdown():
             rospy.spin()
+
+    def calculateDesiredAttitudeSO3(self, desired_position,desired_velocity,desired_acceleration,desired_heading):
+        desired_force = calculateDesiredForce(desired_position,desired_velocity,desired_acceleration)
+        desired_body_z_axis = calculateDesiredBodyZAxis(desired_force)
+        desired_body_y_axis = calculateDesiredBodyYAxis(desired_body_z_axis,desired_heading)
+        desired_body_x_axis = calculateDesiredBodyXAxis(desired_body_y_axis,desired_body_z_axis)
+        desired_rotation = np.concatenate( (np.concatenate((desired_body_x_axis,desired_body_y_axis),1) , desired_body_z_axis) , 1)
+        return desired_rotation
+
+    def calculateDesiredForce(self, desired_position,desired_velocity,desired_acceleration):
+        position_error = calculatePositionError(desired_position)
+        velocity_error = calculateVelocityError(desired_velocity)
+        gravityVector = np.array([[0],[0],[1]])*self.gravity
+        desired_force = -np.dot(self.position_gain,position_error) - np.dot(self.velocity_gain,velocity_error) \
+                        - self.mass*gravityVector + self.mass*desired_acceleration
+        return desired_force
+
+    def calculateDesiredBodyZAxis(self, desired_force):
+        desired_body_z_axis = desired_force / np.linalg.norm(desired_force)
+        return desired_body_z_axis
+
+    def calculateDesiredBodyYAxis(self,desired_body_z_axis,desired_heading):
+        desired_heading_vector = calculateDesiredHeadingVector(desired_heading)
+        desired_body_y_vector =  np.cross(desired_body_z_axis.flatten() , desired_heading_vector().flatten())[:,None]
+        desired_body_y_axis = desired_body_y_vector / np.linalg.norm(desired_body_y_vector)
+        return desired_body_y_axis
+
+    def calculateDesiredBodyXAxis(self,desired_body_y_axis,desired_body_z_axis):
+        desired_body_x_axis = np.cross(desired_body_y_axis.flatten(),desired_body_z_axis.flatten())[:,None]
+        return desired_body_x_axis
+
+    def calculateDesiredHeadingVector(self,desired_heading):
+        desired_heading_vector = np.array([[np.cos(desired_heading)],[np.sin(desired_heading)],[0]])
+        return desired_heading_vector
+
+    def calculatePositionError(self, desired_position):
+        position_error = self.position - desired_position
+        return position_error
+
+    def calculateVelocityError(self, desired_velocity):
+        velocity_error = self.velocity - desired_velocity
+        return velocity_error
+
+    def calculateDesiredThrust(self,desired_force):
+        body_z_axis = np.array([[0],[0],[1]])
+        body_z_axis_in_inertial_frame = np.dot(self.attitudeInSO3,body_z_axis)
+        desired_thrust = -np.dot(desired_force , body_z_axis_in_inertial_frame.flatten())
+        return desired_thrust
+
+    def calculateThrottleCommand(self, ):
+
+
+    def calculateBodyAngularRateCommands(self, desired_attitude_SO3, derivative_desired_attitude_SO3):
+        inertial_to_body_frame_rotation = np.transpose(self.attitude_in_SO3)
+        desired_to_inertial_frame_rotation = desired_attitude_SO3
+        desired_to_body_frame_rotation = np.dot(inertial_to_body_frame_rotation,desired_to_inertial_frame_rotation)
+        attitude_error = calculateAttitudeError( )
+        desired_body_angular_rates = calculateDesiredBodyAngularRates(desired_attitude_SO3, derivative_desired_attitude_SO3)
+        feedforward = np.dot(desired_to_body_frame_rotation,desired_body_angular_rates)
+        feedback = np.dot(self.rotation_gain , attitude_error)
+        body_angular_rate_commands = feedforward - feedback
+        return body_angular_rate_commands
+
+    def calculateAttitudeError(self, desiredAttitudeSO3):
+        desired_to_inertial_frame_rotation = desiredAttitudeSO3
+        inertial_to_desired_frame_rotation = np.transpose(desired_to_inertial_frame_rotation)
+        body_to_inertial_frame_rotation = self.attitude_in_SO3
+        inertial_to_body_frame_rotation = np.transpose(body_to_inertial_frame_rotation)
+        attitude_error_SO3 = np.dot(inertial_to_desired_frame_rotation,body_to_inertial_frame_rotation) \
+                             - np.dot(inertial_to_body_frame_rotation , desired_to_inertial_frame_rotation)
+        attitude_error = veeOperator(attitude_error_SO3)/2
+        return attitude_error
+
+    def veeOperator(self , skewSymmetricMatrix):
+        return np.array([[skewSymmetricMatrix[2,1]] , [skewSymmetricMatrix[0,2]] , [skewSymmetricMatrix[1,0]]]])
+        
+    def calculateDesiredBodyAngularRates(self, desired_attitude_SO3, derivative_desired_attitude_SO3):
+        inertial_to_desired_frame_rotation = np.transpose(desired_attitude_SO3)
+        desired_body_angular_rates = veeOperator(inertial_to_desired_frame_rotation,derivative_desired_attitude_SO3)
+        return desired_body_angular_rates
+
+    def calculateDerivativeDesiredAttitudeSO3(self, desired_velocity, desired_acceleration, desired_jerk, desired_heading, desired_heading_rate):
+        derivative_desired_force = calculateDerivativeDesiredForce(desired_velocity, desired_acceleration, desired_jerk)
+        
+
+    
+
+    def calculateDerivativeDesiredBodyZAxis(self, )
+    calculateDerivativeDesiredBodyYAxis(self, )
+    calculateDerivativeDesiredBodyXAxis(self, )
 
     def odometryCallback(self, msg):
         north_position = msg.pose.pose.position.x
