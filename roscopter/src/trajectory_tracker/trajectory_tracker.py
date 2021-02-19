@@ -24,6 +24,8 @@ class TrajectoryTracker():
         while not rospy.is_shutdown():
             rospy.spin()
 
+    def calculateDesired
+
     def calculateDesiredAttitudeSO3(self, desired_position,desired_velocity,desired_acceleration,desired_heading):
         desired_force = calculateDesiredForce(desired_position,desired_velocity,desired_acceleration)
         desired_body_z_axis = calculateDesiredBodyZAxis(desired_force)
@@ -72,14 +74,14 @@ class TrajectoryTracker():
         desired_thrust = -np.dot(desired_force , body_z_axis_in_inertial_frame.flatten())
         return desired_thrust
 
-    def calculateThrottleCommand(self, ):
+    def calculateThrottleCommand(self, desired_thrust):
 
 
     def calculateBodyAngularRateCommands(self, desired_attitude_SO3, derivative_desired_attitude_SO3):
         inertial_to_body_frame_rotation = np.transpose(self.attitude_in_SO3)
         desired_to_inertial_frame_rotation = desired_attitude_SO3
         desired_to_body_frame_rotation = np.dot(inertial_to_body_frame_rotation,desired_to_inertial_frame_rotation)
-        attitude_error = calculateAttitudeError( )
+        attitude_error = calculateAttitudeError(desiredAttitudeSO3)
         desired_body_angular_rates = calculateDesiredBodyAngularRates(desired_attitude_SO3, derivative_desired_attitude_SO3)
         feedforward = np.dot(desired_to_body_frame_rotation,desired_body_angular_rates)
         feedback = np.dot(self.rotation_gain , attitude_error)
@@ -104,15 +106,41 @@ class TrajectoryTracker():
         desired_body_angular_rates = veeOperator(inertial_to_desired_frame_rotation,derivative_desired_attitude_SO3)
         return desired_body_angular_rates
 
-    def calculateDerivativeDesiredAttitudeSO3(self, desired_velocity, desired_acceleration, desired_jerk, desired_heading, desired_heading_rate):
+    def calculateDerivativeDesiredAttitudeSO3(self, desired_attitude_SO3, desired_position, desired_velocity, desired_acceleration, desired_jerk, desired_heading, desired_heading_rate):
+        desired_force = calculateDesiredForce(desired_position,desired_velocity,desired_acceleration)
         derivative_desired_force = calculateDerivativeDesiredForce(desired_velocity, desired_acceleration, desired_jerk)
-        
+        desired_body_z_axis = desired_attitude_SO3[:,2][:,None]
+        desired_body_y_axis = desired_attitude_SO3[:,1][:,None]
+        derivative_desired_body_z_axis = calculateDerivativeDesiredBodyZAxis(desired_force, derivative_desired_force)
+        derivative_desired_body_y_axis = calculateDerivativeDesiredBodyYAxis(desired_body_z_axis, derivative_desired_body_z_axis, desired_heading, desired_heading_rate)
+        derivative_desired_body_x_axis = calculateDerivativeDesiredBodyXAxis(desired_body_z_axis, derivative_desired_body_z_axis, desired_body_y_axis, derivative_desired_body_y_axis)
+        columns_one_and_two = np.concatenate((derivative_desired_body_x_axis,derivative_desired_body_y),1)
+        derivative_desired_attitude_SO3 = np.concatenate((columns_one_and_two,derivative_desired_body_z_axis),1)
+        return derivative_desired_attitude_SO3
 
-    
+    def calculateDerivativeDesiredBodyZAxis(self, desired_force, derivative_desired_force):
+        norm_desired_force = np.linalg.norm(desired_force)
+        term_1 = -derivative_desired_force / norm_desired_force
+        term_2 = np.dot(desired_force.flatten(),derivative_desired_force)
+        term_3 = desired_force * term_2 / (norm_desired_force**3)
+        derivative_desired_body_z_axis = term_1 + term_2
+        return derivative_desired_body_z_axis
 
-    def calculateDerivativeDesiredBodyZAxis(self, )
-    calculateDerivativeDesiredBodyYAxis(self, )
-    calculateDerivativeDesiredBodyXAxis(self, )
+    def calculateDerivativeDesiredBodyYAxis(self, desired_body_z_axis, derivative_desired_body_z_axis, desired_heading, desired_heading_rate):
+        desired_heading_vector = calculateDesiredHeadingVector(desired_heading)
+        derivative_desired_heading_vector = calculateDerivativeDesiredHeadingVector(desired_heading,desired_heading_rate)
+        term_1 = np.cross(derivative_desired_body_z_axis.flatten() , desired_heading_vector.flatten())
+        term_2 = np.cross(desired_body_z_axis.flatten(), derivative_desired_heading_vector.flatten())
+        derivative_desired_body_y_axis = term_1 + term_2
+        return derivative_desired_body_y_axis
+
+    def calculateDerivativeDesiredBodyXAxis(self, desired_body_z_axis, derivative_desired_body_z_axis, desired_body_y_axis, derivative_desired_body_y_axis):
+        term_1 = np.cross(derivative_desired_body_y_axis.flatten() , desired_body_z_axis.flatten())
+        term_2 = np.cross(desired_body_y_axis.flatten(), derivative_desired_body_z_axis.flatten())
+        return term_1 + term_2
+
+    def calculateDerivativeDesiredHeadingVector(self,desired_heading,desired_heading_rate):
+        return np.array([[-np.sin(desired_heading)*desired_heading_rate],[np.cos(desired_heading)*desired_heading_rate],[0]])
 
     def odometryCallback(self, msg):
         north_position = msg.pose.pose.position.x
@@ -131,6 +159,7 @@ class TrajectoryTracker():
         positions_command = np.array([msg.x_position, msg.y_position, msg.z_position])
         velocities_command = np.array([msg.x_velocity, msg.y_velocity, msg.z_velocity])
         accelerations_command = np.array([msg.x_acceleration, msg.y_acceleration, msg.z_acceleration])
+        jerk_command = np.array([msg.x_jerk, msg.y_jerk, msg.z_jerk])
         heading_command = msg.heading
         heading_rate_command = msg.heading_rate
 
