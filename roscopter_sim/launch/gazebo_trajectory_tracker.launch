@@ -52,20 +52,22 @@
   </node>
 
   <!-- Control -->
-  <node ns="$(arg roscopter_ns)" name="controller" pkg="roscopter" type="controller" output="screen">
+  <!-- <node ns="$(arg roscopter_ns)" name="controller" pkg="roscopter" type="controller" output="screen">
     <param name="param_namespace" value="$(arg roscopter_ns)/controller"/>
-    <!--ouptuts-->
+
     <remap from="command" to="/$(arg roscopter_sim_ns)/command" if="$(eval simulation_mode == 'roscopter_sim')"/>
     <remap from="command" to="/$(arg rosflight_ns)/command" if="$(eval simulation_mode == 'rosflight_sim')"/>
-    <!--inputs-->
+
     <remap from="estimate" to="/$(arg roscopter_ns)/odom"/>
     <remap from="status" to ="/status" if="$(eval simulation_mode == 'roscopter_sim')"/>
     <remap from="status" to ="/$(arg rosflight_ns)/status" if="$(eval simulation_mode == 'rosflight_sim')"/>
-  </node>
+  </node> -->
 
   <!-- Trajectory Tracker -->
   <node ns="roscopter" name="trajectory_tracker" pkg="roscopter" type="trajectory_tracker.py" output="screen">
         <!--ouptuts-->
+        <remap from="rosflight_command" to="/$(arg roscopter_sim_ns)/command" if="$(eval simulation_mode == 'roscopter_sim')"/>
+        <remap from="rosflight_command" to="/$(arg rosflight_ns)/command" if="$(eval simulation_mode == 'rosflight_sim')"/>
         <!--inputs-->
         <remap from="state" to="/$(arg roscopter_ns)/odom"/>
         <remap from="trajectory_command" to="/$(arg roscopter_ns)/trajectory_command"/>
