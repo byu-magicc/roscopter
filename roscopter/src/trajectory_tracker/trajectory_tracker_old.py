@@ -2,10 +2,17 @@
 import numpy as np
 import rospy
 
+from roscopter_msgs.msg import TrajectoryCommand
+from rosflight_msgs.msg import Command
+from nav_msgs.msg import Odometry
+
 class TrajectoryTracker():
 
     def __init__(self):
-        self.position_gain = np.array([[1, 0,0] , [0,1,0], [0,0,1]])*3
+        self.odometry_subscriber = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
+        self.trajectory_command_subscriber = rospy.Subscriber('trajectory_command', TrajectoryCommand, self.commandCallback, queue_size=5)
+        self.rosflight_command_publisher = rospy.Publisher('rosflight_command', Command, queue_size=5, latch = True)
+        self.position_gain = np.array([[1, 0,0] , [0,1,0], [0,0,2]])*3
         self.velocity_gain = np.eye(3)*2
         self.angle_gain = np.eye(3)*0.1
         self.equilibrium_throttle = 0.6
@@ -21,33 +28,67 @@ class TrajectoryTracker():
         self.desired_jerk = np.array([[0],[0],[0]])
         self.desired_heading = 0
         self.desired_heading_rate = 0
+        self.start_time = rospy.get_rostime().to_sec()
+        self.current_time = 0
+        while not rospy.is_shutdown():
+            rospy.spin()
 
-    def updateState(self, position, velocity, attitude_as_quaternion, time_step):
-        self.position = position
+    def odometryCallback(self, msg):
+        previous_time = self.current_time
+        self.current_time = rospy.get_rostime().to_sec() - self.start_time
+        time_step = self.current_time - previous_time
+        if time_step <= 0:
+            return
+        north_position = msg.pose.pose.position.x
+        east_position = msg.pose.pose.position.y
+        down_position = msg.pose.pose.position.z
+        self.position = np.array([[north_position], [east_position], [down_position]])
 
-        previous_velocity = self.velocity
-        self.velocity = velocity
+        north_velocity = msg.twist.twist.linear.x
+        east_velocity = msg.twist.twist.linear.y
+        down_velocity = msg.twist.twist.linear.z
+        previous_north_velocity = self.velocity.item(0)
+        previous_east_velocity = self.velocity.item(1)
+        previous_down_velocity = self.velocity.item(2)
+        self.velocity = np.array([[north_velocity], [east_velocity], [down_velocity]])
 
-        north_acceleration = self.finiteDifferencing(velocity.item(0), previous_velocity.item(0), time_step)
-        east_acceleration = self.finiteDifferencing(velocity.item(1), previous_velocity.item(1), time_step)
-        down_acceleration = self.finiteDifferencing(velocity.item(2), previous_velocity.item(2), time_step)
+        north_acceleration = self.finiteDifferencing(north_velocity, previous_north_velocity, time_step)
+        east_acceleration = self.finiteDifferencing(east_velocity, previous_east_velocity, time_step)
+        down_acceleration = self.finiteDifferencing(down_velocity, previous_down_velocity, time_step)
         self.acceleration = np.array([[north_acceleration], [east_acceleration], [down_acceleration]])
 
-        self.attitude_in_SO3 = self.quaternionToSO3(attitude_as_quaternion)
+        qw = msg.pose.pose.orientation.w
+        qx = msg.pose.pose.orientation.x
+        qy = msg.pose.pose.orientation.y
+        qz = msg.pose.pose.orientation.z
+        self.attitude_in_SO3 = self.quaternionToSO3(qw,qx,qy,qz)
 
-    def updateDesiredState(self, desired_position, desired_velocity, desired_acceleration, desired_jerk, desired_heading, desired_heading_rate):
-        self.desired_position = desired_position
-        self.desired_velocity = desired_velocity
-        self.desired_acceleration = desired_acceleration
-        self.desired_jerk = desired_jerk
-        self.desired_heading = desired_heading
-        self.desired_heading_rate = desired_heading_rate
+    def commandCallback(self,msg):
+        self.desired_position = np.array([[msg.x_position], [msg.y_position], [msg.z_position]])
+        self.desired_velocity = np.array([[msg.x_velocity], [msg.y_velocity], [msg.z_velocity]])
+        self.desired_acceleration = np.array([[msg.x_acceleration], [msg.y_acceleration], [msg.z_acceleration]])
+        self.desired_jerk = np.array([[msg.x_jerk], [msg.y_jerk], [msg.z_jerk]])
+        self.desired_heading = msg.heading
+        self.desired_heading_rate = msg.heading_rate
+        rosflight_commands = self.computeRosflightCommand()
+        self.publishRosflightCommand(rosflight_commands.item(0), rosflight_commands.item(1), rosflight_commands.item(2), rosflight_commands.item(3))
+
+    def publishRosflightCommand(self , roll_rate, pitch_rate, yaw_rate, throttle):
+        cmd_msg = Command()
+        cmd_msg.header.stamp = rospy.Time.now()
+        cmd_msg.mode = Command.MODE_ROLLRATE_PITCHRATE_YAWRATE_THROTTLE
+        cmd_msg.ignore = Command.IGNORE_NONE
+        cmd_msg.x = roll_rate
+        cmd_msg.y = pitch_rate
+        cmd_msg.z = yaw_rate
+        cmd_msg.F = throttle
+        self.rosflight_command_publisher.publish(cmd_msg)
 
     def computeRosflightCommand(self):
         #calculate linear errors
-        position_error = self.computeLinearError(self.position, self.desired_position)
-        velocity_error = self.computeLinearError(self.velocity, self.desired_velocity)
-        acceleration_error = self.computeLinearError(self.acceleration, self.desired_acceleration)
+        position_error = self.computePositionError()
+        velocity_error = self.computeVelocityError()
+        acceleration_error = self.computeAccelerationError()
 
         #calculate desired states
         desired_heading_vector = self.computeDesiredHeadingVector()
@@ -65,11 +106,8 @@ class TrajectoryTracker():
 
         #compute commanded outputs
         body_angular_rate_commands = self.computeBodyAngularRateCommands(euler_attitude_error, desired_to_body_frame_rotation, desired_body_angular_rates)
-        throttle = self.computeThrottleCommand(desired_thrust)
-        roll_rate = body_angular_rate_commands.item(0)
-        pitch_rate = body_angular_rate_commands.item(1)
-        yaw_rate = body_angular_rate_commands.item(2)
-        rosflight_command = np.array([roll_rate, pitch_rate, yaw_rate , throttle])
+        throttle_command = self.computeThrottleCommand(desired_thrust)
+        rosflight_command = np.array([body_angular_rate_commands.item(0), body_angular_rate_commands.item(1) , body_angular_rate_commands.item(2) , throttle_command])
         return rosflight_command
 
     def computeThrottleCommand(self, desired_thrust):
@@ -169,9 +207,9 @@ class TrajectoryTracker():
 
     def computeDesiredForceVector(self, position_error, velocity_error):
         gravityVector = np.array([[0],[0],[1]])*self.gravity
-        desired_force_vector = -np.dot(self.position_gain,position_error) - np.dot(self.velocity_gain,velocity_error) \
+        desired_force = -np.dot(self.position_gain,position_error) - np.dot(self.velocity_gain,velocity_error) \
                         - self.mass*gravityVector + self.mass*self.desired_acceleration
-        return desired_force_vector
+        return desired_force
 
     def computeDerivativeDesiredHeadingVector(self):
         return np.array([[-np.sin(self.desired_heading)*self.desired_heading_rate],[np.cos(self.desired_heading)*self.desired_heading_rate],[0]])
@@ -180,28 +218,45 @@ class TrajectoryTracker():
         desired_heading_vector = np.array([[np.cos(self.desired_heading)],[np.sin(self.desired_heading)],[0]])
         return desired_heading_vector
 
-    def computeLinearError(self, current_state, desired_state):
-        error = current_state - desired_state
-        return error
+    #make these one function?
+    def computePositionError(self):
+        position_error = self.position - self.desired_position
+        return position_error
+
+    def computeVelocityError(self):
+        velocity_error = self.velocity - self.desired_velocity
+        return velocity_error
+
+    def computeAccelerationError(self):
+        acceleration_error = self.acceleration - self.desired_acceleration
+        return acceleration_error
 
     def veeOperator(self , skewSymmetricMatrix):
         return np.array([[skewSymmetricMatrix[2,1]] , [skewSymmetricMatrix[0,2]] , [skewSymmetricMatrix[1,0]]])
 
-    def finiteDifferencing(self, value, new_value, time_step):
+    def finiteDifferencing(self, value,new_value,time_step):
         return (new_value - value)/time_step
 
-    def quaternionToSO3(self,quaternion):
-        q = quaternion
-        r00 = 2 * (q.item(0)*q.item(0) + q.item(1)*q.item(1)) - 1
-        r01 = 2 * (q.item(1)*q.item(2) - q.item(0)*q.item(3))
-        r02 = 2 * (q.item(1)*q.item(3) + q.item(0)*q.item(2))
-        r10 = 2 * (q.item(1)*q.item(2) + q.item(0)*q.item(3))
-        r11 = 2 * (q.item(0)*q.item(0) + q.item(2)*q.item(2)) - 1
-        r12 = 2 * (q.item(2)*q.item(3) - q.item(0)*q.item(1))
-        r20 = 2 * (q.item(1)*q.item(3) - q.item(0)*q.item(2))
-        r21 = 2 * (q.item(2)*q.item(3) + q.item(0)*q.item(1))
-        r22 = 2 * (q.item(0)*q.item(0) + q.item(3)*q.item(3)) - 1
+    def quaternionToSO3(self,q0,q1,q2,q3):
+        r00 = 2 * (q0*q0 + q1*q1) - 1
+        r01 = 2 * (q1*q2 - q0*q3)
+        r02 = 2 * (q1*q3 + q0*q2)
+        r10 = 2 * (q1*q2 + q0*q3)
+        r11 = 2 * (q0*q0 + q2*q2) - 1
+        r12 = 2 * (q2*q3 - q0*q1)
+        r20 = 2 * (q1*q3 - q0*q2)
+        r21 = 2 * (q2*q3 + q0*q1)
+        r22 = 2 * (q0*q0 + q3*q3) - 1
         matrix_SO3 = np.array([[r00, r01, r02],
                                         [r10, r11, r12],
                                         [r20, r21, r22]])
         return matrix_SO3
+
+
+if __name__ == '__main__':
+    rospy.init_node('trajectory_tracker', anonymous=True)
+    try:
+        traj_tracker = TrajectoryTracker()
+    except:
+        rospy.ROSInterruptException
+    pass

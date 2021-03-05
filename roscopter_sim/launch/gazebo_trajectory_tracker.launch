@@ -64,7 +64,7 @@
   </node> -->
 
   <!-- Trajectory Tracker -->
-  <node ns="roscopter" name="trajectory_tracker" pkg="roscopter" type="trajectory_tracker.py" output="screen">
+  <node ns="roscopter" name="trajectory_tracker" pkg="roscopter" type="trajectory_tracker_node.py" output="screen">
         <!--ouptuts-->
         <remap from="rosflight_command" to="/$(arg roscopter_sim_ns)/command" if="$(eval simulation_mode == 'roscopter_sim')"/>
         <remap from="rosflight_command" to="/$(arg rosflight_ns)/command" if="$(eval simulation_mode == 'rosflight_sim')"/>

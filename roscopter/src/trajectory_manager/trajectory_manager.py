@@ -13,7 +13,7 @@ class TrajectoryManager():
         self.current_time = 0
         self.trajectory_publisher = rospy.Publisher("trajectory", TrajectoryCommand, queue_size=5, latch=True)
         self.radius = 5
-        self.altitude = 5
+        self.altitude = 3
 
     def get_time(self):
         time = rospy.get_time() - self.start_time
