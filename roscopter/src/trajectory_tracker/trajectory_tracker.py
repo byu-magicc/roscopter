@@ -6,8 +6,8 @@ class TrajectoryTracker():
 
     def __init__(self):
         self.position_gain = np.array([[1, 0,0] , [0,1,0], [0,0,1]])*3
-        self.velocity_gain = np.eye(3)*2
-        self.angle_gain = np.eye(3)*0.1
+        self.velocity_gain = np.eye(3)*3
+        self.angle_gain = np.eye(3)*5
         self.equilibrium_throttle = 0.6
         self.gravity = 9.8
         self.mass = 3.69
@@ -149,7 +149,7 @@ class TrajectoryTracker():
         return desired_rotation
 
     def computeDesiredBodyZAxis(self, desired_force):
-        desired_body_z_axis = desired_force / np.linalg.norm(desired_force)
+        desired_body_z_axis = -desired_force / np.linalg.norm(desired_force)
         return desired_body_z_axis
 
     def computeDesiredBodyYAxis(self,desired_body_z_axis,desired_heading_vector):
