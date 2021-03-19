@@ -14,6 +14,7 @@ class TrajectoryManager():
         self.trajectory_publisher = rospy.Publisher("trajectory", TrajectoryCommand, queue_size=5, latch=True)
         self.radius = 5
         self.altitude = 3
+        self.speed = 2
 
     def get_time(self):
         time = rospy.get_time() - self.start_time
@@ -22,6 +23,7 @@ class TrajectoryManager():
     def publish_trajectory(self):
         t = self.get_time()
         traj_command = TrajectoryCommand()
+
         traj_command.x_position = self.x(t)
         traj_command.y_position = self.y(t)
         traj_command.z_position = self.z(t)
@@ -36,39 +38,40 @@ class TrajectoryManager():
         traj_command.z_jerk = self.dz3dt(t)
         traj_command.heading = self.psi(t)
         traj_command.heading_rate = self.dpsidt(t)
+
         self.trajectory_publisher.publish(traj_command)
 
         
     def x(self, t):
-        f = self.radius*np.sin(t/10)
+        f = self.radius*np.sin(t/self.speed)
         return f
     
     def dxdt(self, t):
-        f = (self.radius/10)*np.cos(t/10)
+        f = (self.radius/self.speed)*np.cos(t/self.speed)
         return f
 
     def dx2dt(self, t):
-        f = (-self.radius/100)*np.sin(t/10)
+        f = (-self.radius/self.speed**2)*np.sin(t/self.speed)
         return f
 
     def dx3dt(self, t):
-        f = (-self.radius/1000)*np.cos(t/10)
+        f = (-self.radius/self.speed**3)*np.cos(t/self.speed)
         return f
 
     def y(self, t):
-        f = self.radius*np.cos(t/10)
+        f = self.radius*np.cos(t/self.speed)
         return f
 
     def dydt(self, t):
-        f = (-self.radius/10)*np.sin(t/10)
+        f = (-self.radius/self.speed)*np.sin(t/self.speed)
         return f
 
     def dy2dt(self, t):
-        f = (-self.radius/100)*np.cos(t/10)
+        f = (-self.radius/self.speed**2)*np.cos(t/self.speed)
         return f
 
     def dy3dt(self, t):
-        f = (self.radius/1000)*np.sin(t/10)
+        f = (self.radius/self.speed**3)*np.sin(t/self.speed)
         return f
 
     def z(self, t):
@@ -84,9 +87,11 @@ class TrajectoryManager():
         return 0
 
     def psi(self, t):
+        # f = np.arctan([np.cos(t/self.speed) . np.sin(t/self.speed)])
         return 0
 
     def dpsidt(self, t):
+        # f = (1/np.cos(t/self.speed))**2 / (self.speed*np.tan(t/self.speed) + self.speed)
         return 0
         
 if __name__ == '__main__':
