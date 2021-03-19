@@ -14,6 +14,7 @@ class TrajectoryTracker():
         self.position = np.array([[0],[0],[0]])
         self.velocity = np.array([[0],[0],[0]])
         self.acceleration = np.array([[0],[0],[0]])
+        self.jerk = np.array([[0],[0],[0]])
         self.attitude_in_SO3 = np.eye(3)
         self.desired_position = np.array([[0],[0],[0]])
         self.desired_velocity = np.array([[0],[0],[0]])
@@ -28,10 +29,16 @@ class TrajectoryTracker():
         previous_velocity = self.velocity
         self.velocity = velocity
 
+        previous_acceleration = self.acceleration
         north_acceleration = self.finiteDifferencing(velocity.item(0), previous_velocity.item(0), time_step)
         east_acceleration = self.finiteDifferencing(velocity.item(1), previous_velocity.item(1), time_step)
         down_acceleration = self.finiteDifferencing(velocity.item(2), previous_velocity.item(2), time_step)
         self.acceleration = np.array([[north_acceleration], [east_acceleration], [down_acceleration]])
+
+        north_jerk = self.finiteDifferencing(north_acceleration, previous_acceleration.item(0), time_step)
+        east_jerk = self.finiteDifferencing(east_acceleration, previous_acceleration.item(1), time_step)
+        down_jerk = self.finiteDifferencing(down_acceleration, previous_acceleration.item(2), time_step)
+        self.jerk = np.array([[north_jerk], [east_jerk], [down_jerk]])
 
         self.attitude_in_SO3 = self.quaternionToSO3(attitude_as_quaternion)
 
@@ -205,3 +212,6 @@ class TrajectoryTracker():
                                         [r10, r11, r12],
                                         [r20, r21, r22]])
         return matrix_SO3
+
+    def getCurrentHeading(self):
+        
