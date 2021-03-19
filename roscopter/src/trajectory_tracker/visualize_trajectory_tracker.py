@@ -4,6 +4,7 @@ import numpy as np
 import mpl_toolkits.mplot3d.art3d as art3d
 from matplotlib.patches import Circle, Arc
 from scipy.spatial.transform import Rotation as R
+from trajectory_tracker import TrajectoryTracker
 
 def arcData(arc_mag , ortho_axis):
     if ortho_axis == "x":
@@ -14,7 +15,7 @@ def arcData(arc_mag , ortho_axis):
     elif ortho_axis == "y":
         xdata = np.cos(np.linspace(0,np.pi*2,100)*arc_mag)
         ydata = np.zeros(100)
-        zdata = np.sin(np.linspace(0,np.pi*2,100)*arc_mag)
+        zdata = -np.sin(np.linspace(0,np.pi*2,100)*arc_mag)
 
     else:
         xdata = np.cos(np.linspace(0,np.pi*2,100)*arc_mag)
@@ -22,36 +23,68 @@ def arcData(arc_mag , ortho_axis):
         zdata = np.zeros(100)
     return xdata, ydata, zdata
 
+#initialize trajectory tracker
+traj_track = TrajectoryTracker()
 
-
-
-z_pos = 0
+#initialize states
 x_pos = 0
 y_pos = 0
-z_pos_des = 2
-x_pos_des = 1
-y_pos_des = 1
-z_vel = 1
-x_vel = 2
-y_vel = 1
-z_vel_des = 2
-x_vel_des = 2
-y_vel_des = -1
-z_accel = -2
-x_accel = 1
-y_accel = 3
-z_accel_des = 1.5
-x_accel_des = 1.8
-y_accel_des = -0.5
-roll_rate = -3
-pitch_rate = 10
-yaw_rate = 5
-rotation = R.from_quat([0, 0, np.sin(np.pi/4), np.cos(np.pi/4)])
-xdir = np.array([1,0,0])
-ydir = np.array([0,1,0])
-desired_xdir = np.dot(np.array([1,0,0]),rotation.as_matrix())
-desired_ydir = np.dot(np.array([0,1,0]),rotation.as_matrix())
-desired_force = np.array([1,1,1])
+z_pos = 0
+x_vel = 0
+y_vel = 0
+z_vel = 0
+attitude_as_quat = np.array([1,0,0,0])
+time_step = 0.01
+position = np.array([[x_pos],[y_pos],[z_pos]])
+velocity = np.array([[x_vel],[y_vel],[z_vel]])
+traj_track.updateState(position,velocity, attitude_as_quat, time_step)
+x_accel = traj_track.acceleration.item(0)
+y_accel = traj_track.acceleration.item(1)
+z_accel = traj_track.acceleration.item(2)
+xdir = np.dot(np.array([1,0,0]),traj_track.attitude_in_SO3)
+ydir = np.dot(np.array([0,1,0]),traj_track.attitude_in_SO3)
+
+#initialize desired states
+t = 3
+radius = 2
+height = 4
+z_pos_des = -height
+x_pos_des = 2 #np.sin(t)*radius
+y_pos_des = 2 #np.cos(t)*radius
+z_vel_des = 0
+x_vel_des = 0#np.cos(t)*radius
+y_vel_des = 0#-np.sin(t)*radius
+z_accel_des = 0
+x_accel_des = 0#-np.sin(t)*radius
+y_accel_des = 0#-np.cos(t)*radius
+z_jerk_des = 0
+x_jerk_des = 0#-np.cos(t)*radius
+y_jerk_des = 0#np.sin(t)*radius
+desired_heading = np.pi/5
+desired_heading_rate = 0
+desired_position = np.array([[x_pos_des], [y_pos_des], [z_pos_des]])
+desired_velocity = np.array([[x_vel_des], [y_vel_des], [z_vel_des]])
+desired_acceleration = np.array([[x_accel_des], [y_accel_des], [z_accel_des]])
+desired_jerk = np.array([[x_jerk_des], [y_jerk_des], [z_jerk_des]])
+traj_track.updateDesiredState(desired_position, desired_velocity, desired_acceleration, desired_jerk, desired_heading, desired_heading_rate)
+
+#calculate commands and desired values
+position_error = traj_track.computeLinearError(position, desired_position)
+velocity_error = traj_track.computeLinearError(velocity, desired_velocity)
+desired_force_vec = traj_track.computeDesiredForceVector(position_error, velocity_error)
+desired_heading_vec = traj_track.computeDesiredHeadingVector()
+desired_rotation = traj_track.computeDesiredAttitudeSO3(desired_force_vec, desired_heading_vec)
+desired_xdir = np.dot(desired_rotation, np.array([1,0,0]))
+desired_ydir = np.dot(desired_rotation, np.array([0,1,0]))
+desired_thrust = traj_track.computeDesiredThrust(desired_force_vec)
+throttle_mag = traj_track.computeThrottleCommand(desired_thrust)
+thrust_vec = np.dot(traj_track.attitude_in_SO3, np.array([0,0,-1]))*desired_thrust
+rosflight_command = traj_track.computeRosflightCommand()
+roll_rate = rosflight_command.item(0)
+pitch_rate = rosflight_command.item(1)
+yaw_rate = rosflight_command.item(2)
+throttle = rosflight_command.item(3)
+
 
 
 
@@ -88,7 +121,10 @@ ax.plot3D([x_pos, x_pos + x_accel], [y_pos, y_pos + y_accel], [z_pos, z_pos + z_
 ax.plot3D([x_pos_des, x_pos_des + x_accel_des], [y_pos_des, y_pos_des + y_accel_des], [z_pos_des, z_pos_des + z_accel_des], color='green', linestyle=':',label='des_accel')
 
 #desired_force
-ax.plot3D([x_pos, x_pos + desired_force.item(0)], [y_pos, y_pos +  desired_force.item(1)], [z_pos, z_pos +  desired_force.item(2)], color='green', linestyle='-.',label='desired_force')
+ax.plot3D([x_pos, x_pos + desired_force_vec.item(0)], [y_pos, y_pos +  desired_force_vec.item(1)], [z_pos, z_pos +  desired_force_vec.item(2)], color='green', linestyle='-.',label='desired_force')
+
+#thrust_vec
+ax.plot3D([x_pos, x_pos + thrust_vec.item(0)], [y_pos, y_pos +  thrust_vec.item(1)], [z_pos, z_pos +  thrust_vec.item(2)], color='blue', linestyle='-.',label='thrust')
 
 #rate commands
 angle_rate = np.sqrt(roll_rate**2 + pitch_rate**2 + yaw_rate**2)
