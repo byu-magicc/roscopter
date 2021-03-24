@@ -2,7 +2,7 @@
 import numpy as np
 import rospy
 
-from roscopter_msgs.msg import TrajectoryCommand
+from roscopter_msgs.msg import TrajectoryState
 from rosflight_msgs.msg import Command
 from nav_msgs.msg import Odometry
 
@@ -12,8 +12,9 @@ class TrajectoryTrackerNode():
 
     def __init__(self):
         self.odometry_subscriber = rospy.Subscriber('state', Odometry, self.odometryCallback, queue_size=5)
-        self.trajectory_command_subscriber = rospy.Subscriber('trajectory_command', TrajectoryCommand, self.commandCallback, queue_size=5)
+        self.trajectory_command_subscriber = rospy.Subscriber('trajectory_command', TrajectoryState, self.commandCallback, queue_size=5)
         self.rosflight_command_publisher = rospy.Publisher('rosflight_command', Command, queue_size=5, latch = True)
+        self.trajectory_state_publisher = rospy.Publisher('trajectory_state', TrajectoryState, queue_size=5, latch = True)
         self.trajectory_tracker = TrajectoryTracker()
         self.start_time = rospy.get_rostime().to_sec()
         self.current_time = 0
@@ -43,8 +44,26 @@ class TrajectoryTrackerNode():
         qy = msg.pose.pose.orientation.y
         qz = msg.pose.pose.orientation.z
         attitude = np.array([qw,qx,qy,qz])
-
         self.trajectory_tracker.updateState(position, velocity, attitude, time_step)
+
+        current_state = self.trajectory_tracker.getCurrentTrajectoryState()
+        traj_state = TrajectoryState()
+        traj_state.x_position = current_state.item(0)
+        traj_state.y_position = current_state.item(1)
+        traj_state.z_position = current_state.item(2)
+        traj_state.x_velocity = current_state.item(3)
+        traj_state.y_velocity = current_state.item(4)
+        traj_state.z_velocity = current_state.item(5)
+        traj_state.x_acceleration = current_state.item(6)
+        traj_state.y_acceleration = current_state.item(7)
+        traj_state.z_acceleration = current_state.item(8)
+        traj_state.x_jerk = current_state.item(9)
+        traj_state.y_jerk = current_state.item(10)
+        traj_state.z_jerk = current_state.item(11)
+        traj_state.heading = current_state.item(12)
+        traj_state.heading_rate = current_state.item(13)
+        self.trajectory_state_publisher.publish(traj_state)
+
 
     def commandCallback(self,msg):
         desired_position = np.array([[msg.x_position], [msg.y_position], [msg.z_position]])

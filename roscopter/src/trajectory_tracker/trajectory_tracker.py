@@ -5,16 +5,18 @@ import rospy
 class TrajectoryTracker():
 
     def __init__(self):
-        self.position_gain = np.array([[1, 0,0] , [0,1,0], [0,0,1]])*3
-        self.velocity_gain = np.eye(3)*3
-        self.angle_gain = np.eye(3)*5
-        self.equilibrium_throttle = 0.6
+        self.position_gain = np.array([[1, 0,0] , [0,1,0], [0,0,1]])*2
+        self.velocity_gain = np.eye(3)*2
+        self.angle_gain = np.array([[1, 0,0] , [0,1,0], [0,0,1]])*5
+        self.equilibrium_throttle = 0.60
         self.gravity = 9.8
         self.mass = 3.69
         self.position = np.array([[0],[0],[0]])
         self.velocity = np.array([[0],[0],[0]])
         self.acceleration = np.array([[0],[0],[0]])
         self.jerk = np.array([[0],[0],[0]])
+        self.heading = 0
+        self.heading_rate = 0
         self.attitude_in_SO3 = np.eye(3)
         self.desired_position = np.array([[0],[0],[0]])
         self.desired_velocity = np.array([[0],[0],[0]])
@@ -41,6 +43,10 @@ class TrajectoryTracker():
         self.jerk = np.array([[north_jerk], [east_jerk], [down_jerk]])
 
         self.attitude_in_SO3 = self.quaternionToSO3(attitude_as_quaternion)
+
+        previous_heading = self.heading
+        self.heading = self.getCurrentHeading()
+        self.heading_rate = self.finiteDifferencing(self.heading,previous_heading, time_step)
 
     def updateDesiredState(self, desired_position, desired_velocity, desired_acceleration, desired_jerk, desired_heading, desired_heading_rate):
         self.desired_position = desired_position
@@ -214,4 +220,28 @@ class TrajectoryTracker():
         return matrix_SO3
 
     def getCurrentHeading(self):
-        
+        north = np.array([[1],[0],[0]])
+        inertialXDir =  np.dot(self.attitude_in_SO3,north)
+        headingAngle = np.abs(np.arccos(np.dot(north.flatten(), inertialXDir.flatten()) / ( np.linalg.norm(north) * np.linalg.norm(inertialXDir) ))) * np.sign(inertialXDir.item(1))
+        return headingAngle
+
+    def getCurrentTrajectoryState(self):
+        state = np.array([])
+        x_position = self.position[0]
+        y_position = self.position[1]
+        z_position = self.position[2]
+        x_velocity = self.velocity[0]
+        y_velocity = self.velocity[1]
+        z_velocity = self.velocity[2]
+        x_acceleration = self.acceleration[0]
+        y_acceleration = self.acceleration[1] 
+        z_acceleration = self.acceleration[2] 
+        x_jerk = self.jerk[0]
+        y_jerk = self.jerk[1]
+        z_jerk = self.jerk[2]
+        heading = self.heading
+        heading_rate = self.heading_rate
+        state = np.array([x_position, y_position, z_position , x_velocity , y_velocity, z_velocity,
+                x_acceleration, y_acceleration, z_acceleration, x_jerk, y_jerk, z_jerk, 
+                heading, heading_rate])
+        return state

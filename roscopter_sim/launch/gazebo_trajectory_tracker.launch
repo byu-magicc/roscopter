@@ -132,4 +132,8 @@
 
   </group>
 
+
+    <!-- record rosbag -->
+  <node pkg="rosbag" type="record" name="trajectory_state" output="screen" args="-O ../trajectory_state.bag /roscopter/trajectory_state /roscopter/trajectory_command"/>
+
 </launch>

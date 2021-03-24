@@ -1,4 +1,4 @@
-# roscopter trajectory command
+# roscopter trajectory state message
 
 #builtin_interfaces/Time stamp
 time stamp

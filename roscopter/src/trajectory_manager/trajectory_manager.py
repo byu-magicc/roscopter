@@ -3,7 +3,7 @@ import numpy as np
 import rospy
 
 # from geometry_msgs import Vector3Stamped
-from roscopter_msgs.msg import TrajectoryCommand
+from roscopter_msgs.msg import TrajectoryState
 
 
 class TrajectoryManager():
@@ -11,10 +11,10 @@ class TrajectoryManager():
     def __init__(self):
         self.start_time = rospy.get_time()
         self.current_time = 0
-        self.trajectory_publisher = rospy.Publisher("trajectory", TrajectoryCommand, queue_size=5, latch=True)
+        self.trajectory_publisher = rospy.Publisher("trajectory", TrajectoryState, queue_size=5, latch=True)
         self.radius = 5
         self.altitude = 3
-        self.speed = 2
+        self.speed = 1
 
     def get_time(self):
         time = rospy.get_time() - self.start_time
@@ -22,37 +22,37 @@ class TrajectoryManager():
 
     def publish_trajectory(self):
         t = self.get_time()
-        traj_command = TrajectoryCommand()
+        traj_command = TrajectoryState()
 
-        # traj_command.x_position = self.x(t)
-        # traj_command.y_position = self.y(t)
-        # traj_command.z_position = self.z(t)
-        # traj_command.x_velocity = self.dxdt(t)
-        # traj_command.y_velocity = self.dydt(t)
-        # traj_command.z_velocity = self.dzdt(t)
-        # traj_command.x_acceleration = self.dx2dt(t)
-        # traj_command.y_acceleration = self.dy2dt(t)
-        # traj_command.z_acceleration = self.dz2dt(t)
-        # traj_command.x_jerk = self.dx3dt(t)
-        # traj_command.y_jerk = self.dy3dt(t)
-        # traj_command.z_jerk = self.dz3dt(t)
-        # traj_command.heading = self.psi(t)
-        # traj_command.heading_rate = self.dpsidt(t)
-
-        traj_command.x_position = 0
-        traj_command.y_position = 0
-        traj_command.z_position = -4
-        traj_command.x_velocity = 0
-        traj_command.y_velocity = 0
-        traj_command.z_velocity = 0
-        traj_command.x_acceleration = 0
-        traj_command.y_acceleration = 0
-        traj_command.z_acceleration = 0
-        traj_command.x_jerk = 0
-        traj_command.y_jerk = 0
-        traj_command.z_jerk = 0
+        traj_command.x_position = self.x(t)
+        traj_command.y_position = self.y(t)
+        traj_command.z_position = self.z(t)
+        traj_command.x_velocity = self.dxdt(t)
+        traj_command.y_velocity = self.dydt(t)
+        traj_command.z_velocity = self.dzdt(t)
+        traj_command.x_acceleration = self.dx2dt(t)
+        traj_command.y_acceleration = self.dy2dt(t)
+        traj_command.z_acceleration = self.dz2dt(t)
+        traj_command.x_jerk = self.dx3dt(t)
+        traj_command.y_jerk = self.dy3dt(t)
+        traj_command.z_jerk = self.dz3dt(t)
         traj_command.heading = 0
         traj_command.heading_rate = 0
+
+        # traj_command.x_position = 0
+        # traj_command.y_position = 0
+        # traj_command.z_position = -4
+        # traj_command.x_velocity = 0
+        # traj_command.y_velocity = 0
+        # traj_command.z_velocity = 0
+        # traj_command.x_acceleration = 0
+        # traj_command.y_acceleration = 0
+        # traj_command.z_acceleration = 0
+        # traj_command.x_jerk = 0
+        # traj_command.y_jerk = 0
+        # traj_command.z_jerk = 0
+        # traj_command.heading = self.psi(t)
+        # traj_command.heading_rate = self.dpsidt(t)
 
 
         self.trajectory_publisher.publish(traj_command)
@@ -103,13 +103,11 @@ class TrajectoryManager():
         return 0
 
     def psi(self, t):
-        f = np.sin(t/self.speed)
-        # f = np.arctan([np.cos(t/self.speed) . np.sin(t/self.speed)])
+        f = t/self.speed
         return f
 
     def dpsidt(self, t):
-        # f = (1/np.cos(t/self.speed))**2 / (self.speed*np.tan(t/self.speed) + self.speed)
-        f = np.sin(t/self.speed)/self.speed
+        f = 1/self.speed
         return f
         
 if __name__ == '__main__':

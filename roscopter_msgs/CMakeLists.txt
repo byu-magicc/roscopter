@@ -34,7 +34,7 @@ add_message_files(
   FILES
   Command.msg
   PoseEuler.msg
-  TrajectoryCommand.msg
+  TrajectoryState.msg
   
 )
 
