@@ -5,10 +5,10 @@ import rospy
 class TrajectoryTracker():
 
     def __init__(self):
-        self.position_gain = np.array([[1, 0,0] , [0,1,0], [0,0,1]])*2
-        self.velocity_gain = np.eye(3)*2
-        self.angle_gain = np.array([[1, 0,0] , [0,1,0], [0,0,1]])*5
-        self.equilibrium_throttle = 0.60
+        self.position_gain = np.array([[1, 0,0] , [0,1,0], [0,0,1]])*4
+        self.velocity_gain = np.eye(3)*3
+        self.angle_gain = np.array([[1, 0,0] , [0,1,0], [0,0,1]])*7
+        self.equilibrium_throttle = 0.65
         self.gravity = 9.8
         self.mass = 3.69
         self.position = np.array([[0],[0],[0]])
