@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import numpy as np
 import rospy
+import copy
 
 class LQRController():
 
@@ -21,6 +22,7 @@ class LQRController():
         self.desired_jerk = np.array([[0],[0],[0]])
         self.desired_heading = 0
         self.desired_heading_rate = 0
+        self.desired_attitude_SO3 = np.eye(3)
 
     def updateState(self, position, velocity, attitude_as_quaternion, time_step):
         self.position = position
@@ -52,10 +54,13 @@ class LQRController():
         self.desired_jerk = desired_jerk
         self.desired_heading = desired_heading
         self.desired_heading_rate = desired_heading_rate
+        desired_heading_vector = self.computeDesiredHeadingVector()
+        desired_thrust_acceleration_vector = self.computeDesiredThrustAccelerationVector()
+        self.desired_attitude_SO3 = self.computeDesiredAttitudeSO3(desired_thrust_acceleration_vector, desired_heading_vector)
 
     def computeRosflightCommand(self):
-        desired_thrust_acceleration_vector = computeDesiredThrustAccelerationVector()
-        computeDesiredThrottleInDesiredFrame(desired_thrust_acceleration_vector)
+        # desired_thrust_acceleration_vector = self.computeDesiredThrustAccelerationVector()
+        # computeDesiredThrottleInDesiredFrame(desired_thrust_acceleration_vector)
         
         # #calculate linear errors
         # position_error = self.computeLinearError(self.position, self.desired_position)
@@ -85,6 +90,14 @@ class LQRController():
         rosflight_command = np.array([roll_rate, pitch_rate, yaw_rate , throttle])
         return rosflight_command
 
+    def calculateErrorState(self):
+        position_error = self.computeLinearError(self.position, self.desired_position)
+        velocity_error = self.computeLinearError(self.velocity, self.desired_velocity)
+        attitude_error = self.computeAttitudeError()
+        errorState = np.vstack((position_error,velocity_error))
+        errorState = np.vstack((errorState , attitude_error))
+        return errorState
+
     def computeDesiredThrottle(self, desired_thrust_acceleration_vector):
         #assumes a linear throttle -> thrust model
         #returns desired throttle in the desired frame
@@ -108,8 +121,8 @@ class LQRController():
         desired_rotation = np.concatenate( (np.concatenate((desired_body_x_axis,desired_body_y_axis),1) , desired_body_z_axis) , 1)
         return desired_rotation
 
-    def computeAttitudeError(self, desired_attitude_SO3):
-        desired_to_inertial_frame_rotation = desired_attitude_SO3
+    def computeAttitudeError(self):
+        desired_to_inertial_frame_rotation = copy.deepcopy(self.desired_attitude_SO3)
         inertial_to_desired_frame_rotation = np.transpose(desired_to_inertial_frame_rotation)
         body_to_inertial_frame_rotation = self.attitude_in_SO3
         inertial_to_body_frame_rotation = np.transpose(body_to_inertial_frame_rotation)
@@ -118,8 +131,8 @@ class LQRController():
         attitude_error = self.veeOperator(attitude_error_SO3)/2
         return attitude_error
 
-    def computeDesiredBodyAngularRates(self, desired_attitude_SO3, derivative_desired_attitude_SO3):
-        inertial_to_desired_frame_rotation = np.transpose(desired_attitude_SO3)
+    def computeDesiredBodyAngularRates(self, derivative_desired_attitude_SO3):
+        inertial_to_desired_frame_rotation = np.transpose(self.desired_attitude_SO3)
         desired_body_angular_rates = self.veeOperator(np.dot(inertial_to_desired_frame_rotation,derivative_desired_attitude_SO3))
         return desired_body_angular_rates
 

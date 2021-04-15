@@ -55,12 +55,12 @@ y_pos_des = 2 #np.cos(t)*radius
 z_vel_des = 0
 x_vel_des = 0#np.cos(t)*radius
 y_vel_des = 0#-np.sin(t)*radius
-z_accel_des = 0
-x_accel_des = 1#-np.sin(t)*radius
-y_accel_des = 1#-np.cos(t)*radius
-z_jerk_des = .5
-x_jerk_des = 1#-np.cos(t)*radius
-y_jerk_des = .2#np.sin(t)*radius
+z_accel_des = .1
+x_accel_des = 0#-np.sin(t)*radius
+y_accel_des = 0#-np.cos(t)*radius
+z_jerk_des = .0
+x_jerk_des = 0.0 #-np.cos(t)*radius
+y_jerk_des = 0.1 #np.sin(t)*radius
 desired_heading = np.pi/5
 desired_heading_rate = 0
 desired_position = np.array([[x_pos_des], [y_pos_des], [z_pos_des]])
@@ -70,7 +70,8 @@ desired_jerk = np.array([[x_jerk_des], [y_jerk_des], [z_jerk_des]])
 lqr_control.updateDesiredState(desired_position, desired_velocity, desired_acceleration, desired_jerk, desired_heading, desired_heading_rate)
 
 # # calculate commands and desired values
-desired_accel_vec = lqr_control.computeDesiredThrustAccelerationVector()
+desired_accel_vec = lqr_control.computeDesiredThrustAccelerationVector() 
+desired_accel_vec = lqr_control.computeDesiredThrustAccelerationVector() / np.linalg.norm(desired_accel_vec)
 desired_heading_vec = lqr_control.computeDesiredHeadingVector()
 derivative_desired_heading_vec = lqr_control.computeDerivativeDesiredHeadingVector()
 desired_rotation = lqr_control.computeDesiredAttitudeSO3(desired_accel_vec, desired_heading_vec)
@@ -78,7 +79,7 @@ desired_xdir = np.dot(desired_rotation, np.array([1,0,0]))
 desired_ydir = np.dot(desired_rotation, np.array([0,1,0]))
 desired_zdir = np.dot(desired_rotation, np.array([0,0,1]))
 derivative_desired_rotation = lqr_control.computeDerivativeDesiredAttitudeSO3(desired_accel_vec, desired_rotation, desired_heading_vec, derivative_desired_heading_vec)
-desired_body_angular_rates = lqr_control.computeDesiredBodyAngularRates(desired_rotation, derivative_desired_rotation)
+desired_body_angular_rates = lqr_control.computeDesiredBodyAngularRates(derivative_desired_rotation)
 des_pitch_rate = desired_body_angular_rates.item(1)
 des_yaw_rate = desired_body_angular_rates.item(2)
 des_roll_rate = desired_body_angular_rates.item(0)
@@ -106,9 +107,16 @@ ax.scatter3D(x_pos_des, y_pos_des, z_pos_des, color='green',label='des_pos')
 
 ##### orientation ######
 #desired heading
-ax.plot3D([x_pos_des, x_pos_des + desired_heading_vec.item(0)], [y_pos_des, y_pos_des + desired_heading_vec.item(1)], [z_pos_des, z_pos_des + desired_heading_vec.item(2)], color='r', linestyle='-',label='des heading')
+ax.plot3D([x_pos_des, x_pos_des + desired_heading_vec.item(0)], [y_pos_des, y_pos_des + desired_heading_vec.item(1)], [z_pos_des, z_pos_des + desired_heading_vec.item(2)], color='b', linestyle='-',label='des heading')
+ax.plot3D([x_pos_des + desired_heading_vec.item(0) , x_pos_des + desired_heading_vec.item(0) - desired_heading_vec.item(1)*np.sign(desired_heading_rate)],\
+          [y_pos_des + desired_heading_vec.item(1) , y_pos_des + desired_heading_vec.item(1) + desired_heading_vec.item(0)*np.sign(desired_heading_rate) ],\
+          [z_pos_des + desired_heading_vec.item(2) , z_pos_des + desired_heading_vec.item(2) + desired_heading_vec.item(2) ], color='b', linestyle='-',label='des heading_rate')
 #desired acceleration due to thrust
-ax.plot3D([x_pos_des, x_pos_des + desired_accel_vec.item(0)], [y_pos_des, y_pos_des + desired_accel_vec.item(1)], [z_pos_des, z_pos_des + desired_accel_vec.item(2)], color='r', linestyle='-',label='des acceleration')
+ax.plot3D([x_pos_des, x_pos_des + desired_accel_vec.item(0)], [y_pos_des, y_pos_des + desired_accel_vec.item(1)], [z_pos_des, z_pos_des + desired_accel_vec.item(2)], color='b', linestyle='-',label='des acceleration')
+# desired jerk
+ax.plot3D([x_pos_des + desired_accel_vec.item(0) , x_pos_des + desired_accel_vec.item(0) + desired_jerk.item(0)]\
+         ,[y_pos_des + desired_accel_vec.item(1) , y_pos_des + desired_accel_vec.item(1) + desired_jerk.item(1)]\
+         ,[z_pos_des + desired_accel_vec.item(2) , z_pos_des + desired_accel_vec.item(2) + desired_jerk.item(2)], color='b', linestyle='-',label='des jerk dir')
 #x dir
 ax.plot3D([x_pos, x_pos + xdir.item(0)], [y_pos, y_pos + xdir.item(1)], [z_pos, z_pos + xdir.item(2)], color='black', linestyle='-',label='x_dir')
 #desired x dir
@@ -149,18 +157,41 @@ des_pitch_mag = des_pitch_rate / angle_rate_des
 des_yaw_mag = des_yaw_rate / angle_rate_des
 
 # #roll_rate
+roll_x_des, roll_y_des, roll_z_des = arcData(des_roll_mag , "x")
+roll_data_matrix = np.vstack((roll_x_des, roll_y_des))
+roll_data_matrix = np.vstack((roll_data_matrix, roll_z_des))
+roll_data_matrix = np.dot(desired_rotation,roll_data_matrix) + np.array([[x_pos_des],[y_pos_des],[z_pos_des]])
+roll_x_des = roll_data_matrix[0,:]
+roll_y_des = roll_data_matrix[1,:]
+roll_z_des = roll_data_matrix[2,:]
+ax.plot3D(roll_x_des,roll_y_des,roll_z_des,color='red',label='des_roll_rate_c')
+ax.scatter3D(roll_x_des[-1],roll_y_des[-1],roll_z_des[-1],color='red',marker='>')
 # roll_x, roll_y, roll_z = arcData(roll_mag , "x")
 # ax.plot3D(roll_x,roll_y,roll_z,color='red',label='roll_rate_c')
 # ax.scatter3D(roll_x[-1],roll_y[-1],roll_z[-1],color='red',marker='>')
 
 # #pitch_rate
+pitch_x_des, pitch_y_des, pitch_z_des = arcData(des_pitch_mag , "y")
+pitch_data_matrix = np.vstack((pitch_x_des, pitch_y_des))
+pitch_data_matrix = np.vstack((pitch_data_matrix, pitch_z_des))
+pitch_data_matrix = np.dot(desired_rotation,pitch_data_matrix) + np.array([[x_pos_des],[y_pos_des],[z_pos_des]])
+pitch_x_des = pitch_data_matrix[0,:]
+pitch_y_des = pitch_data_matrix[1,:]
+pitch_z_des = pitch_data_matrix[2,:]
+ax.plot3D(pitch_x_des,pitch_y_des,pitch_z_des,color='purple',label='des_pitch_rate_c')
+ax.scatter3D(pitch_x_des[-1],pitch_y_des[-1],pitch_z_des[-1],color='purple',marker='^')
 # pitch_x, pitch_y, pitch_z = arcData(pitch_mag , "y")
 # ax.plot3D(pitch_x,pitch_y,pitch_z,color='purple',label='pitch_rate_c')
 # ax.scatter3D(pitch_x[-1],pitch_y[-1],pitch_z[-1],color='purple',marker='^')
 
 #yaw_rate
 yaw_x_des, yaw_y_des, yaw_z_des = arcData(des_yaw_mag , "z")
-# yaw_x_des = np.dot(np.array([1,0,0]),lqr_control.attitude_in_SO3)
+yaw_data_matrix = np.vstack((yaw_x_des, yaw_y_des))
+yaw_data_matrix = np.vstack((yaw_data_matrix, yaw_z_des))
+yaw_data_matrix = np.dot(desired_rotation,yaw_data_matrix) + np.array([[x_pos_des],[y_pos_des],[z_pos_des]])
+yaw_x_des = yaw_data_matrix[0,:]
+yaw_y_des = yaw_data_matrix[1,:]
+yaw_z_des = yaw_data_matrix[2,:]
 ax.plot3D(yaw_x_des,yaw_y_des,yaw_z_des,color='gold',label="des_yaw_rate_C")
 ax.scatter3D(yaw_x_des[-1],yaw_y_des[-1],yaw_z_des[-1],color='gold',marker='<')
 # yaw_x, yaw_y, yaw_z = arcData(yaw_mag , "z")
