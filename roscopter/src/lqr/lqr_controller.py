@@ -2,7 +2,7 @@
 import numpy as np
 import rospy
 
-class LQR_Controller():
+class LQRController():
 
     def __init__(self):
         self.equilibrium_throttle = 0.65
@@ -22,7 +22,7 @@ class LQR_Controller():
         self.desired_heading = 0
         self.desired_heading_rate = 0
 
-     def updateState(self, position, velocity, attitude_as_quaternion, time_step):
+    def updateState(self, position, velocity, attitude_as_quaternion, time_step):
         self.position = position
 
         previous_velocity = self.velocity
@@ -90,14 +90,14 @@ class LQR_Controller():
         #returns desired throttle in the desired frame
         desired_acceleration_magnitude = np.linalg.norm(desired_thrust_acceleration_vector)
         max_acceleration = self.gravity/self.equilibrium_throttle
-        throttle_command = desired_acceleration_magnitude/max_z_acceleration
+        throttle_command = desired_acceleration_magnitude/max_acceleration
         saturated_throttle_command = np.clip(throttle_command,0,1)
         return saturated_throttle_command
 
     def computeDesiredThrustAccelerationVector(self):
         # returns desired acceleration due to thrust at the desired pose in the inertial frame of reference
         gravityVector = np.array([[0],[0],[1]])*self.gravity
-        desired_thrust_acceleration_vector = np.dot(gravityVector - self.desired_acceleration)
+        desired_thrust_acceleration_vector = self.desired_acceleration - np.array([[0],[0],[1]])*gravityVector
         return desired_thrust_acceleration_vector
 
     def computeDesiredAttitudeSO3(self, desired_thrust_acceleration_vector, desired_heading_vector):
@@ -118,13 +118,14 @@ class LQR_Controller():
         attitude_error = self.veeOperator(attitude_error_SO3)/2
         return attitude_error
 
-    def computeDesiredBodyAngularRates(desired_attitude_SO3, derivative_desired_attitude_SO3)
+    def computeDesiredBodyAngularRates(self, desired_attitude_SO3, derivative_desired_attitude_SO3):
         inertial_to_desired_frame_rotation = np.transpose(desired_attitude_SO3)
         desired_body_angular_rates = self.veeOperator(np.dot(inertial_to_desired_frame_rotation,derivative_desired_attitude_SO3))
         return desired_body_angular_rates
 
-    def computeDerivativeDesiredAttitudeSO3(self, desired_thrust_acceleration_vector, derivative_desired_thrust_acceleration_vector, desired_attitude_SO3, desired_heading_vector, derivative_desired_heading_vector):
+    def computeDerivativeDesiredAttitudeSO3(self, desired_thrust_acceleration_vector, desired_attitude_SO3, desired_heading_vector, derivative_desired_heading_vector):
         # derivative desired_body_z_axis
+        derivative_desired_thrust_acceleration_vector = self.desired_jerk
         desired_body_z_axis = desired_attitude_SO3[:,2][:,None]
         norm_desired_thrust_acceleration_vector = np.linalg.norm(desired_thrust_acceleration_vector)
         z_term_1 = -derivative_desired_thrust_acceleration_vector / norm_desired_thrust_acceleration_vector
