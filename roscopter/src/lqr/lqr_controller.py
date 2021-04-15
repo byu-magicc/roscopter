@@ -124,11 +124,23 @@ class LQR_Controller():
         return desired_body_angular_rates
 
     def computeDerivativeDesiredAttitudeSO3(self, desired_thrust_acceleration_vector, derivative_desired_thrust_acceleration_vector, desired_attitude_SO3, desired_heading_vector, derivative_desired_heading_vector):
+        # derivative desired_body_z_axis
         desired_body_z_axis = desired_attitude_SO3[:,2][:,None]
+        norm_desired_thrust_acceleration_vector = np.linalg.norm(desired_thrust_acceleration_vector)
+        z_term_1 = -derivative_desired_thrust_acceleration_vector / norm_desired_thrust_acceleration_vector
+        z_term_2 = np.dot(desired_thrust_acceleration_vector.flatten(),derivative_desired_thrust_acceleration_vector)
+        z_term_3 = desired_thrust_acceleration_vector * z_term_2 / (norm_desired_thrust_acceleration_vector**3)
+        derivative_desired_body_z_axis = z_term_1 + z_term_3
+        #derivative desired body y axis
+        y_term_1 = np.cross(derivative_desired_body_z_axis.flatten() , desired_heading_vector.flatten())
+        y_term_2 = np.cross(desired_body_z_axis.flatten(), derivative_desired_heading_vector.flatten())
+        derivative_desired_body_y_axis = y_term_1 + y_term_2
+        #derivative desired body x axis
         desired_body_y_axis = desired_attitude_SO3[:,1][:,None]
-        derivative_desired_body_z_axis = self.computeDerivativeDesiredBodyZAxis(desired_force_vector, derivative_desired_force_vector)
-        derivative_desired_body_y_axis = self.computeDerivativeDesiredBodyYAxis(desired_body_z_axis, derivative_desired_body_z_axis, desired_heading_vector, derivative_desired_heading_vector)
-        derivative_desired_body_x_axis = self.computeDerivativeDesiredBodyXAxis(desired_body_z_axis, derivative_desired_body_z_axis, desired_body_y_axis, derivative_desired_body_y_axis)
+        x_term_1 = np.cross(derivative_desired_body_y_axis.flatten() , desired_body_z_axis.flatten())
+        x_term_2 = np.cross(desired_body_y_axis.flatten(), derivative_desired_body_z_axis.flatten())
+        derivative_desired_body_x_axis = x_term_1 + x_term_2
+        #concatenate columns
         columns_one_and_two = np.concatenate((derivative_desired_body_x_axis,derivative_desired_body_y_axis),1)
         derivative_desired_attitude_SO3 = np.concatenate((columns_one_and_two,derivative_desired_body_z_axis),1)
         return derivative_desired_attitude_SO3
