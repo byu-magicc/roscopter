@@ -135,12 +135,12 @@ class LQRController():
         #derivative desired body y axis
         y_term_1 = np.cross(derivative_desired_body_z_axis.flatten() , desired_heading_vector.flatten())
         y_term_2 = np.cross(desired_body_z_axis.flatten(), derivative_desired_heading_vector.flatten())
-        derivative_desired_body_y_axis = y_term_1 + y_term_2
+        derivative_desired_body_y_axis = (y_term_1 + y_term_2)[:,None]
         #derivative desired body x axis
         desired_body_y_axis = desired_attitude_SO3[:,1][:,None]
         x_term_1 = np.cross(derivative_desired_body_y_axis.flatten() , desired_body_z_axis.flatten())
         x_term_2 = np.cross(desired_body_y_axis.flatten(), derivative_desired_body_z_axis.flatten())
-        derivative_desired_body_x_axis = x_term_1 + x_term_2
+        derivative_desired_body_x_axis = (x_term_1 + x_term_2)[:,None]
         #concatenate columns
         columns_one_and_two = np.concatenate((derivative_desired_body_x_axis,derivative_desired_body_y_axis),1)
         derivative_desired_attitude_SO3 = np.concatenate((columns_one_and_two,derivative_desired_body_z_axis),1)
