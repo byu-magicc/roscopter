@@ -126,19 +126,7 @@ void EKF::propagate(const double &t, const Vector6d &imu, const Matrix6d &R)
   }
 
   double dt = t - x().t;
-  
-  try
-  {
-    if (dt < 0)
-      throw dt;
-  }
-  catch (double e)
-  {
-    std::cout << "[WARNING]: Negative time step calculated in estimator" << '\n';
-    xbuf_.next().x.t = t;
-    return;
-  }
-  
+  assert(dt >= 0);
   if (dt < 1e-6)
     return;
 
