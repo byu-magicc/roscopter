@@ -24,20 +24,20 @@ class TrajectoryManager():
         t = self.get_time()
         traj_command = TrajectoryState()
 
-        traj_command.x_position = self.x(t)
-        traj_command.y_position = self.y(t)
-        traj_command.z_position = self.z(t)
-        traj_command.x_velocity = self.dxdt(t)
-        traj_command.y_velocity = self.dydt(t)
-        traj_command.z_velocity = self.dzdt(t)
-        traj_command.x_acceleration = self.dx2dt(t)
-        traj_command.y_acceleration = self.dy2dt(t)
-        traj_command.z_acceleration = self.dz2dt(t)
-        traj_command.x_jerk = self.dx3dt(t)
-        traj_command.y_jerk = self.dy3dt(t)
-        traj_command.z_jerk = self.dz3dt(t)
-        traj_command.heading = 0
-        traj_command.heading_rate = 0
+        # traj_command.x_position = self.x(t)
+        # traj_command.y_position = self.y(t)
+        # traj_command.z_position = self.z(t)
+        # traj_command.x_velocity = self.dxdt(t)
+        # traj_command.y_velocity = self.dydt(t)
+        # traj_command.z_velocity = self.dzdt(t)
+        # traj_command.x_acceleration = self.dx2dt(t)
+        # traj_command.y_acceleration = self.dy2dt(t)
+        # traj_command.z_acceleration = self.dz2dt(t)
+        # traj_command.x_jerk = self.dx3dt(t)
+        # traj_command.y_jerk = self.dy3dt(t)
+        # traj_command.z_jerk = self.dz3dt(t)
+        # traj_command.heading = 0
+        # traj_command.heading_rate = 0
 
         # traj_command.x_position = 0
         # traj_command.y_position = 0
@@ -53,6 +53,21 @@ class TrajectoryManager():
         # traj_command.z_jerk = 0
         # traj_command.heading = self.psi(t)
         # traj_command.heading_rate = self.dpsidt(t)
+
+        traj_command.x_position = 0
+        traj_command.y_position = 0
+        traj_command.z_position = -4
+        traj_command.x_velocity = 0
+        traj_command.y_velocity = 0
+        traj_command.z_velocity = 0
+        traj_command.x_acceleration = 0
+        traj_command.y_acceleration = 0
+        traj_command.z_acceleration = 0
+        traj_command.x_jerk = 0
+        traj_command.y_jerk = 0
+        traj_command.z_jerk = 0
+        traj_command.heading = 0
+        traj_command.heading_rate = 0
 
 
         self.trajectory_publisher.publish(traj_command)

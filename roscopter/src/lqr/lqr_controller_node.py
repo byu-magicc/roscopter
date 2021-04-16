@@ -39,9 +39,9 @@ class LQRControllerNode():
         down_velocity = msg.twist.twist.linear.z
         velocity = np.array([[north_velocity], [east_velocity], [down_velocity]])
 
-        x_angular_rate = msg.twist.angular.x 
-        y_angular_rate = msg.twist.angular.y
-        z_angular_rate = msg.twist.angular.z
+        x_angular_rate = msg.twist.twist.angular.x 
+        y_angular_rate = msg.twist.twist.angular.y
+        z_angular_rate = msg.twist.twist.angular.z
         body_angular_rates = np.array([[x_angular_rate], [y_angular_rate],[z_angular_rate]])
 
         qw = msg.pose.pose.orientation.w

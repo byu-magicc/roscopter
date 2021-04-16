@@ -26,8 +26,9 @@ class LQRController():
         self.desired_heading_vector = np.array([[0],[0],[0]])
         self.desired_heading_rate = 0
         self.desired_attitude_SO3 = np.eye(3)
-        self.Q = np.diag([1/100,1/100,1/100 , 1/100,1/100,1/100 , 1,1,1])
-        self.R = np.diag([1, 1/(np.pi**2),1/(np.pi**2),1/(np.pi**2)])
+        #smaller the numbers less effect they have on system
+        self.Q = np.diag([1/5,1/5,1/5 , 1/3.3,1/3.3,1/3.3 , 1.2,1.2,1.2]) #position,  velocity,  attitude
+        self.R = np.diag([0.6, 1.2,1.2,1.2]) #throttle, rollrate, pitchrate, yawrate
 
     def updateState(self, position, velocity, body_angular_rates, attitude_as_quaternion, time_step):
         self.position = position
@@ -78,7 +79,7 @@ class LQRController():
         B = self.createBMatrix()
         A = self.createAMatrix()
         u_error = self.calculateErrorInput(X,A,B)
-        u = u_error + u_desired
+        u = u_desired + u_error
         throttle = np.clip(u.item(0),0,1)
         roll_rate = u.item(1)
         pitch_rate = u.item(2)
@@ -96,13 +97,13 @@ class LQRController():
         return error_state
 
     def createBMatrix(self):
-        dvdotds = np.array( [[0], [0], [(-self.gravity/self.equilibrium_throttle)]])
+        dvdot_ds = np.array( [[0], [0], [(-self.gravity/self.equilibrium_throttle)]])
         inertial_to_body_frame_rotation = np.transpose(self.attitude_in_SO3)
         body_velocity = np.dot(inertial_to_body_frame_rotation, self.velocity)
-        dvdotdw = self.skewOperator(body_velocity)
-        drdotdw = np.eye(3)
-        leftColumn = np.vstack((np.zeros([3,1]), dvdotds , np.zeros([3,1])))
-        right3Columns = np.vstack((np.zeros([3,3]) , dvdotdw , drdotdw))
+        dvdot_dw = self.skewOperator(body_velocity)
+        drdot_dw = np.eye(3)
+        leftColumn = np.vstack((np.zeros([3,1]), dvdot_ds , np.zeros([3,1])))
+        right3Columns = np.vstack((np.zeros([3,3]) , dvdot_dw , drdot_dw))
         B = np.concatenate((leftColumn,right3Columns),1)
         return B
 
@@ -112,7 +113,7 @@ class LQRController():
         dpdot_dv = body_to_inertial_frame_rotation
         body_velocity = np.dot( inertial_to_body_frame_rotation , self.velocity)
         dpdot_dr = -np.dot(body_to_inertial_frame_rotation , self.skewOperator(body_velocity))
-        dvdot_dv =  -self.skewOperator(self.body_angular_rates) 
+        dvdot_dv = -self.skewOperator(self.body_angular_rates) 
         dvdot_dr = self.skewOperator( self.gravity*np.dot(inertial_to_body_frame_rotation,np.array([[0],[0],[1]])) ) 
         drdot_dr = -self.skewOperator(self.body_angular_rates)
         left_columns = np.zeros([9,3])
