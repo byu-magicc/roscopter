@@ -2,7 +2,7 @@
 import numpy as np
 import rospy
 import copy
-import scipy
+from scipy import linalg
 
 class LQRController():
 
@@ -14,6 +14,7 @@ class LQRController():
         self.velocity = np.array([[0],[0],[0]])
         self.acceleration = np.array([[0],[0],[0]])
         self.jerk = np.array([[0],[0],[0]])
+        self.body_angular_rates = np.array([[0],[0],[0]])
         self.heading = 0
         self.heading_rate = 0
         self.attitude_in_SO3 = np.eye(3)
@@ -28,7 +29,7 @@ class LQRController():
         self.Q = np.diag([1/100,1/100,1/100 , 1/100,1/100,1/100 , 1,1,1])
         self.R = np.diag([1, 1/(np.pi**2),1/(np.pi**2),1/(np.pi**2)])
 
-    def updateState(self, position, velocity, attitude_as_quaternion, time_step):
+    def updateState(self, position, velocity, body_angular_rates, attitude_as_quaternion, time_step):
         self.position = position
 
         previous_velocity = self.velocity
@@ -45,6 +46,8 @@ class LQRController():
         east_jerk = self.finiteDifferencing(east_acceleration, previous_acceleration.item(1), time_step)
         down_jerk = self.finiteDifferencing(down_acceleration, previous_acceleration.item(2), time_step)
         self.jerk = np.array([[north_jerk], [east_jerk], [down_jerk]])
+
+        self.body_angular_rates = body_angular_rates
 
         self.attitude_in_SO3 = self.quaternionToSO3(attitude_as_quaternion)
 
@@ -73,7 +76,7 @@ class LQRController():
         u_desired = np.vstack((desired_throttle,desired_angular_rates))
         X = self.calculateErrorState()
         B = self.createBMatrix()
-        A = self.createAMatrix(desired_angular_rates)
+        A = self.createAMatrix()
         u_error = self.calculateErrorInput(X,A,B)
         u = u_error + u_desired
         throttle = np.clip(u.item(0),0,1)
@@ -103,15 +106,15 @@ class LQRController():
         B = np.concatenate((leftColumn,right3Columns),1)
         return B
 
-    def createAMatrix(self, desired_angular_rates):
+    def createAMatrix(self):
         body_to_inertial_frame_rotation = copy.deepcopy(self.attitude_in_SO3)
         inertial_to_body_frame_rotation = np.transpose(self.attitude_in_SO3)
         dpdot_dv = body_to_inertial_frame_rotation
         body_velocity = np.dot( inertial_to_body_frame_rotation , self.velocity)
         dpdot_dr = -np.dot(body_to_inertial_frame_rotation , self.skewOperator(body_velocity))
-        dvdot_dv =  -self.skewOperator(desired_angular_rates) 
+        dvdot_dv =  -self.skewOperator(self.body_angular_rates) 
         dvdot_dr = self.skewOperator( self.gravity*np.dot(inertial_to_body_frame_rotation,np.array([[0],[0],[1]])) ) 
-        drdot_dr = -self.skewOperator(desired_angular_rates)
+        drdot_dr = -self.skewOperator(self.body_angular_rates)
         left_columns = np.zeros([9,3])
         middle_columns = np.vstack((dpdot_dv, dvdot_dv, np.zeros([3,3])))
         right_columns = np.vstack((dpdot_dr, dvdot_dr, drdot_dr))
@@ -119,7 +122,7 @@ class LQRController():
         return A
 
     def calculateErrorInput(self,X,A,B):
-        P = scipy.linalg.solve_continuous_are(A, B, self.Q, self.R, e=None, s=None)
+        P = linalg.solve_continuous_are(A, B, self.Q, self.R, e=None, s=None)
         K = np.dot(np.dot(np.transpose(self.R) , np.transpose(B)) , P)
         u_error = -np.dot(K,X)
         return u_error
@@ -149,13 +152,15 @@ class LQRController():
         return desired_rotation
 
     def computeAttitudeError(self):
-        desired_to_inertial_frame_rotation = copy.deepcopy(self.desired_attitude_SO3)
-        inertial_to_desired_frame_rotation = np.transpose(desired_to_inertial_frame_rotation)
-        body_to_inertial_frame_rotation = self.attitude_in_SO3
-        inertial_to_body_frame_rotation = np.transpose(body_to_inertial_frame_rotation)
-        attitude_error_SO3 = np.dot(inertial_to_desired_frame_rotation,body_to_inertial_frame_rotation) \
-                             - np.dot(inertial_to_body_frame_rotation , desired_to_inertial_frame_rotation)
-        attitude_error = self.veeOperator(attitude_error_SO3)/2
+        # desired_to_inertial_frame_rotation = copy.deepcopy(self.desired_attitude_SO3)
+        # inertial_to_desired_frame_rotation = np.transpose(desired_to_inertial_frame_rotation)
+        # body_to_inertial_frame_rotation = self.attitude_in_SO3
+        # inertial_to_body_frame_rotation = np.transpose(body_to_inertial_frame_rotation)
+        # attitude_error_SO3 = np.dot(inertial_to_desired_frame_rotation,body_to_inertial_frame_rotation) \
+        #                      - np.dot(inertial_to_body_frame_rotation , desired_to_inertial_frame_rotation)
+        # attitude_error = self.veeOperator(attitude_error_SO3)/2
+        attitude_error_SO3 = self.logSO3(np.dot( np.transpose(self.desired_attitude_SO3), self.attitude_in_SO3))
+        attitude_error = self.veeOperator(attitude_error_SO3)
         return attitude_error
 
     def computeDesiredBodyAngularRates(self, derivative_desired_attitude_SO3):
@@ -226,6 +231,14 @@ class LQRController():
                                         [r10, r11, r12],
                                         [r20, r21, r22]])
         return matrix_SO3
+
+    def logSO3(self, R):
+        theta = np.arccos((np.trace(R) - 1)/2)
+        if theta == 0:
+            w_skew = np.eye(3)
+        else:
+            w_skew = theta*(R-np.transpose(R))/(2*np.sin(theta))
+        return w_skew
 
     def getCurrentHeading(self):
         north = np.array([[1],[0],[0]])
