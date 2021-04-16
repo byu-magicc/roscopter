@@ -61,8 +61,8 @@ y_accel_des = .5#-np.cos(t)*radius
 z_jerk_des = .0
 x_jerk_des = 0.0 #-np.cos(t)*radius
 y_jerk_des = 0.1 #np.sin(t)*radius
-desired_heading = -np.pi/3
-desired_heading_rate = .2
+desired_heading = 0
+desired_heading_rate = 0
 desired_position = np.array([[x_pos_des], [y_pos_des], [z_pos_des]])
 desired_velocity = np.array([[x_vel_des], [y_vel_des], [z_vel_des]])
 desired_acceleration = np.array([[x_accel_des], [y_accel_des], [z_accel_des]])
@@ -83,11 +83,11 @@ desired_body_angular_rates = lqr_control.computeDesiredBodyAngularRates(derivati
 des_pitch_rate = desired_body_angular_rates.item(1)
 des_yaw_rate = desired_body_angular_rates.item(2)
 des_roll_rate = desired_body_angular_rates.item(0)
-# rosflight_command = traj_track.computeRosflightCommand()
-# roll_rate = rosflight_command.item(0)
-# pitch_rate = rosflight_command.item(1)
-# yaw_rate = rosflight_command.item(2)
-# throttle = rosflight_command.item(3)
+rosflight_command = lqr_control.computeRosflightCommand()
+roll_rate_command = rosflight_command.item(0)
+pitch_rate_command = rosflight_command.item(1)
+yaw_rate_command = rosflight_command.item(2)
+throttle_command = rosflight_command.item(3)
 
 fig = plt.figure()
 ax = plt.axes(projection='3d')
@@ -145,10 +145,25 @@ ax.plot3D([x_pos_des, x_pos_des + desired_zdir.item(0)], [y_pos_des, y_pos_des +
 # ax.plot3D([x_pos, x_pos + thrust_vec.item(0)], [y_pos, y_pos +  thrust_vec.item(1)], [z_pos, z_pos +  thrust_vec.item(2)], color='blue', linestyle='-.',label='thrust')
 
 # #rate commands
-# angle_rate = np.sqrt(roll_rate**2 + pitch_rate**2 + yaw_rate**2)
-# roll_mag = roll_rate/angle_rate
-# pitch_mag = pitch_rate/angle_rate
-# yaw_mag = yaw_rate/angle_rate
+angle_rate_command = np.sqrt(roll_rate_command**2 + pitch_rate_command**2 + yaw_rate_command**2)
+roll_mag_command = roll_rate_command/angle_rate_command
+pitch_mag_command = pitch_rate_command/angle_rate_command
+yaw_mag_command = yaw_rate_command/angle_rate_command
+
+#roll command
+roll_x, roll_y, roll_z = arcData(roll_mag_command , "x")
+ax.plot3D(roll_x,roll_y,roll_z,color='red',label='roll_rate_c')
+ax.scatter3D(roll_x[-1],roll_y[-1],roll_z[-1],color='red',marker='>')
+
+#pitch command
+pitch_x, pitch_y, pitch_z = arcData(pitch_mag_command , "y")
+ax.plot3D(pitch_x,pitch_y,pitch_z,color='purple',label='pitch_rate_c')
+ax.scatter3D(pitch_x[-1],pitch_y[-1],pitch_z[-1],color='purple',marker='^')
+
+# yaw command
+yaw_x, yaw_y, yaw_z = arcData(yaw_mag_command , "z")
+ax.plot3D(yaw_x,yaw_y,yaw_z,color='gold',label="yaw_rate_C")
+ax.scatter3D(yaw_x[-1],yaw_y[-1],yaw_z[-1],color='gold',marker='<')
 
 #desired body rates
 angle_rate_des = np.sqrt(des_roll_rate**2 + des_pitch_rate**2 + des_yaw_rate**2)
@@ -156,7 +171,7 @@ des_roll_mag = des_roll_rate / angle_rate_des
 des_pitch_mag = des_pitch_rate / angle_rate_des
 des_yaw_mag = des_yaw_rate / angle_rate_des
 
-# #roll_rate
+# # desired roll_rate
 roll_x_des, roll_y_des, roll_z_des = arcData(des_roll_mag , "x")
 roll_data_matrix = np.vstack((roll_x_des, roll_y_des))
 roll_data_matrix = np.vstack((roll_data_matrix, roll_z_des))
@@ -166,11 +181,8 @@ roll_y_des = roll_data_matrix[1,:]
 roll_z_des = roll_data_matrix[2,:]
 ax.plot3D(roll_x_des,roll_y_des,roll_z_des,color='red',label='des_roll_rate_c')
 ax.scatter3D(roll_x_des[-1],roll_y_des[-1],roll_z_des[-1],color='red',marker='>')
-# roll_x, roll_y, roll_z = arcData(roll_mag , "x")
-# ax.plot3D(roll_x,roll_y,roll_z,color='red',label='roll_rate_c')
-# ax.scatter3D(roll_x[-1],roll_y[-1],roll_z[-1],color='red',marker='>')
 
-# #pitch_rate
+# #desired pitch_rate
 pitch_x_des, pitch_y_des, pitch_z_des = arcData(des_pitch_mag , "y")
 pitch_data_matrix = np.vstack((pitch_x_des, pitch_y_des))
 pitch_data_matrix = np.vstack((pitch_data_matrix, pitch_z_des))
@@ -180,11 +192,8 @@ pitch_y_des = pitch_data_matrix[1,:]
 pitch_z_des = pitch_data_matrix[2,:]
 ax.plot3D(pitch_x_des,pitch_y_des,pitch_z_des,color='purple',label='des_pitch_rate_c')
 ax.scatter3D(pitch_x_des[-1],pitch_y_des[-1],pitch_z_des[-1],color='purple',marker='^')
-# pitch_x, pitch_y, pitch_z = arcData(pitch_mag , "y")
-# ax.plot3D(pitch_x,pitch_y,pitch_z,color='purple',label='pitch_rate_c')
-# ax.scatter3D(pitch_x[-1],pitch_y[-1],pitch_z[-1],color='purple',marker='^')
 
-#yaw_rate
+#desired yaw_rate
 yaw_x_des, yaw_y_des, yaw_z_des = arcData(des_yaw_mag , "z")
 yaw_data_matrix = np.vstack((yaw_x_des, yaw_y_des))
 yaw_data_matrix = np.vstack((yaw_data_matrix, yaw_z_des))
@@ -194,12 +203,7 @@ yaw_y_des = yaw_data_matrix[1,:]
 yaw_z_des = yaw_data_matrix[2,:]
 ax.plot3D(yaw_x_des,yaw_y_des,yaw_z_des,color='gold',label="des_yaw_rate_C")
 ax.scatter3D(yaw_x_des[-1],yaw_y_des[-1],yaw_z_des[-1],color='gold',marker='<')
-# yaw_x, yaw_y, yaw_z = arcData(yaw_mag , "z")
-# ax.plot3D(yaw_x,yaw_y,yaw_z,color='gold',label="yaw_rate_C")
-# ax.scatter3D(yaw_x[-1],yaw_y[-1],yaw_z[-1],color='gold',marker='<')
 
-
-print("Error State: " , lqr_control.calculateErrorState())
 ax.legend()
 plt.show()
 

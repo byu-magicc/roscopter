@@ -70,7 +70,7 @@ class LQRController():
         derivative_desired_attitude = self.computeDerivativeDesiredAttitude(desired_thrust_acceleration_vector, derivative_desired_heading_vector)
         desired_angular_rates = self.computeDesiredBodyAngularRates(derivative_desired_attitude)
         desired_throttle = self.computeDesiredThrottle(desired_thrust_acceleration_vector)
-        u_desired = np.vstack(desired_throttle,desired_angular_rates)
+        u_desired = np.vstack((desired_throttle,desired_angular_rates))
         X = self.calculateErrorState()
         B = self.createBMatrix()
         A = self.createAMatrix(desired_angular_rates)
@@ -93,13 +93,13 @@ class LQRController():
         return error_state
 
     def createBMatrix(self):
-        dvdotds = np.array( [0, 0, (-self.gravity/self.equilibrium_throttle)])
+        dvdotds = np.array( [[0], [0], [(-self.gravity/self.equilibrium_throttle)]])
         inertial_to_body_frame_rotation = np.transpose(self.attitude_in_SO3)
         body_velocity = np.dot(inertial_to_body_frame_rotation, self.velocity)
         dvdotdw = self.skewOperator(body_velocity)
         drdotdw = np.eye(3)
-        leftColumn = np.vstack([np.zeros([3,1]), dvdotds , np.zeros([3,1])])
-        right3Columns = np.vstack(np.zeros([3,3]) , dvdotdw , drdotdw)
+        leftColumn = np.vstack((np.zeros([3,1]), dvdotds , np.zeros([3,1])))
+        right3Columns = np.vstack((np.zeros([3,3]) , dvdotdw , drdotdw))
         B = np.concatenate((leftColumn,right3Columns),1)
         return B
 
@@ -109,12 +109,12 @@ class LQRController():
         dpdot_dv = body_to_inertial_frame_rotation
         body_velocity = np.dot( inertial_to_body_frame_rotation , self.velocity)
         dpdot_dr = -np.dot(body_to_inertial_frame_rotation , self.skewOperator(body_velocity))
-        dvdot_dv =  -self.skewOperator(desired_angular_rates)
-        dvdot_dr = self.gravity*np.dot(inertial_to_body_frame_rotation,np.array([0,0,1]))
+        dvdot_dv =  -self.skewOperator(desired_angular_rates) 
+        dvdot_dr = self.skewOperator( self.gravity*np.dot(inertial_to_body_frame_rotation,np.array([[0],[0],[1]])) ) 
         drdot_dr = -self.skewOperator(desired_angular_rates)
         left_columns = np.zeros([9,3])
-        middle_columns = np.vstack(dpdot_dv, dvdot_dv, np.zeros([3,3]))
-        right_columns = np.vstack(dpdot_dr, dvdot_dr, drdot_dr)
+        middle_columns = np.vstack((dpdot_dv, dvdot_dv, np.zeros([3,3])))
+        right_columns = np.vstack((dpdot_dr, dvdot_dr, drdot_dr))
         A = np.concatenate( (np.concatenate((left_columns,middle_columns),1) , right_columns) , 1)
         return A
 

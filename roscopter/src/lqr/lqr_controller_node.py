@@ -15,7 +15,7 @@ class LQRControllerNode():
         self.trajectory_command_subscriber = rospy.Subscriber('trajectory_command', TrajectoryState, self.commandCallback, queue_size=5)
         self.rosflight_command_publisher = rospy.Publisher('rosflight_command', Command, queue_size=5, latch = True)
         self.trajectory_state_publisher = rospy.Publisher('trajectory_state', TrajectoryState, queue_size=5, latch = True)
-        self.lqr_controller = LQR_Controller()
+        self.lqr_controller = LQRController()
         self.start_time = rospy.get_rostime().to_sec()
         self.current_time = 0
         while not rospy.is_shutdown():
@@ -39,16 +39,11 @@ class LQRControllerNode():
         down_velocity = msg.twist.twist.linear.z
         velocity = np.array([[north_velocity], [east_velocity], [down_velocity]])
 
-        msg.twist.twist.angular.x
-        msg.twist.twist.angular.y
-        msg.twist.twist.angular.z
-
         qw = msg.pose.pose.orientation.w
         qx = msg.pose.pose.orientation.x
         qy = msg.pose.pose.orientation.y
         qz = msg.pose.pose.orientation.z
         attitude = np.array([qw,qx,qy,qz])
-        ### implement function below ###
         self.lqr_controller.updateState(position, velocity, attitude, time_step)
 
         ### implement function below ###
