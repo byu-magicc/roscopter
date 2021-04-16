@@ -27,7 +27,7 @@ class LQRController():
         self.desired_heading_rate = 0
         self.desired_attitude_SO3 = np.eye(3)
         #smaller the numbers less effect they have on system
-        self.Q = np.diag([1/5,1/5,1/5 , 1/3.3,1/3.3,1/3.3 , 1.2,1.2,1.2]) #position,  velocity,  attitude
+        self.Q = np.diag([1/100,1/100,1/100 , 1/70,1/70,1/70 , 1.7,1.7,1.7]) #position,  velocity,  attitude
         self.R = np.diag([0.6, 1.2,1.2,1.2]) #throttle, rollrate, pitchrate, yawrate
 
     def updateState(self, position, velocity, body_angular_rates, attitude_as_quaternion, time_step):
@@ -79,7 +79,7 @@ class LQRController():
         B = self.createBMatrix()
         A = self.createAMatrix()
         u_error = self.calculateErrorInput(X,A,B)
-        u = u_desired + u_error
+        u = u_error + u_desired 
         throttle = np.clip(u.item(0),0,1)
         roll_rate = u.item(1)
         pitch_rate = u.item(2)
@@ -153,15 +153,15 @@ class LQRController():
         return desired_rotation
 
     def computeAttitudeError(self):
-        # desired_to_inertial_frame_rotation = copy.deepcopy(self.desired_attitude_SO3)
-        # inertial_to_desired_frame_rotation = np.transpose(desired_to_inertial_frame_rotation)
-        # body_to_inertial_frame_rotation = self.attitude_in_SO3
-        # inertial_to_body_frame_rotation = np.transpose(body_to_inertial_frame_rotation)
-        # attitude_error_SO3 = np.dot(inertial_to_desired_frame_rotation,body_to_inertial_frame_rotation) \
-        #                      - np.dot(inertial_to_body_frame_rotation , desired_to_inertial_frame_rotation)
-        # attitude_error = self.veeOperator(attitude_error_SO3)/2
-        attitude_error_SO3 = self.logSO3(np.dot( np.transpose(self.desired_attitude_SO3), self.attitude_in_SO3))
-        attitude_error = self.veeOperator(attitude_error_SO3)
+        desired_to_inertial_frame_rotation = copy.deepcopy(self.desired_attitude_SO3)
+        inertial_to_desired_frame_rotation = np.transpose(desired_to_inertial_frame_rotation)
+        body_to_inertial_frame_rotation = self.attitude_in_SO3
+        inertial_to_body_frame_rotation = np.transpose(body_to_inertial_frame_rotation)
+        attitude_error_SO3 = np.dot(inertial_to_desired_frame_rotation,body_to_inertial_frame_rotation) \
+                             - np.dot(inertial_to_body_frame_rotation , desired_to_inertial_frame_rotation)
+        attitude_error = self.veeOperator(attitude_error_SO3)/2
+        # attitude_error_SO3 = self.logSO3(np.dot( np.transpose(self.desired_attitude_SO3), self.attitude_in_SO3))
+        # attitude_error = self.veeOperator(attitude_error_SO3)
         return attitude_error
 
     def computeDesiredBodyAngularRates(self, derivative_desired_attitude_SO3):
