@@ -14,7 +14,7 @@ class TrajectoryManager():
         self.trajectory_publisher = rospy.Publisher("trajectory", TrajectoryState, queue_size=5, latch=True)
         self.radius = 5
         self.altitude = 3
-        self.speed = 2
+        self.speed = 5
 
     def get_time(self):
         time = rospy.get_time() - self.start_time
@@ -36,8 +36,8 @@ class TrajectoryManager():
         traj_command.x_jerk = self.dx3dt(t)
         traj_command.y_jerk = self.dy3dt(t)
         traj_command.z_jerk = self.dz3dt(t)
-        traj_command.heading = 0
-        traj_command.heading_rate = 0
+        traj_command.heading = self.psi(t)
+        traj_command.heading_rate = self.dpsidt(t)
 
         # traj_command.x_position = 0
         # traj_command.y_position = 0

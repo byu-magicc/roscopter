@@ -53,16 +53,16 @@ z_pos_des = -height
 x_pos_des = 2 #np.sin(t)*radius
 y_pos_des = 2 #np.cos(t)*radius
 z_vel_des = 0
-x_vel_des = 0#np.cos(t)*radius
-y_vel_des = 0#-np.sin(t)*radius
+x_vel_des = 1#np.cos(t)*radius
+y_vel_des = 1#-np.sin(t)*radius
 z_accel_des = .1
 x_accel_des = 0#-np.sin(t)*radius
-y_accel_des = 0#-np.cos(t)*radius
+y_accel_des = .5#-np.cos(t)*radius
 z_jerk_des = .0
 x_jerk_des = 0.0 #-np.cos(t)*radius
 y_jerk_des = 0.1 #np.sin(t)*radius
-desired_heading = np.pi/5
-desired_heading_rate = 0
+desired_heading = -np.pi/3
+desired_heading_rate = .2
 desired_position = np.array([[x_pos_des], [y_pos_des], [z_pos_des]])
 desired_velocity = np.array([[x_vel_des], [y_vel_des], [z_vel_des]])
 desired_acceleration = np.array([[x_accel_des], [y_accel_des], [z_accel_des]])
@@ -198,6 +198,8 @@ ax.scatter3D(yaw_x_des[-1],yaw_y_des[-1],yaw_z_des[-1],color='gold',marker='<')
 # ax.plot3D(yaw_x,yaw_y,yaw_z,color='gold',label="yaw_rate_C")
 # ax.scatter3D(yaw_x[-1],yaw_y[-1],yaw_z[-1],color='gold',marker='<')
 
+
+print("Error State: " , lqr_control.calculateErrorState())
 ax.legend()
 plt.show()
 

@@ -7,7 +7,7 @@ class TrajectoryTracker():
     def __init__(self):
         self.position_gain = np.array([[1, 0,0] , [0,1,0], [0,0,1]])*4
         self.velocity_gain = np.eye(3)*3
-        self.angle_gain = np.array([[1, 0,0] , [0,1,0], [0,0,1]])*7
+        self.angle_gain = np.array([[1, 0,0] , [0,1,0], [0,0,1]])*8
         self.equilibrium_throttle = 0.65
         self.gravity = 9.8
         self.mass = 3.69
@@ -29,12 +29,14 @@ class TrajectoryTracker():
         self.position = position
 
         previous_velocity = self.velocity
-        self.velocity = velocity
+        bodToInertialFrame = self.attitude_in_SO3
+        self.velocity = np.dot(bodToInertialFrame,velocity)
+        # self.velocity = velocity
 
         previous_acceleration = self.acceleration
-        north_acceleration = self.finiteDifferencing(velocity.item(0), previous_velocity.item(0), time_step)
-        east_acceleration = self.finiteDifferencing(velocity.item(1), previous_velocity.item(1), time_step)
-        down_acceleration = self.finiteDifferencing(velocity.item(2), previous_velocity.item(2), time_step)
+        north_acceleration = self.finiteDifferencing(self.velocity.item(0), previous_velocity.item(0), time_step)
+        east_acceleration = self.finiteDifferencing(self.velocity.item(1), previous_velocity.item(1), time_step)
+        down_acceleration = self.finiteDifferencing(self.velocity.item(2), previous_velocity.item(2), time_step)
         self.acceleration = np.array([[north_acceleration], [east_acceleration], [down_acceleration]])
 
         north_jerk = self.finiteDifferencing(north_acceleration, previous_acceleration.item(0), time_step)

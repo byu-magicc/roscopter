@@ -2,6 +2,7 @@
 import numpy as np
 import rospy
 import copy
+import scipy
 
 class LQRController():
 
@@ -21,14 +22,18 @@ class LQRController():
         self.desired_acceleration = np.array([[0],[0],[0]])
         self.desired_jerk = np.array([[0],[0],[0]])
         self.desired_heading = 0
+        self.desired_heading_vector = np.array([[0],[0],[0]])
         self.desired_heading_rate = 0
         self.desired_attitude_SO3 = np.eye(3)
+        self.Q = np.diag([1/100,1/100,1/100 , 1/100,1/100,1/100 , 1,1,1])
+        self.R = np.diag([1, 1/(np.pi**2),1/(np.pi**2),1/(np.pi**2)])
 
     def updateState(self, position, velocity, attitude_as_quaternion, time_step):
         self.position = position
 
         previous_velocity = self.velocity
-        self.velocity = velocity
+        bodyToInertialFrame = self.attitude_in_SO3
+        self.velocity = np.dot(bodyToInertialFrame,velocity)
 
         previous_acceleration = self.acceleration
         north_acceleration = self.finiteDifferencing(velocity.item(0), previous_velocity.item(0), time_step)
@@ -53,50 +58,71 @@ class LQRController():
         self.desired_acceleration = desired_acceleration
         self.desired_jerk = desired_jerk
         self.desired_heading = desired_heading
+        self.desired_heading_vector = self.computeDesiredHeadingVector()
         self.desired_heading_rate = desired_heading_rate
-        desired_heading_vector = self.computeDesiredHeadingVector()
+        self.desired_heading_vector = self.computeDesiredHeadingVector()
         desired_thrust_acceleration_vector = self.computeDesiredThrustAccelerationVector()
-        self.desired_attitude_SO3 = self.computeDesiredAttitudeSO3(desired_thrust_acceleration_vector, desired_heading_vector)
+        self.desired_attitude_SO3 = self.computeDesiredAttitudeSO3(desired_thrust_acceleration_vector)
 
     def computeRosflightCommand(self):
-        # desired_thrust_acceleration_vector = self.computeDesiredThrustAccelerationVector()
-        # computeDesiredThrottleInDesiredFrame(desired_thrust_acceleration_vector)
-        
-        # #calculate linear errors
-        # position_error = self.computeLinearError(self.position, self.desired_position)
-        # velocity_error = self.computeLinearError(self.velocity, self.desired_velocity)
-        # acceleration_error = self.computeLinearError(self.acceleration, self.desired_acceleration)
-
-        # #calculate desired states
-        # desired_heading_vector = self.computeDesiredHeadingVector()
-        # derivative_desired_heading_vector = self.computeDerivativeDesiredHeadingVector()
-        # desired_force_vector = self.computeDesiredForceVector(position_error, velocity_error)
-        # desired_thrust = self.computeDesiredThrust(desired_force_vector)
-        # desired_attitude_SO3 = self.computeDesiredAttitudeSO3(desired_force_vector, desired_heading_vector)
-        # derivative_desired_force_vector = self.computeDerivativeDesiredForceVector(velocity_error, acceleration_error)
-        # derivative_desired_attitude_SO3 = self.computeDerivativeDesiredAttitudeSO3(desired_force_vector, derivative_desired_force_vector, desired_attitude_SO3, desired_heading_vector, derivative_desired_heading_vector)
-        # desired_body_angular_rates = self.computeDesiredBodyAngularRates(desired_attitude_SO3, derivative_desired_attitude_SO3)
-
-        # #calculate angular errors
-        # euler_attitude_error = self.computeEulerAttitudeError(desired_attitude_SO3)
-        # desired_to_body_frame_rotation = self.computeDesiredToBodyFrameRotation(desired_attitude_SO3)
-
-        # #compute commanded outputs
-        # body_angular_rate_commands = self.computeBodyAngularRateCommands(euler_attitude_error, desired_to_body_frame_rotation, desired_body_angular_rates)
-        # throttle = self.computeThrottleCommand(desired_thrust)
-        roll_rate = body_angular_rate_commands.item(0)
-        pitch_rate = body_angular_rate_commands.item(1)
-        yaw_rate = body_angular_rate_commands.item(2)
+        desired_thrust_acceleration_vector = self.computeDesiredThrustAccelerationVector()
+        derivative_desired_heading_vector = self.computeDerivativeDesiredHeadingVector()
+        derivative_desired_attitude = self.computeDerivativeDesiredAttitude(desired_thrust_acceleration_vector, derivative_desired_heading_vector)
+        desired_angular_rates = self.computeDesiredBodyAngularRates(derivative_desired_attitude)
+        desired_throttle = self.computeDesiredThrottle(desired_thrust_acceleration_vector)
+        u_desired = np.vstack(desired_throttle,desired_angular_rates)
+        X = self.calculateErrorState()
+        B = self.createBMatrix()
+        A = self.createAMatrix(desired_angular_rates)
+        u_error = self.calculateErrorInput(X,A,B)
+        u = u_error + u_desired
+        throttle = np.clip(u.item(0),0,1)
+        roll_rate = u.item(1)
+        pitch_rate = u.item(2)
+        yaw_rate = u.item(3)
         rosflight_command = np.array([roll_rate, pitch_rate, yaw_rate , throttle])
         return rosflight_command
 
     def calculateErrorState(self):
         position_error = self.computeLinearError(self.position, self.desired_position)
-        velocity_error = self.computeLinearError(self.velocity, self.desired_velocity)
+        inertial_to_body_frame_rotation = np.transpose(self.attitude_in_SO3)
+        body_velocity_error = np.dot(inertial_to_body_frame_rotation, self.computeLinearError(self.velocity, self.desired_velocity))
         attitude_error = self.computeAttitudeError()
-        errorState = np.vstack((position_error,velocity_error))
-        errorState = np.vstack((errorState , attitude_error))
-        return errorState
+        error_state = np.vstack((position_error,body_velocity_error))
+        error_state = np.vstack((error_state , attitude_error))
+        return error_state
+
+    def createBMatrix(self):
+        dvdotds = np.array( [0, 0, (-self.gravity/self.equilibrium_throttle)])
+        inertial_to_body_frame_rotation = np.transpose(self.attitude_in_SO3)
+        body_velocity = np.dot(inertial_to_body_frame_rotation, self.velocity)
+        dvdotdw = self.skewOperator(body_velocity)
+        drdotdw = np.eye(3)
+        leftColumn = np.vstack([np.zeros([3,1]), dvdotds , np.zeros([3,1])])
+        right3Columns = np.vstack(np.zeros([3,3]) , dvdotdw , drdotdw)
+        B = np.concatenate((leftColumn,right3Columns),1)
+        return B
+
+    def createAMatrix(self, desired_angular_rates):
+        body_to_inertial_frame_rotation = copy.deepcopy(self.attitude_in_SO3)
+        inertial_to_body_frame_rotation = np.transpose(self.attitude_in_SO3)
+        dpdot_dv = body_to_inertial_frame_rotation
+        body_velocity = np.dot( inertial_to_body_frame_rotation , self.velocity)
+        dpdot_dr = -np.dot(body_to_inertial_frame_rotation , self.skewOperator(body_velocity))
+        dvdot_dv =  -self.skewOperator(desired_angular_rates)
+        dvdot_dr = self.gravity*np.dot(inertial_to_body_frame_rotation,np.array([0,0,1]))
+        drdot_dr = -self.skewOperator(desired_angular_rates)
+        left_columns = np.zeros([9,3])
+        middle_columns = np.vstack(dpdot_dv, dvdot_dv, np.zeros([3,3]))
+        right_columns = np.vstack(dpdot_dr, dvdot_dr, drdot_dr)
+        A = np.concatenate( (np.concatenate((left_columns,middle_columns),1) , right_columns) , 1)
+        return A
+
+    def calculateErrorInput(self,X,A,B):
+        P = scipy.linalg.solve_continuous_are(A, B, self.Q, self.R, e=None, s=None)
+        K = np.dot(np.dot(np.transpose(self.R) , np.transpose(B)) , P)
+        u_error = -np.dot(K,X)
+        return u_error
 
     def computeDesiredThrottle(self, desired_thrust_acceleration_vector):
         #assumes a linear throttle -> thrust model
@@ -113,7 +139,8 @@ class LQRController():
         desired_thrust_acceleration_vector = self.desired_acceleration - np.array([[0],[0],[1]])*gravityVector
         return desired_thrust_acceleration_vector
 
-    def computeDesiredAttitudeSO3(self, desired_thrust_acceleration_vector, desired_heading_vector):
+    def computeDesiredAttitudeSO3(self, desired_thrust_acceleration_vector):
+        desired_heading_vector = copy.deepcopy(self.desired_heading_vector)
         desired_body_z_axis = -desired_thrust_acceleration_vector / np.linalg.norm(desired_thrust_acceleration_vector)
         desired_body_y_vector =  np.cross(desired_body_z_axis.flatten() , desired_heading_vector.flatten())[:,None]
         desired_body_y_axis = desired_body_y_vector / np.linalg.norm(desired_body_y_vector)
@@ -136,8 +163,10 @@ class LQRController():
         desired_body_angular_rates = self.veeOperator(np.dot(inertial_to_desired_frame_rotation,derivative_desired_attitude_SO3))
         return desired_body_angular_rates
 
-    def computeDerivativeDesiredAttitudeSO3(self, desired_thrust_acceleration_vector, desired_attitude_SO3, desired_heading_vector, derivative_desired_heading_vector):
+    def computeDerivativeDesiredAttitude(self, desired_thrust_acceleration_vector, derivative_desired_heading_vector):
         # derivative desired_body_z_axis
+        desired_attitude_SO3 = copy.deepcopy(self.desired_attitude_SO3)
+        desired_heading_vector = copy.deepcopy(self.desired_heading_vector)
         derivative_desired_thrust_acceleration_vector = self.desired_jerk
         desired_body_z_axis = desired_attitude_SO3[:,2][:,None]
         norm_desired_thrust_acceleration_vector = np.linalg.norm(desired_thrust_acceleration_vector)
@@ -150,7 +179,7 @@ class LQRController():
         y_term_2 = np.cross(desired_body_z_axis.flatten(), derivative_desired_heading_vector.flatten())
         derivative_desired_body_y_axis = (y_term_1 + y_term_2)[:,None]
         #derivative desired body x axis
-        desired_body_y_axis = desired_attitude_SO3[:,1][:,None]
+        desired_body_y_axis = copy.deepcopy(self.desired_attitude_SO3[:,1][:,None])
         x_term_1 = np.cross(derivative_desired_body_y_axis.flatten() , desired_body_z_axis.flatten())
         x_term_2 = np.cross(desired_body_y_axis.flatten(), derivative_desired_body_z_axis.flatten())
         derivative_desired_body_x_axis = (x_term_1 + x_term_2)[:,None]
@@ -172,6 +201,12 @@ class LQRController():
 
     def veeOperator(self , skewSymmetricMatrix):
         return np.array([[skewSymmetricMatrix[2,1]] , [skewSymmetricMatrix[0,2]] , [skewSymmetricMatrix[1,0]]])
+
+    def skewOperator(self, vector):
+        skewSymmetricMatrix = np.array([[0 , -vector.item(2) , vector.item(1)]\
+                                      , [vector.item(2) , 0 , -vector.item(0)]\
+                                      , [-vector.item(1) , vector.item(0) , 0]])
+        return skewSymmetricMatrix
 
     def finiteDifferencing(self, value, new_value, time_step):
         return (new_value - value)/time_step
