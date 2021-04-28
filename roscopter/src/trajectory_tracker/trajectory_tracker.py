@@ -29,7 +29,8 @@ class TrajectoryTracker():
         self.position = position
 
         previous_velocity = self.velocity
-        self.velocity = velocity
+        bodyToInertialFrame = self.attitude_in_SO3
+        self.velocity = np.dot(bodyToInertialFrame,velocity)
 
         previous_acceleration = self.acceleration
         north_acceleration = self.finiteDifferencing(velocity.item(0), previous_velocity.item(0), time_step)
