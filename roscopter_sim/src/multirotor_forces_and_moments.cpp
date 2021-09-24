@@ -252,15 +252,6 @@ void MultiRotorForcesAndMoments::UpdateForcesAndMoments()
     desired_forces_.n = yaw_controller_.computePID(command_.z, r, sampling_time_);
     desired_forces_.Fz = command_.F*actuators_.F.max;
   }
-  else if (command_.mode == rosflight_msgs::Command::MODE_ROLL_PITCH_YAWRATE_ALTITUDE)
-  {
-    desired_forces_.l = roll_controller_.computePID(command_.x, phi,  sampling_time_, p);
-    desired_forces_.m = pitch_controller_.computePID(command_.y, theta, sampling_time_, q);
-    desired_forces_.n = yaw_controller_.computePID(command_.z, r, sampling_time_);
-    double pddot = -sin(theta)*u + sin(phi)*cos(theta)*v + cos(phi)*cos(theta)*w;
-    double p1 = alt_controller_.computePID(command_.F, -pd, sampling_time_, -pddot);
-    desired_forces_.Fz = p1  + (mass_*9.80665)/(cos(command_.x)*cos(command_.y));
-  }
 
   // calculate the actual output force using low-pass-filters to introduce a first-order
   // approximation of delay in motor reponse
