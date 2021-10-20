@@ -8,7 +8,8 @@
 #include <controller/simple_pid.h>
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Bool.h>
-#include <tf/tf.h>
+// #include <tf/tf.h>
+#include <roscopter_utils/geometry/quat.h>
 #include <stdint.h>
 #include <dynamic_reconfigure/server.h>
 #include <roscopter/ControllerConfig.h>
@@ -135,6 +136,9 @@ private:
   void resetIntegrators();
   void publishCommand();
   double saturate(double x, double max, double min);
+
+  void normalize_quat(double &w, double &x, double &y, double &z)
+  void message_to_quat(const geometry_msgs::Quaternion &message, quat::Quatd &q);
 
 };
 }

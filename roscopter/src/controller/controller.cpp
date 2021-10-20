@@ -1,3 +1,4 @@
+#include <geometry/quat.h>
 #include <controller/controller.h>
 #include <stdio.h>
 #include <string.h>
@@ -13,7 +14,7 @@ Controller::Controller() :
 {
   if (!nh_param_.getParam("equilibrium_throttle", throttle_eq_))
     ROS_ERROR("[Controller] MAV equilibrium_throttle not found!");
-    
+
   // Calculate max accelerations. Assuming that equilibrium throttle produces
   // 1 g of acceleration and a linear thrust model, these max acceleration
   // values are computed in g's as well.
@@ -47,6 +48,31 @@ Controller::Controller() :
   command_pub_ = nh_.advertise<rosflight_msgs::Command>("command", 1);
 }
 
+void normalize_quat(double &w, double &x, double &y, double &z)
+{
+  double mav_q_len = sqrt(w*w + x*x + y*y + z*z)
+  // if (fabs(mav_q_len - 1) > 0.0000001)
+  w /= mav_q_len;
+  x /= mav_q_len;
+  y /= mav_q_len;
+  z /= mav_q_len;
+}
+
+void message_to_quat(const geometry_msgs::Quaternion &message, quat::Quatd &q)
+{
+  double w = message.w;
+  double x = message.x;
+  double y = message.y;
+  double z = message.z;
+
+  normalize_quat(w, x, y, z);
+
+  q.setW(w);
+  q.setW(x);
+  q.setW(y);
+  q.setW(z);
+
+}
 
 void Controller::stateCallback(const nav_msgs::OdometryConstPtr &msg)
 {
@@ -75,11 +101,17 @@ void Controller::stateCallback(const nav_msgs::OdometryConstPtr &msg)
   xhat_.w = msg->twist.twist.linear.z;
 
   // Convert Quaternion to RPY
-  tf::Quaternion tf_quat;
-  tf::quaternionMsgToTF(msg->pose.pose.orientation, tf_quat);
-  tf::Matrix3x3(tf_quat).getRPY(xhat_.phi, xhat_.theta, xhat_.psi);
-  xhat_.theta = xhat_.theta;
-  xhat_.psi = xhat_.psi;
+  quat::Quatd geometry_quat;
+  message_to_quat(msg->pose.pose.orientation, geometry_quat);
+  Eigen::Matrix<double,3,1> rpy_vec3 = geometry_quat.euler();
+  // tf::Quaternion tf_quat;
+  // tf::quaternionMsgToTF(msg->pose.pose.orientation, tf_quat);
+  // tf::Matrix3x3(tf_quat).getRPY(xhat_.phi, xhat_.theta, xhat_.psi);
+  xhat_.phi = out[0];
+  xhat_.theta = out[1];
+  xhat_.psi = out[2];
+  // xhat_.theta = xhat_.theta;
+  // xhat_.psi = xhat_.psi;
 
   xhat_.p = msg->twist.twist.angular.x;
   xhat_.q = msg->twist.twist.angular.y;
