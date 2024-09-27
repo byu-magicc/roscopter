@@ -1,6 +1,9 @@
 ROScopter
 =========
 
+This verison of ROScopter is no longer under development and no longer supported.
+ROScopter for ROS2 is currently under development and in alpha, you can find ROScopter [here](https://github.com/rosflight/roscopter).
+
 ------ Getting Started ------
 
 Install the latest version of ROS on your computer.
