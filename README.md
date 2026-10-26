@@ -61,7 +61,7 @@ To get more help on how to setup roscopter visit the wiki (https://github.com/by
 
 3. Standardize the flight controller board. Board sensor suite needs to include an IMU, barometer and magnetometer. Current board and sensor combination is becoming obsolete.
 
-4. Implement a trajectory follower control node. Should recieve inertial position, velocity, acceleration and heading, and output angular rate and throttle.
+4. Implement a trajectory follower control node. Should receive inertial position, velocity, acceleration and heading, and output angular rate and throttle.
 
 5. Develop and document a magnetometer calibration routine and incorporate magnetometer measurements to the estimator. This would enable accurate heading estimates at initialization and during hover flight.
 
